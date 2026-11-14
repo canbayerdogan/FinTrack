@@ -1,6 +1,6 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.5
+**Sürüm:** 1.6
 **Tarih:** 2026-11-14
 **Bağlı belgeler:** [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · [API Sözleşmeleri v1.1](06-api-sozlesmeleri.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
@@ -65,7 +65,7 @@
 | EF aracı | `dotnet-ef` `10.0.15` (yerel tool manifest: `dotnet-tools.json`) |
 | Docker | ✅ `29.7.2` — Testcontainers MSSQL kullanılabilir |
 | MAUI iş yükü | ❌ kurulu değil; slice 9'da `dotnet workload install maui` |
-| Sürüm kontrolü | Depo şu an **git değil** |
+| Sürüm kontrolü | ✅ git (`main`) + GitHub uzak depo + GitHub Actions CI (yeşil) |
 | NuGet sürümleri | Microsoft paketleri `10.0.15`; 11.x net11 hedefler, kullanılmaz |
 
 ### 2.3 Mevcut iskelet sınırları
@@ -686,6 +686,7 @@ Bir sonraki dilime geçmeden:
 - [ ] Mevcut dilimin DoD listesi tamam
 - [ ] `_status` kaldırıldı (ilgili modül)
 - [ ] Regresyon testleri yeşil
+- [ ] CI yeşil (`.github/workflows/ci.yml`; `main` push)
 - [ ] README/doküman durumu güncel
 - [ ] Bir sonraki dilimin bağımlılıkları (ADR dahil) hazır
 - [ ] Açık soru kalmadı
@@ -705,7 +706,7 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | Tarih/yuvarlama | Taksit ve rapor farkları | Domain testleri; `AwayFromZero`; son taksit düzeltmesi |
 | Saat dilimi | Ay sınırı kayması | `DateOnly` + kullanıcı IANA; sınır testleri |
 | MAUI iş yükü | Slice 9 gecikmesi | Backend'i önce bitir; MAUI en sona bırakılabilir |
-| Git yokluğu | Değişiklik geri alınamaz | Sürüm kontrolü başlatılması ayrı karar; önerilir |
+| Git yokluğu | Değişiklik geri alınamaz | ✅ Çözüldü: git + GitHub uzak depo + zorunlu CI (`main` push/PR) |
 | Kapsam kayması | v1 gecikir | Görev kartı + DoD + durma tetikleyicileri |
 
 ---
@@ -720,3 +721,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.3 | 2026-11-14 | `docs/08` durum ve devam notu eklendi; §6.7 güncelleme kuralı genişletildi |
 | 1.4 | 2026-11-14 | `docs/09` görev listesi eklendi; §6.7'ye dahil edildi |
 | 1.5 | 2026-11-14 | Slice 3 (kart + hesaplanan bakiye) tamamlandı; 22 modül + 6 entegrasyon testi eklendi, toplam 139 test yeşil |
+| 1.6 | 2026-11-14 | Git + GitHub uzak depo + GitHub Actions CI; ilk CI çalıştırması yeşil (139/139). Dilim kapanışında CI yeşili de aranır |

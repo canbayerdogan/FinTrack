@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 1.5
+**Sürüm:** 1.6
 **Tarih:** 2026-11-14
-**Bağlı belgeler:** [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.2](06-api-sozlesmeleri.md) · [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · ADR-0001…0008
+**Bağlı belgeler:** [Yol haritası v1.6](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.2](06-api-sozlesmeleri.md) · [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -38,10 +38,10 @@
 | 8 | Raporlama | ⏳ |
 | 9 | MAUI istemci | ⏳ |
 
-**Çözüm:** `FinTrack.slnx`, **27 proje**. Depo **git** (`main`); başlangıç
-commit'leri alındı, çalışma ağacı temiz. Uzak depo henüz bağlı değil; GitHub
-Actions CI (`.github/workflows/ci.yml`) hazır, ilk çalıştırma uzak depo
-bağlanınca doğrulanacak.
+**Çözüm:** `FinTrack.slnx`, **27 proje**. Depo **git** (`main`); uzak depo
+[`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
+GitHub Actions CI (`.github/workflows/ci.yml`) ilk çalıştırmada yeşil:
+build + 139/139 test (Ubuntu, Testcontainers MSSQL).
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
@@ -60,6 +60,7 @@ migration, uç noktalar). Kalan iş modülleri yalnızca DI + route grubu + geç
 | Test (Debug) | `dotnet test FinTrack.slnx` | ✅ 139/139 |
 | Build (Release) | `dotnet build FinTrack.slnx --configuration Release` | ✅ 0 uyarı, 0 hata |
 | Test (Release) | `dotnet test FinTrack.slnx --no-build --configuration Release` | ✅ 139/139 |
+| CI | GitHub Actions `build-test` | ✅ 139/139 (Ubuntu, run `43591249353`) |
 | Migration | `dotnet run --project src/Host/FinTrack.Api -- --migrate` | ✅ LocalDB `FinTrackDb` |
 | DB doğrulama | `sqlcmd -S "(localdb)\MSSQLLocalDB" -d FinTrackDb ...` | ✅ `cards` şeması, `Cards` + history, `IX_Cards_UserId_IsArchived` |
 
@@ -253,14 +254,11 @@ migration, uç noktalar). Kalan iş modülleri yalnızca DI + route grubu + geç
 | Soru | Karar |
 |---|---|
 | `docs/01` ayrı dosya olarak gerekli mi? | **Gerekli değil.** `docs/_source/` içindeki ham konuşma yeterli; ayrı dosya açılmayacak. |
-| Sürüm kontrolü/CI başlatılsın mı? | **Evet.** Git deposu + başlangıç commit'i alındı; GitHub Actions CI eklendi (`.github/workflows/ci.yml`; build + tüm testler). Uzak depo henüz bağlı değil. |
+| Sürüm kontrolü/CI başlatılsın mı? | **Evet.** Git deposu + commit'ler; GitHub Actions CI (`.github/workflows/ci.yml`) eklendi. Uzak depo [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack); ilk çalıştırma yeşil (139/139). |
 | Nakit avans ve raporlama geçişi | Nakit avans ve kredi **borç** olarak değerlendirilir. **Faiz/KKDF/BSMV hesabı yapılmaz**; aylık ödeme tutarı kullanıcıdan alınır. Slice 7 sözleşmesi (`docs/06` §7.1) bu ilkeye göre netleştirilecek. |
 
 ### 8.2 Açık kalanlar
 
-- CI platformu ve uzak depo seçimi: GitHub Actions hazır; **Release build +
-  139/139 test yerelde doğrulandı**. Uzak depo (GitHub) bağlanınca ilk CI
-  çalıştırması doğrulanacak.
 - Slice 7'de kredi sözleşmesi: aylık ödeme tutarı mı, toplam geri ödeme + taksit
   sayısı mı esas alınacak? (Mevcut `docs/06` §7.1 toplam geri ödemeyi kullanır.)
 
@@ -276,3 +274,4 @@ migration, uç noktalar). Kalan iş modülleri yalnızca DI + route grubu + geç
 | 1.3 | 2026-11-14 | Açık sorular yanıtlandı: `docs/01` gerekli değil, git başlatıldı, borçlarda faiz yok/aylık ödeme kullanıcıdan |
 | 1.4 | 2026-11-14 | Release build + 139/139 test doğrulandı; Docker kapalıyken entegrasyon testi tuzağı eklendi; depo/CI durumu güncellendi |
 | 1.5 | 2026-11-14 | Entegrasyon fixture'ı env var ile bağlanıyor: testler artık gerçekten Testcontainers MSSQL kullanıyor (önceden sessizce LocalDB) |
+| 1.6 | 2026-11-14 | GitHub uzak depo açıldı; ilk CI çalıştırması yeşil (139/139, Ubuntu) |

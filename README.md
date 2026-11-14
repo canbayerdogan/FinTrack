@@ -1,5 +1,7 @@
 # FinTrack
 
+[![CI](https://github.com/canbayerdogan/FinTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/canbayerdogan/FinTrack/actions/workflows/ci.yml)
+
 Kişisel finans ve harcama takibi uygulaması.
 
 **Nihai ürün:** mobil uygulama (.NET MAUI)
@@ -51,9 +53,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 04 | [ADR'ler](docs/adr/) | ✅ |
 | 05 | [İş kuralları (business rules) v1.0](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.2](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.5](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v1.5](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.4](docs/09-todo.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.6](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v1.6](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.5](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -69,18 +71,19 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   CRUD + arşivleme, `GET /cards/{id}/balance` (harcama − iade; ödeme ve nakit
   avans sonraki dilimlerde). Bilinmeyen kart alanları (kart no/CVV/SKT) `400`
   ile reddedilir. 22 modül + 6 entegrasyon testi.
-- **Testler:** ✅ 139 test yeşil — Debug ve Release (3 mimari + 22 birim + 52
-  Expenses + 22 CreditCards + 40 entegrasyon; 7 smoke + 17 kimlik + 10 harcama +
-  6 kart). Entegrasyon testleri için Docker Desktop açık olmalı.
+- **Testler:** ✅ 139 test yeşil — Debug, Release ve CI (Ubuntu; 3 mimari + 22
+  birim + 52 Expenses + 22 CreditCards + 40 entegrasyon; 7 smoke + 17 kimlik +
+  10 harcama + 6 kart). Entegrasyon testleri için Docker Desktop açık olmalı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. `Idempotency-Key` uygulaması ayrı göreve ertelendi
   (`docs/06` §1.4, `docs/07` slice 2). Güncel durum: `docs/08`; sıradaki adımlar:
   `docs/09`.
 - **Migration:** `dotnet run --project src/Host/FinTrack.Api -- --migrate`
   (üretimde otomatik migration yok). Testlerde `Database:MigrateOnStartup=true`.
-- **Sürüm kontrolü:** ✅ git deposu başlatıldı (başlangıç commit'i). GitHub Actions
-  CI eklendi (`.github/workflows/ci.yml`); uzak depo bağlanınca ilk çalıştırma
-  doğrulanacak.
+- **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
+  [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
+  GitHub Actions CI (`.github/workflows/ci.yml`) yeşil: build + 139/139 test
+  (Ubuntu, Testcontainers MSSQL).
 - **Sıradaki:** slice 4 — ekstre + kart ödemesi (`docs/07` §4).
 
 ## Çözüm yapısı (özet)

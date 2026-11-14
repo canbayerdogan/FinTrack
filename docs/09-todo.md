@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.4
+**Sürüm:** 1.5
 **Tarih:** 2026-11-14
-**Bağlı belgeler:** [Durum notu v1.5](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v1.6](08-durum-ve-devam-notu.md) · [Yol haritası v1.6](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -129,8 +129,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 - [ ] `Idempotency-Key` (tüm POST) — ayrı görev
 - [x] Sürüm kontrolü (git) — başlatıldı
-- [x] CI — GitHub Actions (`.github/workflows/ci.yml`); Release build + 139/139
-      yerelde doğrulandı, ilk CI çalıştırması uzak depo bağlanınca doğrulanacak
+- [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
+      [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
+      ilk çalıştırma yeşil (139/139, Ubuntu + Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [ ] Yerel entegrasyon testleri için Docker Desktop açık olmalı (aksi halde
       33/40 `DockerUnavailableException`)
@@ -164,3 +165,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.2 | 2026-11-14 | Sürüm kontrolü başlatıldı; `docs/01` kapatıldı; GitHub Actions CI eklendi |
 | 1.3 | 2026-11-14 | Release build + 139/139 doğrulandı; Docker ön koşulu not edildi |
 | 1.4 | 2026-11-14 | Entegrasyon fixture'ı env var'a geçti; testler gerçek konteynere bağlanıyor |
+| 1.5 | 2026-11-14 | GitHub uzak depo + ilk yeşil CI çalıştırması işaretlendi |
