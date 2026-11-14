@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\FinTrack.SharedKernel\FinTrack.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\FinTrack.ModuleContracts\FinTrack.ModuleContracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+  </ItemGroup>
+
+</Project>

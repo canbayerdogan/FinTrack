@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinTrack.Modules.Expenses.Application\FinTrack.Modules.Expenses.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\FinTrack.SharedKernel\FinTrack.SharedKernel.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FinTrack.Modules.Expenses.Tests" />
+  </ItemGroup>
+</Project>

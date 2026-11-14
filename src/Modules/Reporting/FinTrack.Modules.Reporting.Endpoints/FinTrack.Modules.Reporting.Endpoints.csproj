@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinTrack.Modules.Reporting.Application\FinTrack.Modules.Reporting.Application.csproj" />
+    <ProjectReference Include="..\FinTrack.Modules.Reporting.Infrastructure\FinTrack.Modules.Reporting.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

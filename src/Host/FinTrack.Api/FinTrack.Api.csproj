@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>FinTrack.Api</RootNamespace>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\FinTrack.SharedKernel\FinTrack.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\FinTrack.ModuleContracts\FinTrack.ModuleContracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Expenses\FinTrack.Modules.Expenses.Endpoints\FinTrack.Modules.Expenses.Endpoints.csproj" />
+    <ProjectReference Include="..\..\Modules\Expenses\FinTrack.Modules.Expenses.Infrastructure\FinTrack.Modules.Expenses.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\CashInflows\FinTrack.Modules.CashInflows.Endpoints\FinTrack.Modules.CashInflows.Endpoints.csproj" />
+    <ProjectReference Include="..\..\Modules\CashInflows\FinTrack.Modules.CashInflows.Infrastructure\FinTrack.Modules.CashInflows.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\CreditCards\FinTrack.Modules.CreditCards.Endpoints\FinTrack.Modules.CreditCards.Endpoints.csproj" />
+    <ProjectReference Include="..\..\Modules\CreditCards\FinTrack.Modules.CreditCards.Infrastructure\FinTrack.Modules.CreditCards.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Debts\FinTrack.Modules.Debts.Endpoints\FinTrack.Modules.Debts.Endpoints.csproj" />
+    <ProjectReference Include="..\..\Modules\Debts\FinTrack.Modules.Debts.Infrastructure\FinTrack.Modules.Debts.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Reporting\FinTrack.Modules.Reporting.Endpoints\FinTrack.Modules.Reporting.Endpoints.csproj" />
+    <ProjectReference Include="..\..\Modules\Reporting\FinTrack.Modules.Reporting.Infrastructure\FinTrack.Modules.Reporting.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.21.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
+  </ItemGroup>
+</Project>

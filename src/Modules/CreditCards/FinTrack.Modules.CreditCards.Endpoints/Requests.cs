@@ -1,0 +1,28 @@
+using System.Text.Json.Serialization;
+
+namespace FinTrack.Modules.CreditCards.Endpoints;
+
+// Kart isteklerinde bilinmeyen alan kabul edilmez (docs/06 §6.2): gerçek kart
+// numarası, CVV veya son kullanma tarihi gönderilirse 400 döner. Kural yalnızca
+// kart uç noktalarına uygulanır; genel JSON davranışı değiştirilmez.
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record CreateCardRequest(
+    string? BankName,
+    string? DisplayName,
+    string? LogoKey,
+    decimal? CreditLimit,
+    int? StatementDay,
+    int? PaymentDueDay);
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record UpdateCardRequest(
+    string? BankName,
+    string? DisplayName,
+    string? LogoKey,
+    decimal? CreditLimit,
+    int? StatementDay,
+    int? PaymentDueDay,
+    string? RowVersion);
+
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record ArchiveCardRequest(string? RowVersion);

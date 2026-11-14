@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinTrack.Modules.CreditCards.Application\FinTrack.Modules.CreditCards.Application.csproj" />
+    <ProjectReference Include="..\FinTrack.Modules.CreditCards.Infrastructure\FinTrack.Modules.CreditCards.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,1337 @@
+
+1. Fikrini nasıl anladım?
+Senin fikrin basit bir harcama takip uygulamasından daha kapsamlı.
+Finansal kayıt merkezi: Kullanıcının kredi kartları, hesap kesim tarihleri, harcamaları, borçları ve abonelikleri tek yerde tutulacak.
+Kolay veri girişi: Kullanıcı bir harcamayı manuel girebilecek; ileride market fişini fotoğraflayarak ürünleri ve fiyatları kaydedebilecek.
+Yapay zekâ destekli veri işleme: AI, fişleri ve ileride ekstreleri yorumlayacak; harcamaları kategorilere ayıracak. Kullanıcı yanlış sınıflandırmaları düzeltebilecek.
+Zaman içinde biriken bilgi: Sistem yalnızca bugünü değil, aylar ve yıllar içindeki harcama geçmişini de bilecek.
+Proaktif içgörü: Abonelik fiyatındaki artışı, yaklaşan ekstreyi, bitmek üzere olan kredi borcunu ve harcama eğilimlerini gösterecek.
+Buradaki temel ayrım şu: Finansal gerçeklerin kaynağı uygulamanın kendi kayıtları olacak; yapay zekâ ise bu kayıtları anlamlandırmaya ve kullanıcıya değer üretmeye yardımcı olacak. Yapay zekânın sohbet geçmişine güvenerek finansal kayıt tutmayacağız.
+Bu, senin anlattığın ürün vizyonunun omurgası.
+2. Mimariyi hangi seviyede konuşacağız?
+Önce PDF'nin sonundaki önerileri doğru yere oturtalım. Gemini bazı doğru kavramlar önermiş olsa da bunları henüz yeterince tartışmadan kesin kararlar gibi sunmuş.
+Ana mimari: Modüler monolit
+Başlangıç önerim
+Tek dağıtılabilir uygulama içinde net iş alanı sınırları. İlk günden mikroservis dağıtım maliyetini üstlenmeden, modüller arası bağımlılıkları kontrol altında tutacağız.
+Domain-Driven Design (DDD): Pratik uygulama
+Sistemi veritabanı tablolarına göre değil, iş sorumluluklarına göre böleceğiz. DDD'nin bütün taktiksel araçlarını ilk günden uygulamak zorunda değiliz.
+Clean Architecture ve bağımlılık yönetimi
+İş kuralları altyapıdan bağımsız kalacak. Veritabanı, AI sağlayıcısı ve dosya işleme gibi ayrıntılar iş mantığını yönetmeyecek.
+CQRS, olaylar ve arka plan işleri: İhtiyaç oldukça
+Her işlemi Command, Query, Event veya Handler'a dönüştürmek bir hedef değil. Gerçekten farklı ihtiyaçları çözdükleri yerde kullanacağız.
+Bunlar başlangıç önerilerim; henüz hepsini kesinleştirmiş değiliz.
+3. Özellikle netleştirmemiz gereken mimari kararlar
+Bence mimari tartışmamızın merkezinde beş konu var.
+Konu
+ | Yanıtlamamız gereken soru
+ | 
+Modül sınırları
+ | Finansal kayıt, fiş işleme ve içgörü üretimi birbirinden nasıl ayrılacak?
+ | 
+Bağımlılıklar
+ | Modüller birbirleriyle doğrudan mı, arayüzler veya olaylar üzerinden mi iletişim kuracak?
+ | 
+İşlem modeli
+ | Hangi işlemlerde anında sonuç, hangilerinde arka plan işleme gerekiyor?
+ | 
+AI mimarisi
+ | AI, uygulamanın hangi bölümünün sorumluluğunda olacak ve sağlayıcı değişimi nasıl yönetilecek?
+ | 
+Evrim stratejisi
+ | Hangi koşullarda bir modülü ayrı servise dönüştürmek gerçekten anlamlı olacak?
+ | 
+Reflection kullanıp kullanmayacağımız da bu çerçevenin içinde değerlendirilecek. Örneğin modüllerin başlangıç kayıtlarını otomatik keşfetmek için Reflection kullanabiliriz; ancak sırf Program.cs dosyasına birkaç kayıt eklememek uğruna gereksiz bir keşif mekanizması kurmak zorunda değiliz.
+Aynı şekilde, gelecekte mikroservislere geçebilmek için bugünden her modülün kendi mesaj kuyruğuna, veritabanına ve dağıtım altyapısına sahip olması gerekmiyor. Önemli olan modüllerin sınırlarını ve bağımlılıklarını doğru tasarlamak.
+4. Çalışma şeklimiz
+Sen ürün sahibi olarak hedefi ve öncelikleri belirleyeceksin. Ben mimari seçenekleri değerlendirecek, önerimi ve gerekçelerini sunacağım. Kararları birlikte netleştireceğiz.
+UI ekranlarına, tablo şemalarına ve kod ayrıntılarına erken inmeyeceğiz.
+Bir teknolojiyi sırf popüler olduğu için mimariye eklemeyeceğiz.
+Her karar için bütün olası istisnaları çözmeye çalışmayacağız.
+Ertelenebilecek konuları açıkça belirteceğiz.
+Aldığımız kararları bir mimari karar kaydında (ADR) tutacağız; böylece daha sonra aynı konuları tekrar tekrar tartışmayacağız.
+İlk mimari kararımız
+Benim başlangıç önerim DDD prensiplerinden yararlanan, Clean Architecture sınırlarını koruyan modüler monolit. Ancak bunun nasıl uygulanacağına henüz karar vermedik.
+İlk olarak şu ayrımı netleştirmek istiyorum:
+Bu projede modüler monolit derken, tek bir uygulama ve tek bir dağıtım birimi içinde modüllerin kesin sınırlarla ayrılmasını mı hedefliyoruz; yoksa gerektiğinde modülleri bağımsız çalıştırabilme imkânını da en baştan mimari gereksinim olarak mı kabul ediyoruz?
+İkisi birbirine yakın görünse de bağımlılık yönetimi, çalışma modeli ve mimarinin karmaşıklığı bakımından farklı sonuçlar doğuruyor. Ben ilk seçeneği başlangıç noktası olarak öneriyorum; ikinci seçeneği ise gerçek bir gereksinim ortaya çıktığında değerlendirebiliriz.
+tek bir uygulama ve tek bir dağıtım birimi içinde modüllerin kesin sınırlarla ayrılmasını hedefliyoruz.
+O zaman ilk mimari kararımızı netleştirebiliriz: tek uygulama, tek dağıtım birimi, kesin modül sınırlarına sahip bir Modular Monolith.
+Burada önemli olan yalnızca kodları klasörlere ayırmak değil; her modülün sorumluluğunu, sahip olduğu veriyi ve diğer modüllerle nasıl iletişim kuracağını mimari kurallarla güvence altına almak.
+1. Mimari kararımız
+Kişisel Finans Uygulaması
+Tek uygulama · Tek dağıtım birimi
+Finans
+Harcamalar, kartlar, borçlar
+Yapay zekâ
+Sınıflandırma, analiz
+İçgörüler
+Uyarılar, öneriler
+Kalıcı veri katmanı
+Veri sahipliği ve erişim kuralları mimariyle belirlenecek
+Bu şema şimdilik kavramsal. Üç modülün nihai sınırlarını henüz kesinleştirmiyoruz. Özellikle yapay zekâ ile içgörü üretiminin ayrı modüller mi olması gerektiğini ileride sorumluluklarına bakarak kararlaştıracağız.
+2. Modül sınırlarını nasıl koruyacağız?
+Bence dört temel kuralı mimari ilke olarak benimsemeliyiz:
+Veri sahipliği: Her modül kendi iş verisinin ve iş kurallarının sahibi olmalı. Bir modül, başka bir modülün tablolarını veya iç sınıflarını doğrudan kullanmamalı.
+Kontrollü iletişim: Modüller birbirlerinin iç uygulamalarına değil, tanımlanmış sözleşmelerine dayanmalı.
+Bağımlılık yönü: Bir modülde yapılan değişiklik, ilgisiz modüllerin kodlarını değiştirmeyi zorunlu kılmamalı.
+Tek dağıtım, bağımsız sınırlar: Modüller aynı uygulama olarak çalışabilir; bu, aralarındaki mimari sınırların gevşek olacağı anlamına gelmez.
+Bunlar üzerinde uzlaşabiliriz; ancak bunları uygulamak için hangi teknik mekanizmaları kullanacağımızı henüz seçmemize gerek yok. Örneğin CQRS, MediatR, domain event veya Reflection kararlarını şimdiden zorunlu kılmayalım.
+3. Sıradaki mimari karar: iş mantığı nerede yaşayacak?
+Bu karar önemli; çünkü modüllerin sınırlarını çizsek bile iş kuralları yanlış katmana konulursa uygulama zamanla birbirine bağımlı hale gelir.
+İki yaklaşımı değerlendirebiliriz:
+A — İş odaklı modüller ve katmanlı yapı
+Her modül kendi iş kurallarını, uygulama akışlarını ve veri erişimini kapsar. Katmanlar modülün içinde düzenlenir. Böylece modül, kendi sorumluluğunu mümkün olduğunca bütünlüklü taşır.
+İlk tercihim
+B — Uygulama genelinde katmanlar
+Tüm uygulama için ortak bir iş mantığı katmanı, veri erişim katmanı ve servis katmanı kurulur. Modüller bu katmanların içinde ayrıştırılır.
+Başlangıçta düzenli görünebilir; ancak modüllerin sınırlarını zamanla aşındırma riski vardır.
+Ben A yaklaşımını, yani modül içi katmanlı yapıyı başlangıç noktası olarak öneriyorum. Bu yaklaşım, Clean Architecture ilkelerinden yararlanmamıza imkân verir; fakat her modüle gereksiz sayıda katman veya proje eklemek zorunda bırakmaz.
+Senin beklentin de bu yönde mi? Yoksa tüm uygulama için ortak bir Domain, Application ve Infrastructure yapısının özellikle korunmasını mı istiyorsun?
+
+İş odaklı modüller kuralım
+Tamam, o halde mimari yaklaşımımızı netleştirdik: iş odaklı modüller, modül içinde katmanlı mimari ve tek dağıtım birimi.
+Şimdi teknoloji veya kod yapısına geçmeden önce modülleri iş alanlarına göre belirleyelim. Çünkü modül sınırlarını doğru çizmek, sonradan hangi tasarım desenini kullanacağımızdan daha önemli.
+İlk modül adaylarımız
+Bunlar henüz kesin karar değil; ürünün sorumluluklarından çıkardığım ilk taslak.
+1. Finansal Kayıtlar
+Harcamalar, gelirler, finansal hareketler, kategoriler ve harcama detayları.
+Temel soru: Uygulamanın finansal gerçekliğini hangi modül yönetecek?
+2. Finansal Taahhütler
+Kredi kartları ve hesaplar, ekstre dönemleri, krediler, taksitler ve abonelikler.
+Temel soru: Bunlar ayrı bir iş alanı mı olmalı, yoksa finansal kayıtların bir parçası mı?
+3. Finansal Analiz ve Yapay Zekâ
+Harcama sınıflandırma, ekstre yorumlama, fişlerden ürün çıkarma ve finansal örüntüleri analiz etme.
+Temel soru: Yapay zekâ yalnızca analiz mi yapacak, yoksa kayıt oluşturma süreçlerini de yönetecek mi?
+4. Finansal İçgörüler
+Bütçe uyarıları, harcama eğilimleri, yaklaşan ödemeler ve tasarruf önerileri.
+Temel soru: Analiz yapan mekanizma ile kullanıcıya sonuç sunan mekanizmayı ayırmalı mıyız?
+Bence önce çözmemiz gereken konu
+Kredi kartı, kredi ve abonelikleri nasıl modelleyeceğimiz önemli bir sınır kararı. Örneğin kredi kartından yapılan bir market alışverişi bir harcamadır; kartın ekstre borcunu ödemek ise aynı harcamanın ikinci kez gider yazılmaması gereken farklı bir finansal olaydır. Bu ayrımı doğru kurmamız gerekir.
+Bu nedenle modülleri hemen çoğaltmak yerine önce temel finansal kavramların sorumluluklarını belirleyelim.
+Sana tek bir soru sorayım:
+Kredi kartlarını, kredileri ve abonelikleri; harcamalardan ayrı bir “Finansal Taahhütler” modülünde yönetmek sana mantıklı geliyor mu? Ben ilk taslakta bu ayrımı öneriyorum; ancak nihai kararı iş kurallarına göre vermeliyiz.
+harcamalar ve ödemeler olarak böleriz, kredi kartı toplam ekstre harcaması 100 bin tl ödenen 50 bin tl ve ayrıca guncel faiz oranınıda yazarız 3.25 gibi kalan 50 bin ekstre için devralınan borç 53 bin tl gibi. Kredi kartları sürekli harcamadır kredileri ve abonelikler sürelidir 1 sene sonra bitebilir bunları tek yerde toplamayalım ayrıca Finansal Taahhütler derken ödeme sözü vermek gibi algılanıyor ben borcumun kredi kartı veya kredimin hepsini ödemeyebilirim aboneliğimi iptal edebilirim. biraz daha farklı ve detaylı düşün
+Haklısın. Ben önceki yaklaşımda kavramları fazla erken modüllere dönüştürdüm. Üstelik “Finansal Taahhütler” adını seçerken senin uygulamada yapmak istediğin şeyi değil, finansal ürünleri kendi bakış açımdan gruplandırmayı esas aldım. Bu, doğru bir mimari karar verme yöntemi değil.
+Senin anlattığın örnekte uygulama yalnızca harcamaları kaydetmiyor. Borçların zaman içinde nasıl değiştiğini, ödemelerin borca nasıl etki ettiğini ve kullanıcının mevcut finansal durumunun ne olduğunu takip ediyor. Bu çok daha kapsamlı bir problem.
+Önce bunu doğru modelleyelim.
+1. Kredi kartı, harcama ve ödeme aynı şey değil
+Verdiğin örneği ele alalım:
+Örnek kredi kartı ekstresi
+Ekstre harcaması
+100.000 TL
+Yapılan ödeme
+50.000 TL
+Ödenmeyen ekstre borcu
+50.000 TL
+Örnek faiz oranı
+%3,25
+Bir sonraki döneme devreden borç
+53.000 TL
+Basitleştirilmiş örnek: 50.000 TL borca 3.000 TL faiz eklenmiş varsayılmıştır. Gerçek hesap; faiz türü, vergi ve diğer koşullara göre değişebilir.
+Bu örnekte birbirinden farklı kavramlar var:
+Harcama: Kartla yapılan alışverişler ve diğer işlemler.
+Ödeme: Kullanıcının kart borcunu azaltmak için yaptığı para hareketi.
+Ekstre: Belirli bir dönemdeki işlemleri ve o dönemin hesaplanan borcunu gösteren finansal belge/dönem özeti.
+Devreden borç: Önceki dönemden yeni döneme taşınan ve yeni faiz veya diğer maliyetlerden etkilenebilen borç bakiyesi.
+Bunları tek bir “harcama” kaydına indirgersek gerçek finansal durumu yanlış hesaplayabiliriz. Örneğin 50.000 TL kredi kartı ödemesini yeniden gider saymak, daha önce kaydedilmiş alışverişleri ikinci kez gider olarak sayabilir.
+Buradaki temel mimari ilke şu olmalı: Harcama, para hareketi, borç bakiyesi ve dönemsel hesaplama birbirleriyle ilişkili olabilir; ancak aynı kavram değildir.
+2. Kredi kartları, krediler ve abonelikler neden ayrı düşünülmeli?
+Burada da söylediğin ayrım önemli. Bunların yaşam döngüleri ve iş kuralları aynı değil.
+Kredi kartları
+Sürekli kullanılabilir. Harcamalar, ekstre dönemleri, kısmi ödemeler, faiz ve devreden borç birbirini etkiler. Kart açık kaldığı sürece yeni işlemler oluşabilir.
+Krediler
+Başlangıç tutarı, faiz koşulları, taksit planı, kalan anapara ve ödeme geçmişi vardır. Kredi tamamen ödendiğinde kapanabilir; erken kapatma veya gecikme gibi farklı durumlar da olabilir.
+Abonelikler
+Belirli aralıklarla ücret doğurur. Fiyatı değişebilir, iptal edilebilir, askıya alınabilir veya sona erebilir. İptal edilmesi, geçmişteki ödemeleri silmez.
+Dolayısıyla bunları tek bir modülde toplamak için güçlü bir neden henüz görmüyorum. Üçünün de ortak bir özelliği olması — gelecekte para çıkışına neden olabilmeleri — aynı iş alanına ait oldukları anlamına gelmez.
+Ancak bunları birbirinden tamamen habersiz de tasarlamamalıyız. Örneğin bir kredi taksidi ödendiğinde hem kredi bakiyesi hem de kullanıcının para hareketleri doğru güncellenmeli. Bu, modüllerin aynı olması gerektiğini değil, aralarındaki ilişkinin açıkça tasarlanması gerektiğini gösterir.
+3. Modüllere isim vermeden önce ürünün iş alanlarını belirleyelim
+Şimdilik şu ayrımı bir başlangıç hipotezi olarak görüyorum:
+İş alanı
+ | Temel sorumluluk
+ | 
+Harcamalar
+ | Harcama kayıtları, ürün detayları ve kategoriler
+ | 
+Para hareketleri ve ödemeler
+ | Para girişleri, çıkışları ve borç ödemelerinin kaydı
+ | 
+Kredi kartları
+ | Kartlar, ekstreler, devreden borç ve kart maliyetleri
+ | 
+Krediler
+ | Kredi koşulları, taksitler, kalan borç ve geri ödeme geçmişi
+ | 
+Abonelikler
+ | Tekrarlayan ücretler, fiyat değişiklikleri ve iptal/sona erme
+ | 
+Finansal analiz
+ | Farklı alanlardaki verileri bir araya getirerek kullanıcının durumunu hesaplama ve yorumlama
+ | 
+Yapay zekâ destekli veri işleme
+ | İşlemleri sınıflandırma, ekstre/fişlerden bilgi çıkarma ve kullanıcı onayına sunma
+ | 
+Bu tablo nihai modül listemiz değil. Özellikle “para hareketleri ve ödemeler” alanının sınırını, gelirleri ve banka hesaplarını kapsayıp kapsamayacağını; ayrıca finansal analizin ayrı bir modül mü yoksa bir uygulama yeteneği mi olması gerektiğini henüz kararlaştırmadık.
+Bir diğer önemli ayrım da şu: Yapay zekâ, kredi kartı borcunu veya kredi bakiyesini kendi başına belirleyen otorite olmamalı. Finansal veriler ve hesaplama kuralları uygulamanın kontrolünde kalmalı; yapay zekâ bu verileri yorumlamalı, sınıflandırmalı veya kullanıcıya öneriler sunmalı.
+4. Şimdi sana sormak istediğim asıl soru
+Bir sonraki kararı doğru verebilmek için uygulamanın finansal kapsamını netleştirelim.
+Uygulama yalnızca giderleri ve borçları mı takip edecek, yoksa banka hesaplarını ve gelirleri de kapsayan bütünsel bir kişisel finans uygulaması mı olacak?
+Örneğin maaşın banka hesabına yatması, hesaptan kredi kartı borcunun ödenmesi, nakit harcama yapılması ve hesabın kalan bakiyesinin görülmesi de kapsamda mı?
+Bu yanıt, mimarinin merkezine yalnızca harcama takibini mi koyacağımızı, yoksa bütün para hareketlerini ve finansal bakiyeleri mi koyacağımızı belirleyecek.
+şuan ilk hedefimiz giderler borçlar ama daha sonra gelirleri de dahil edeceğiz. Z raporu gibi gün sonu bizim için ay sonu olacak, geçen ay girdi 250 bin tl borçlar 225 bin tl +25bin tl paranız kalmıştır. daha sonraki seviyede finans haberleride ekleyip yatırım yapmak isteyenlere tavsiyeler verebiliriz (ama kimseyi yönlendirmeyeceğiz bunu al şunu al demeyeceğiz yatırım yapmak finansal ve kişisel hamledir biz finans haberi paylaşıp bilgi veririz) uygulama üstünden banka hesabı bilgisi kayıt etmeyeceğiz kullanan kişiler kredi kartını bilgileriyle kaydetmeyecek yada biz api üstünden banka bilgisi çekmeyeceğiz çok fazla güvenlik sorunu ve karmaşıklık çıkar burada. kişi kullandıgı kredi kartını isim logo olarak ekleyecek, 3 tane kredi kartı varsa kredi kartı ekle ... bankası ... kredi kartı (akbank axses kredi kartı gibi) harcama girince harcamayı yaptıgı kartı seçer ve kayıt atılır. kimsenin kart bilgisini tutmayacağız. kısaca harcama takibi ve gelirleri görsün gerçek kart bilgileri kaydı yapılmasın
+Şimdi ürünün temel amacını çok daha net görüyorum. Biz bir banka uygulaması, muhasebe yazılımı veya yatırım danışmanlığı platformu yapmıyoruz. Kişinin kendi girdiği finansal verilerden, parasının nereye gittiğini ve ay sonunda gerçekte ne durumda olduğunu anlamasını sağlayan bir kişisel finans uygulaması tasarlıyoruz.
+Bence en önemli nokta şu: Uygulamanın finansal verileri otomatik olarak bankalardan çekmesi gerekmiyor. Kullanıcı kendi harcamalarını, borçlarını ve ileride gelirlerini giriyor; uygulama bu verileri saklıyor, hesaplıyor ve anlamlı sonuçlara dönüştürüyor.
+Bu, hem ürünün kapsamını kontrol altında tutuyor hem de banka entegrasyonlarının getireceği güvenlik ve işletim karmaşıklığını başlangıçta önlüyor.
+1. Ürünün sınırlarını belirleyelim
+İlk sürümün kapsamı
+Harcamaları ve harcama detaylarını kaydetmek.
+Kullanıcının tanımladığı kredi kartlarını seçerek harcama kaydetmek.
+Kart ekstrelerini, ödemeleri ve devreden borçları takip etmek.
+Kredileri, taksitleri ve abonelikleri ayrı iş kurallarıyla takip etmek.
+Ay sonunda toplam gideri, borç durumunu ve finansal özeti göstermek.
+Sonraki aşamalar
+Gelirlerin eklenmesi ve aylık gelir-gider farkının hesaplanması.
+Fiş ve banka ekstresi dosyalarından veri çıkarılması.
+Yapay zekâ ile harcama analizi ve kişiselleştirilmiş içgörüler.
+Finans haberleri ve yatırım konusunda bilgilendirici içerikler.
+Ürün sınırları
+Gerçek kredi kartı numarası, CVV veya banka giriş bilgileri tutulmayacak.
+Banka API'leriyle hesaplara bağlanılmayacak.
+Yatırım ürünleri için “şunu al, bunu sat” biçiminde kişiye özel işlem yönlendirmesi hedeflenmiyor.
+Bir ayrımı da şimdiden koruyalım: Kullanıcının kart için kaydettiği banka adı, kart adı ve logosu, uygulamanın tanıması için kullanılan tanımlayıcı bilgilerdir. Bunlar gerçek kart bilgileri değildir. İleride dosya yükleme özelliği geldiğinde de yüklenen ekstre veya fişlerde hassas bilgiler bulunabileceği için o özellik ayrıca güvenlik ve veri saklama kararı gerektirecek.
+2. Ay sonu raporu, uygulamanın merkezî özelliği olabilir
+Senin “Z raporu gibi ay sonu” benzetmen önemli. Bence bu, sıradan bir harcama takip uygulamasından ayrışabileceğimiz temel özelliklerden biri.
+Örneğin gelecekteki bir aylık rapor şöyle görünebilir:
+Örnek aylık finans özeti · Temsili veriler
+Toplam gelir
+250.000 TL
+Toplam gider
+225.000 TL
+Gelir ve gider arasındaki fark
++25.000 TL
+Bu tutar gelir ve gider kayıtlarından hesaplanan farktır; gerçek banka bakiyesi veya eldeki nakit olduğu anlamına gelmez.
+Raporun cevaplayacağı sorular
+Bu ay param en çok nereye gitti?
+Önceki aya göre hangi giderler arttı?
+Kredi kartlarında ne kadar borç devrediyor?
+Önümüzdeki ay hangi kredi taksitleri ve abonelikler var?
+Bu ay ne kadar harcadım, ne kadar borç ödedim?
+Burada kritik bir muhasebe ayrımı var: Gelir ile gider arasındaki fark, borç bakiyesiyle aynı şey değildir. Ayrıca kredi kartı borcunu ödemek, daha önce harcama olarak kaydedilmiş alışverişleri ikinci kez gider saymamalı.
+İlk sürümde gelirler henüz olmayacağı için rapor, toplam harcamaları, ödemeleri ve borç değişimini gösterebilir. Gelir takibi eklendiğinde ise gelir-gider farkı da hesaplanır. Böylece bugün kuracağımız mimariyi ileride değiştirmek zorunda kalmayız.
+3. Mimari açıdan bunun sonucu ne?
+Şimdilik şu prensipleri benimsemeyi öneriyorum:
+Finansal kayıtlar uygulamanın doğruluk kaynağıdır. Yapay zekâ değil, uygulamanın kayıtları ve hesaplama kuralları finansal rakamların otoritesidir.
+Kartlar, krediler ve abonelikler farklı yaşam döngülerine sahiptir. Bunları yalnızca hepsi ödeme doğuruyor diye aynı modüle koymayacağız.
+Aylık rapor farklı iş alanlarının verilerini bir araya getirir. Raporun verileri toplaması, bu verilerin sahibi olması anlamına gelmez.
+Gelecekteki özellikleri bugünden hesaba katacağız ama hepsini ilk sürüme yüklemeyeceğiz. Gelirler ve finansal haberler daha sonra eklenebilir; mevcut modüllerin iç işleyişine bağımlı olmamalılar.
+Bir sonraki adımda doğrudan sınıf, tablo veya proje isimleri tasarlamak yerine harcama, ödeme ve borç arasındaki ilişkileri netleştirelim. Bunlar doğru tanımlandığında modül sınırlarını çok daha sağlam belirleyebiliriz.
+hemen kodlamak istemiyorum sağlam bir mimari kuralım teknik tasarım dökümanı çıkaralım kodlamayı codex veya opus da yapar zaten. temiz bir mimari kuralım ilerde özellik eklemek istediğimizde direnç oluşmasın. harcama: kullanıcının gün içinde para harcadığı her şeydir biz sadece gelen veriyi görürüz kişinin gün içinde veri girdiği saatleri kişiye göre özelleştirip bildirim bile atabiliriz. (kişi her sabah 9.30 da kahvaltı için aldıgı simit harcamasını giriyor ama birgün girmediyse bildirim atıp sorabiliriz bugun kahvaltı harcamanı girmeyi unuttun gibi) ödeme: ay içinde yapılan harcamalar, kira ödemesi, kredi ödemesi, kredi kartı, abonelikler vs birçok insan abonelik için kullandıgı kredi kartını günlük harcamalarında da kullanıyor borç: birinden alınan para arkadaşından almış olabilir nakit avans çekmiş olabilir. nakit avans harcaması kredi kartına mı yazılmalı borç mu yazılmalı bu konuda çok net değilim iki yere de çok güzel uyuyor ama ekstre pdf ini alıp incelediğimiz dönemde bir çakışma olur mu bu harcama şuan net birşey diyemedim
+Anlaştık. Bu projede önceliğimiz kod üretmek değil; ürün gereksinimlerini, finansal kavramları, modül sınırlarını ve mimari kararları netleştirerek Codex veya Opus'un uygulayabileceği sağlam bir teknik tasarım dokümanı hazırlamak.
+Mimariyi bugünkü özelliklere göre değil, ileride gelir takibi, ekstre analizi, yapay zekâ, kişiselleştirilmiş bildirimler ve finansal haberler eklendiğinde de bozulmayacak şekilde tasarlayacağız. Ancak gelecekte eklenebilecek her özelliği bugünden uygulamak zorunda değiliz.
+Özellikle son mesajında üç ayrı kavramı birbirinden ayırmamız gerektiğini düşünüyorum:
+Harcama: Kullanıcının bir ürün veya hizmet için yaptığı harcamayı kaydetmesi.
+Ödeme: Kira, kredi taksidi, kredi kartı borcu veya abonelik gibi bir yükümlülüğün ödenmesi.
+Borç: Bir kişinin veya kurumun kullanıcıdan alacaklı olduğu, zaman içinde değişebilen bakiye.
+Bunlar ilişkili olabilir ama aynı kayıt türü olmamalı. Şimdi asıl mimari soruna, yani nakit avans örneğine bakalım.
+1. Nakit avans: iki yere yazılmalı mı?
+Bence burada çözüm, aynı olayı iki ayrı borç olarak kaydetmek değil; tek bir finansal olayı, farklı açılardan ilişkilendirebilmek.
+Örneğin kullanıcı kredi kartından 10.000 TL nakit avans çekti:
+Nakit avans işlemi
+10.000 TL
+Nakit girişi
+Kullanıcının eline 10.000 TL nakit geçer.
+Kart borcu
+Kullanıcının kart kuruluşuna borcu artar; faiz ve ücretler ayrıca doğabilir.
+Bu olayın iki sonucu vardır ama 10.000 TL'lik yeni bir tüketim harcaması oluşmuş değildir. Kullanıcı bu parayla sonradan 2.000 TL market alışverişi yaparsa, market harcaması ayrı bir kayıt olur.
+Aynı şekilde arkadaşından 10.000 TL borç alırsa bu da gelir değildir; borç alınması sonucunda para elde etmiştir. Borç bakiyesiyle para girişinin ilişkisi vardır ama bunları aynı kavram olarak tutmamalıyız.
+Bu nedenle önerim:
+Kredi kartından çekilen nakit avans, kartın işlemleri içinde görünür.
+Kart borcunun hesabında nakit avans dikkate alınır.
+Kullanıcı ayrıca aynı tutarı ikinci kez bağımsız bir borç olarak girmek zorunda kalmaz.
+İleride nakit ve banka bakiyelerini de takip etmeye başlarsak, nakit girişini ayrıca ilişkilendirebiliriz.
+Bu yaklaşımın ekstre PDF'si analizinde de faydası var. Ekstrede görünen nakit avans işlemi içeri aktarıldığında, aynı işlem ikinci kez harcama veya borç olarak oluşturulmamalı. Bunun için ileride işlem eşleştirme, kaynak bilgisi ve mükerrer kayıt tespiti tasarımını yapacağız.
+2. “Ödeme” kavramını biraz daha dikkatli tanımlamalıyız
+Senin ödeme tanımın günlük kullanım açısından doğru; kira, kredi taksidi, abonelik ve kredi kartı ödemeleri bunun içine giriyor. Ancak teknik tasarımda bunların hepsini tek bir gider türüne dönüştürmemeliyiz.
+Olay
+ | Gider kaydı
+ | Borç etkisi
+ | 
+Kredi kartıyla market alışverişi
+ | Market gideri
+ | Kart borcu artar
+ | 
+Kredi kartı borcunu ödeme
+ | İkinci kez market gideri oluşturmaz
+ | Kart borcu azalır
+ | 
+Kira ödemesi
+ | Kira gideri
+ | Varsa ilgili kira borcu kapanır
+ | 
+Kredi taksidi
+ | Faiz ve anapara ayrımı gerektirebilir
+ | Kredi borcu azalır; faiz maliyeti oluşabilir
+ | 
+Abonelik ücreti
+ | Abonelik gideri
+ | Ödeme yöntemine göre ilgili bakiye etkilenir
+ | 
+Arkadaştan borç alma
+ | Gider değildir
+ | Arkadaşa borç artar
+ | 
+Arkadaşa borç geri ödeme
+ | Anapara geri ödemesi tekrar gider sayılmamalı
+ | Borç azalır
+ | 
+Burada önemli bir tasarım kararı var: Bir ödeme, bir giderin ödenmesi olabilir ama her ödeme yeni bir gider değildir. Ayrıca her giderin de hemen ödenmiş olması gerekmez.
+Kredi kartı borcuna faiz eklenmesi, kredinin anapara ve faiz bileşenleri, kısmi ödemeler gibi ayrıntılar teknik tasarımda ayrıca ele alınmalı. Bunları tek bir genel “borç tutarı” alanıyla çözmeye çalışmak ileride sorun çıkarabilir.
+3. Kişiselleştirilmiş bildirimler de ayrı bir sorumluluk olmalı
+Simit örneğin yalnızca bildirim göndermekten ibaret değil. Uygulama, kullanıcının alışkanlıklarını öğrenip bir hatırlatma önerebilir:
+Kullanıcı çoğu gün saat 09.30 civarında kahvaltı harcaması giriyor.
+Bir gün bu kayıt oluşmadı.
+Uygulama, kullanıcının gerçekten harcama yaptığını varsaymak yerine “Bugünkü kahvaltı harcamanı kaydetmek ister misin?” diye soruyor.
+Bu, ileride kişiselleştirme ve bildirim mekanizması olarak ele alınabilir. Harcamaları kaydeden modül ile bildirim zamanını hesaplayan mekanizmanın aynı şey olması gerekmiyor. Kullanıcı alışkanlıkları, bildirim tercihleri ve izinleri de ayrıca tasarlanmalı.
+4. Teknik tasarım dokümanına nasıl ilerleyelim?
+Ben dokümanı şu sırayla hazırlamayı öneriyorum:
+Ürün vizyonu ve kapsam: Neyi çözüyoruz, neyi özellikle yapmıyoruz?
+Finansal alan modeli: Harcama, ödeme, borç, kredi kartı, ekstre, kredi ve abonelik kavramları.
+Modüler monolith mimarisi: İş odaklı modüller, veri sahipliği ve modüller arası iletişim kuralları.
+Mimari karar kayıtları (ADR): Seçenekler, artılar-eksiler, gerekçeler ve ertelenen kararlar.
+Çapraz kesen konular: Güvenlik, veri gizliliği, zamanlanmış işler, bildirimler, yapay zekâ ve hata yönetimi.
+Geliştirme yol haritası: İlk sürüm ve sonraki aşamalar; Codex veya Opus için küçük, doğrulanabilir görevler.
+Henüz veritabanı şeması, sınıf isimleri, API uçları veya teknoloji kütüphaneleri belirlemeyeceğiz. Önce bunları belirlemeyi gerektiren iş kurallarını netleştireceğiz.
+Bir sonraki önemli soru
+Kullanıcı, kredi kartından 10.000 TL nakit avans çektiğinde, ilk sürümde uygulama yalnızca kart borcundaki artışı ve nakit avans işlemini mi göstermeli; yoksa kullanıcının eline geçen 10.000 TL'yi de ayrıca bir nakit bakiyesi olarak takip etmek istiyor muyuz?
+Şu ana kadarki kapsamına göre ben ilk sürümde nakit bakiyesi tutmamayı öneriyorum. Bu, uygulamayı gerçek banka hesabı veya cüzdan takibine dönüştürmeden borç ve gider takibini doğru yapmamızı sağlar.
+6 adımlı ilerleme başlangıç için iyi gibi duruyor. kredi kartından 10.000 TL nakit avans çektiğinde ele 10k para geçmiştir, bunu bir arkadaştan almak yada elde var olan altını bozmak yada karttan çekmek bence aynıdır. nakit avans kayıt etmek ayrı bir işleyiş gibi olsun o ay için gelir bir sonraki ay için borç olarak dönüşsün. bu ay 100k kredi çektiysem 12 taksit yaptıysam totalde 120 bin ödeyeceksem, bu ay gelir hanesine 100k yazsın, sonuçta o para elime geçti, sonraki 12 ay boyunca kredi borcu olarak 10k yazsın. (faiz hesaplamasıyla birlikte daha net sonuçlar veririz burada amacımız ana para faiz oranı kkdf bsm gibi kalem detaylarını tutmak değil total aylık yapılması gereken ödemeyi bilmemiz bize yeter burası muhasebe uygulaması değil)
+Bu açıklama mimari yaklaşımımızı önemli ölçüde netleştiriyor. Özellikle şu prensibi benimsiyorum: Biz muhasebe uygulaması değil, kişinin finansal durumunu anlaşılır biçimde takip etmesini sağlayan bir uygulama yapıyoruz. Dolayısıyla kullanıcıya fayda sağlamayan muhasebe ayrıntılarını modele taşımayacağız; ama finansal sonuçları yanlış hesaplamamızı önleyecek ayrımları koruyacağız.
+Altı adımlı teknik tasarım planını da bu anlayışla ilerletebiliriz. İlk adımda ürün kapsamını ve temel finansal kavramları belirliyoruz; henüz kodlama veya veritabanı şeması aşamasına geçmiyoruz.
+1. Borç alınan para ile gelir arasındaki ayrım
+Senin ürün yaklaşımında bir para kaynağının kullanıcının eline geçmesi, o ayki finansal özetinde gelen para olarak görünmeli. Ancak bunun maaş gibi kazanılmış gelirle aynı anlamda sunulması ileride aylık raporu yanıltabilir.
+Bu nedenle iki ayrı kavram kullanmayı öneriyorum:
+Para girişi: Kullanıcının eline geçen para. Maaş, kredi, nakit avans, arkadaştan alınan borç veya altın bozdurma gibi kaynaklar burada izlenebilir.
+Kazanılmış gelir: Kullanıcının çalışarak, hizmet vererek veya başka bir gelir faaliyetiyle elde ettiği para.
+İlk sürümde bütün kaynakları ayrıntılı muhasebe kategorilerine ayırmak zorunda değiliz. Fakat para girişinin kaynağını tanımak, uygulamanın kullanıcıya doğru bir aylık özet sunmasını sağlar.
+2. Kredi örneğini nasıl modellemeliyiz?
+Kullanıcının 100.000 TL kredi çektiğini ve 12 ay boyunca toplam 120.000 TL geri ödeyeceğini düşünelim.
+Örnek kredi planı
+Bu ay eline geçen
+100.000 TL
+Toplam geri ödeme
+120.000 TL
+Aylık taksit
+10.000 TL
+Geri ödeme süresi
+12 ay
+Örnekte taksitlerin eşit olduğu varsayılmıştır. İlk taksidin hangi ay başlayacağı kredi planında ayrıca belirtilir.
+Uygulamanın kullanıcıya sunacağı mantık şu olur:
+Kredi çekildiği ay 100.000 TL para girişi kaydedilir.
+Kredi için 12 aylık ödeme planı oluşturulur.
+İlgili aylarda yapılması gereken taksitler 10.000 TL olarak gösterilir.
+Ödeme yapıldığında ilgili taksit ödenmiş olarak işaretlenir ve kalan ödeme yükümlülükleri güncellenir.
+Uygulamanın toplam geri ödeme tutarı 120.000 TL ise kullanıcıdan ayrıca faiz, KKDF, BSMV ve anapara dağılımını girmesi beklenmez.
+Burada bir nüans var: 100.000 TL kredi, ekonomik anlamda kazanılmış gelir değildir. Ancak senin istediğin aylık görünümde gelen parayı göstermek mantıklıdır. Bu nedenle teknik tasarımda bunu doğrudan “gelir” tablosuna sıkıştırmak yerine, para girişini kaynağıyla birlikte kaydetmek daha esnek olur. Kullanıcı arayüzünde bu para girişi aylık özetin içinde gösterilebilir.
+Aynı yaklaşım nakit avans ve arkadaşından alınan borç için de geçerli. Altın bozdurmak da eline para geçmesini sağlar; ancak bir varlığın paraya dönüşmesiyle borçlanma aynı kaynak türü değildir. İlk sürümde bunların ayrıntılı muhasebesini yapmayacağız, fakat kaynağın türünü koruyacağız.
+3. Bu kararı mimari açıdan nasıl kaydedelim?
+Önerilen mimari kararı
+Finansal hareketler ile ödeme yükümlülükleri ayrı kavramlardır.
+Para girişi, harcama ve borç geri ödemesi birbirine karıştırılmayacak.
+Kredi ve nakit avans, para girişi oluştururken aynı zamanda gelecekteki ödeme yükümlülüklerini de oluşturabilecek.
+Ödeme planları, kullanıcının bildirdiği toplam geri ödeme ve taksit bilgileri üzerinden takip edilebilecek.
+Ayrıntılı muhasebe hesaplamaları ürünün temel gereksinimi olmayacak.
+Aynı finansal olayın hem manuel girişte hem de gelecekteki ekstre aktarımında iki kez kaydedilmesi engellenecek.
+Bu, teknik tasarım belgesine girecek bir karar taslağıdır; henüz nihai ADR değil.
+Bence sıradaki işimiz bu ilkeleri temel alarak 1. adımın, yani ürün vizyonu ve kapsam dokümanının taslağını çıkarmak. Sonrasında finansal kavramları ve sınırlarını ikinci adımda netleştirip, modüllerin mimarisini bunların üzerine kurabiliriz. Böylece kod ajanlarına yalnızca teknoloji talimatları değil, uygulamanın neden bu şekilde tasarlandığını da aktarabileceğimiz bir teknik tasarım dokümanımız olur.
+kaynağın türünü koruyacağız bu önemli, ticari gelir veya maaş geliri değilse düzenli gelmiyorsa sonraki aylarda bu gelir borç olarak çıkacaktır. Teknik tasarım da bu ürünün amacı nedir, neden bu ürünü tasarladık hedeflerimiz nedir bunları bilmesi gerekiyor. halisünasyonlara karşı uyarılarda eklemek lazım, muhasabe uygulaması değiliz, e-ticaret entegrasyonu değiliz, kişinin banka bilgilerini almıyoruz api bağlantısı yaparak veri okumuyoruz vs. kişinin bize verdiği bilgiler ile çıkarımlar yapıyoruz düzenli harcama girdiği saatler veya günlerde örneğin sadece cuma günleri 20.00 da haftalık tüm harcamasını girebilir, kişisel bildirimler vermek gibi
+Kesinlikle. Teknik tasarım belgemiz yalnızca geliştiricilere nasıl kod yazılacağını anlatmamalı; ürünün neden var olduğunu, hangi problemi çözdüğünü, hangi sınırları koruması gerektiğini ve yapay zekânın nerede durması gerektiğini de anlatmalı.
+Özellikle Codex veya Opus gibi kod ajanlarıyla çalışırken bu çok önemli. Ajanlar bir özelliği uygulayabilir ama ürünün amacını bilmezlerse, talep edilmeyen entegrasyonlar ekleyebilir, gereksiz soyutlamalar kurabilir veya uygulamayı farkında olmadan muhasebe yazılımına dönüştürebilirler.
+Bu nedenle teknik tasarımın en başına bir Ürün Vizyonu, İlkeler ve Mimari Kısıtlar bölümü koymayı öneriyorum.
+1. Ürünün temel amacı
+Kişisel Finans ve Harcama Takibi
+Kullanıcıların kendi girdikleri harcama, para girişi ve borç bilgilerini bir araya getirerek finansal durumlarını anlamalarını, aylık değişimleri takip etmelerini ve kişisel alışkanlıklarına uygun hatırlatmalar almalarını sağlayan bir uygulama.
+Temel değer önerisi: Kullanıcının finansal verilerini yalnızca saklamak değil, bu verilerden anlaşılır ve faydalı sonuçlar üretmek.
+Ürünün başarısını banka hesaplarına bağlanmakla, tüm finansal işlemleri otomatik çekmekle veya muhasebe düzeyinde hesaplamalar yapmakla ölçmeyeceğiz. Kullanıcıya verdiğimiz bilgilerin anlaşılır, tutarlı ve mevcut verilerle desteklenmiş olması daha önemli.
+2. Ürün ilkeleri ve kesin sınırlar
+İlke
+ | Tasarıma etkisi
+ | 
+Kullanıcı verisinin esas alınması
+ | Finansal analizler kullanıcının girdiği veya açıkça sağladığı verilere dayanır.
+ | 
+Kaynak türünün korunması
+ | Maaş, ticari gelir, borç alınan para, nakit avans ve varlık satışı birbirine karıştırılmaz.
+ | 
+Muhasebe ürünü olmamak
+ | Gereksiz muhasebe hesapları ve ayrıntılı vergi bileşenleri temel gereksinim yapılmaz.
+ | 
+Banka bağlantısı kurmamak
+ | Banka API'lerinden otomatik veri çekilmez; gerçek kart numarası, CVV ve banka giriş bilgileri istenmez.
+ | 
+E-ticaret entegrasyonu olmamak
+ | Alışveriş siteleri, siparişler veya ödeme altyapılarıyla entegrasyon ürünün temel kapsamı değildir.
+ | 
+Açıklanabilir sonuçlar
+ | Uygulama, hangi kayıtların ve varsayımların bir sonuca temel oluşturduğunu gösterebilmelidir.
+ | 
+Kullanıcı kontrolü
+ | Yapay zekâ önerileri, tahminleri veya çıkarımları doğrulanmış finansal kayıtların yerine geçmez.
+ | 
+Genişletilebilirlik
+ | Gelir takibi, ekstre analizi ve yeni kişiselleştirme özellikleri mevcut modül sınırlarını bozmadan eklenebilmelidir.
+ | 
+Bu ilkeler, ileride teknik tasarımın ve kod ajanlarının görevlerinin değerlendirilmesinde de kullanılmalı.
+3. Kaynak türleri ve borç ilişkisi
+Burada önemli bir ayrımı teknik tasarıma açıkça yazalım.
+Düzenli kazanılmış gelir: Maaş veya düzenli ticari gelir gibi kaynaklar.
+Borçlanmadan doğan para girişi: Kredi, nakit avans veya arkadaştan borç alma. Para girişine ek olarak geri ödeme yükümlülüğü oluşturur.
+Varlığın paraya çevrilmesi: Örneğin altın bozdurmak. Para girişi vardır ama bu işlem tek başına borç oluşturmaz.
+Diğer para girişleri: Kaynağı ayrıca belirtilmesi gereken, henüz sınıflandırılmamış işlemler.
+Buradaki önemli kural şu: Bir para girişinin tek seferlik olması, otomatik olarak borç olduğu anlamına gelmez. Borç oluşup oluşmayacağını işlemin kaynağı ve niteliği belirlemeli. Böylece aylık rapor hem gerçeğe daha yakın olur hem de yanlış borç üretmez.
+4. Kişiselleştirme ve bildirimler
+Bu özellik ürünün önemli bir parçası olacak; yalnızca sabit saatlerde hatırlatma göndermekten ibaret değil.
+Örneğin:
+Kullanıcı her sabah 09.30 civarında kahvaltı harcaması giriyorsa, bir gün kayıt görünmediğinde hatırlatma önerilebilir.
+Kullanıcı hafta içi veri girmeyip cuma günü saat 20.00'de haftalık harcamalarını topluca giriyorsa, bildirim düzeni buna göre şekillenebilir.
+Kullanıcı belirli günlerde daha sık harcama kaydediyorsa, uygulama bu örüntüyü kullanarak hatırlatma zamanını kişiselleştirebilir.
+Ancak burada da bir sınırımız var: Kayıt girilmemesi, harcama yapılmadığının veya unutulduğunun kanıtı değildir. Uygulama, “Bugünkü harcamanı kaydetmeyi unuttun” diye kesin bir yargıda bulunmak yerine “Bugünkü harcamalarını kaydetmek ister misin?” gibi bir hatırlatma yapmalı. Kullanıcının haftalık kayıt tutma alışkanlığı varsa günlük bildirimlerle rahatsız etmemeli.
+Bu özellik için ileride kullanıcı tercihlerinin, kayıt zamanlarının ve bildirim kurallarının nasıl yönetileceğini ayrıca tasarlayacağız.
+5. Yapay zekâ halüsinasyonlarına karşı kurallar
+Bunu yalnızca bir prompt talimatı olarak bırakmamalıyız. Hem ürün gereksinimlerinde hem teknik mimaride yer almalı.
+Finansal gerçekleri uyduramaz
+Yapay zekâ, kayıtlarda bulunmayan bir harcamayı, borcu, geliri veya faiz oranını gerçekmiş gibi sunamaz.
+Hesaplamalar kontrol edilebilir olmalı
+Toplamlar ve bakiyeler mümkün olduğunca deterministik uygulama mantığıyla hesaplanmalı. Dil modeli hesaplama otoritesi olmamalı.
+Tahmin, çıkarım ve gerçek ayrılmalı
+“Son üç ayda market harcamaların arttı” gibi sonuçlar kayıtlarla desteklenmeli. Veri yetersizse uygulama bunu açıkça belirtmeli.
+Belirsiz veriler gerektiğinde kullanıcıya sorulmalı
+Ekstre veya fiş analizinde belirsiz bir işlem otomatik olarak kesinleştirilmemeli; kullanıcıya doğrulatılmalı.
+İleride finans haberleri ve yatırım bilgilendirmesi eklenirse bu içerikler de kaynakları ve tarihleriyle sunulmalı. Uygulama kişiye özel “şunu al, bunu sat” yönlendirmesi yapmamalı; haber, bilgi ve risklerin anlaşılmasına yardımcı olmalı.
+6. Teknik tasarım dokümanının yapısı
+Önerdiğimiz altı adımlı planı bu ilkelerle sürdürelim:
+Ürün vizyonu, hedefler, kapsam ve kısıtlar
+Finansal kavramlar ve iş kuralları
+Modüler monolith mimarisi ve modül sınırları
+ADR'ler: mimari kararlar ve gerekçeleri
+Güvenlik, veri gizliliği, yapay zekâ, zamanlanmış işler ve bildirimler
+Aşamalı geliştirme yol haritası ve kod ajanları için görev standardı
+Bunların sonunda yalnızca bir mimari diyagramımız değil, ürünün amacını koruyan ve her geliştirme görevinde referans alınabilecek bir tasarım dokümanı setimiz olacak.
+Benim önerim: Bir sonraki aşamada birinci adımı gerçek bir Product Vision & Scope dokümanı olarak tamamlayalım. Amaç, kapsam dışı konular, ürün ilkeleri, kullanıcı senaryoları, yapay zekâ sınırları ve başarı ölçütleri bu belgede yer alsın. Sonra ikinci adıma geçelim; modül tasarımını iş kurallarından türetelim, teknoloji tercihlerinden değil.
+
+Product Vision & Scope dokümanı olarak tamamlayalım ama bunun bir mobil uygulama olacağını unutma. geliştirme aşamasında api testlerinde web browser yada postman kullanabilirim, en son nihai ürün mobile çıkacaktır
+Aşağıdaki belgeyi TalepPazarı'ndan bağımsız, bu yeni projenin temel ürün belgesi olarak hazırlıyorum. Mobil uygulama hedefini en baştan mimari gereksinim olarak ele alıyorum: nihai ürün mobil olacak; API ve tarayıcı üzerinden yapılan testler yalnızca geliştirme ve doğrulama araçlarıdır.
+Belge, ileride Codex veya Opus'a verilecek teknik tasarım ve uygulama görevlerinin de temel referansı olacak. Kesinleşen ürün kararlarını, kapsam dışı konuları ve henüz karara bağlamadığımız noktaları birbirinden ayırıyorum.
+Yazma
+Product Vision & Scope
+Kişisel Finans ve Harcama Takibi Mobil Uygulaması
+Belge türü: Ürün vizyonu ve kapsamı
+Durum: İlk sürüm için temel ürün kararları tanımlandı; bazı iş kuralları sonraki tasarım aşamalarında netleştirilecek.
+Belge amacı: Ürünün neden geliştirildiğini, hangi problemi çözdüğünü, hedeflerini, sınırlarını ve temel davranışlarını tanımlamak. Bu belge, teknik mimari tasarımının ve geliştirme görevlerinin temel referansıdır.
+
+1. Ürün vizyonu
+Kullanıcıların kendi girdikleri finansal veriler üzerinden harcamalarını, borçlarını ve zaman içindeki finansal durumlarını takip etmelerini sağlayan; bu verilerden anlamlı analizler üreten ve kişisel alışkanlıklara uygun hatırlatmalar sunan bir mobil uygulama geliştirmek.
+Uygulamanın temel amacı yalnızca finansal kayıtları saklamak değildir. Kullanıcının parasının nereye gittiğini, borçlarının nasıl değiştiğini, hangi harcamalarının arttığını ve ay sonunda finansal durumunun ne olduğunu anlayabilmesini sağlamaktır.
+Uygulama, finansal verileri kullanıcı adına bankalardan otomatik olarak toplamak yerine kullanıcının sağladığı bilgileri esas alır. Bu verileri düzenler, hesaplar ve anlaşılır sonuçlara dönüştürür.
+Temel ürün yaklaşımı
+Mobil öncelikli bir kullanıcı deneyimi.
+Kullanıcının girdiği finansal veriler üzerinde kontrol sahibi olması.
+Harcama, para girişi, ödeme ve borç kavramlarının birbirinden ayrılması.
+Aylık finansal özetlerin ve kişisel içgörülerin ürünün temel değerlerinden biri olması.
+Yapay zekânın finansal kayıtların yerine geçmemesi; bu kayıtları anlamlandırmaya yardımcı olması.
+Modüler ve genişletilebilir bir teknik mimariyle gelecekteki özelliklerin mevcut yapıyı bozmadan eklenebilmesi.
+2. Çözdüğümüz problem
+İnsanlar gün içinde birçok farklı biçimde para harcar. Kredi kartları, krediler, taksitler, abonelikler, kira ve kişisel borçlar nedeniyle finansal durumlarını tek bir yerde takip etmek zorlaşır.
+Kullanıcılar harcamalarını hatırlamakta, farklı kartlardaki borçlarını anlamakta ve ay sonunda toplam giderlerini değerlendirmekte zorlanabilir. Geleneksel tablolar düzenli manuel çalışma gerektirir. Bir yapay zekâ sohbetine her gün veri girmek ise uzun vadeli kayıt tutma ve geçmiş verileri tutarlı biçimde değerlendirme ihtiyacını tek başına karşılamaz.
+Ürün şu sorunlara çözüm sunmayı hedefler:
+Harcamaların ve harcama detaylarının düzenli kaydedilmesi.
+Farklı kredi kartlarının ve borçların ayrı ayrı takip edilebilmesi.
+Kredi ödemeleri, abonelikler ve diğer tekrarlayan giderlerin izlenmesi.
+Geçmiş aylarla karşılaştırma yapılabilmesi.
+Kullanıcının kendi veri giriş alışkanlıklarına uygun hatırlatmalar alması.
+Zaman içinde biriken finansal verilerin analiz edilerek anlaşılır içgörülere dönüştürülmesi.
+3. Hedef kullanıcı ve kullanım yaklaşımı
+Ürün, kişisel finansal durumunu daha iyi anlamak isteyen bireysel kullanıcılara yöneliktir.
+Kullanıcının profesyonel muhasebe bilgisine sahip olması veya karmaşık finansal tablolarla çalışması beklenmez.
+Uygulama farklı kullanım alışkanlıklarını desteklemelidir:
+Harcamalarını gün içinde tek tek kaydeden kullanıcı.
+Her gün belirli bir saatte harcamalarını kaydeden kullanıcı.
+Haftada bir gün, örneğin cuma akşamı, haftalık harcamalarını topluca giren kullanıcı.
+Harcamalarını farklı kredi kartlarına göre takip eden kullanıcı.
+Kredi, taksit ve aboneliklerini izlemek isteyen kullanıcı.
+Uygulama, tüm kullanıcılara aynı kayıt rutinini dayatmamalıdır.
+4. Platform ve ürün dağıtımı
+4.1. Nihai ürün: mobil uygulama
+Nihai kullanıcı ürünü mobil uygulama olacaktır. Kullanıcıların finansal kayıtlarını oluşturması, düzenlemesi, raporları incelemesi ve bildirimlerle etkileşim kurması öncelikle mobil deneyim üzerinden tasarlanacaktır.
+Mobil platformun teknik tercihi, işletim sistemi kapsamı ve istemci teknolojisi bu belgenin kapsamında henüz kesinleştirilmemiştir.
+4.2. API ve geliştirme araçları
+Uygulamanın iş mantığına ve verilerine erişim sağlayan bir API katmanı, mimari tasarım kapsamında değerlendirilecektir.
+Geliştirme ve test aşamalarında:
+API uçları tarayıcı veya API test araçları üzerinden test edilebilir.
+Postman benzeri araçlarla istekler gönderilebilir.
+Gerektiğinde test veya geliştirme amacıyla tarayıcı üzerinden teknik doğrulamalar yapılabilir.
+Bunlar nihai ürünün web uygulaması olacağı anlamına gelmez. API test arayüzleri, mobil uygulamanın yerine geçen bir kullanıcı ürünü olarak tasarlanmayacaktır.
+Mobil istemci ile sunucu tarafındaki iş mantığı arasındaki sınırlar, ileride farklı istemciler eklenmesini engellemeyecek şekilde tasarlanmalıdır. Bununla birlikte, yalnızca gelecekte web istemcisi geliştirilebilir diye bugünden ayrı bir web ürünü oluşturulması zorunlu değildir.
+5. Ürün kapsamı
+5.1. İlk sürümün hedefleri
+İlk sürüm, harcamaların ve borçların takip edilmesini sağlayan sağlam bir temel oluşturacaktır.
+Harcama takibi
+Kullanıcı harcama kaydı oluşturabilir, düzenleyebilir ve silebilir.
+Harcama tutarı, tarihi, açıklaması ve kategorisi kaydedilebilir.
+Kullanıcı, ihtiyacına göre harcamaya ürün veya hizmet detayları ekleyebilir.
+Kullanıcı harcamayı hangi kayıtlı kredi kartıyla yaptığını belirtebilir.
+Harcamalar tarih, kategori ve kart gibi anlamlı ölçütlerle görüntülenebilir.
+Kullanıcı tarafından tanımlanan kredi kartları
+Kullanıcı bir kart kaydı oluşturabilir.
+Kartın banka adı, görünen adı ve uygun logo veya görseli tanımlanabilir.
+Örneğin kullanıcı, “Akbank Axess” adlı bir kart kaydedebilir.
+Birden fazla kart tanımlanabilir ve harcama kaydedilirken ilgili kart seçilebilir.
+Gerçek kart numarası, CVV, son kullanma tarihi veya banka giriş bilgileri istenmez ve saklanmaz.
+Kart kaydı, ödeme altyapısı veya banka hesabı bağlantısı değildir. Uygulama, kullanıcı tarafından tanımlanan kartı harcamaları gruplandırmak ve kart borcunu takip etmek için kullanır.
+Borç takibi
+Kredi kartı borçları ve devreden bakiyeler izlenebilir.
+Kullanıcının başka bir kişiden aldığı borçlar kaydedilebilir.
+Kredi ve nakit avans gibi borçlanma kaynakları izlenebilir.
+Borcun kaynağı ve varsa geri ödeme planı korunur.
+Borç bakiyesi ile harcama toplamı birbirine karıştırılmaz.
+Ödemeler ve tekrarlayan giderler
+Kira, kredi taksidi, kredi kartı borcu ve abonelik ödemeleri gibi farklı ödeme türleri takip edilebilir.
+Bir ödeme planlanmış, yapılmış, kısmen yapılmış veya gecikmiş olabilir; bu durumların kesin iş kuralları teknik tasarım aşamasında belirlenecektir.
+Abonelikler ve krediler kendi yaşam döngülerine göre takip edilir.
+Kullanıcı bir aboneliği iptal edebilir veya bir kredi tamamlandığında ilgili kaydı kapatabilir.
+Finansal özet
+İlk sürümde harcamalar, yapılan ödemeler ve borçların durumu görüntülenebilir. Gelir takibi henüz tamamlanmadıysa uygulama, gelir-gider farkını tam finansal sonuç gibi sunmamalıdır.
+5.2. Sonraki aşamalarda eklenecek özellikler
+Aşağıdaki özellikler ürünün gelecekteki yönünü belirler ancak ilk sürümün tamamlanması için zorunlu değildir:
+Kullanıcı gelirlerinin ve para girişlerinin daha kapsamlı takibi.
+Gelir-gider karşılaştırması ve aylık finansal kapanış raporu.
+Banka ekstresi dosyalarından işlemlerin çıkarılması ve kullanıcı onayıyla kaydedilmesi.
+Fişlerden harcama ve ürün detaylarının çıkarılması.
+Harcama alışkanlıklarının analiz edilmesi.
+Kullanıcının veri giriş rutinine göre kişiselleştirilmiş bildirimler.
+Finans haberlerinin kaynaklarıyla sunulması ve genel finansal bilgilendirme.
+Kullanıcının kendi finansal verilerinden hareketle daha gelişmiş analiz ve içgörüler oluşturulması.
+Bu özelliklerin eklenmesi, ilk sürümde gereksiz entegrasyonlar veya karmaşık altyapılar kurulmasını gerektirmemelidir. Ancak mimari, bu özelliklerin sonradan eklenmesini engellememelidir.
+6. Ürünün kapsamı dışında kalan konular
+Aşağıdaki sınırlar ürünün amaç dışına kaymasını önlemek için açıkça tanımlanmıştır.
+6.1. Muhasebe yazılımı değiliz
+Ürün, işletmeler için profesyonel muhasebe veya vergi hesaplama yazılımı değildir.
+Resmî muhasebe defterleri tutmak temel hedef değildir.
+Vergi beyannamesi hazırlamak temel hedef değildir.
+Kredi maliyetlerini muhasebe düzeyinde bileşenlerine ayırmak zorunlu değildir.
+Ana para, faiz, KKDF ve BSMV gibi ayrıntılar, kullanıcının finansal durumunu takip etmek için gerekli olmadığı sürece ayrıntılı muhasebe modeli olarak zorunlu tutulmayacaktır.
+Kullanıcıdan mümkün olduğunda toplam geri ödeme tutarı, taksit sayısı, taksit tutarı ve ilgili tarihler gibi anlaşılır bilgiler alınacaktır.
+6.2. Bankacılık uygulaması değiliz
+Banka hesaplarına bağlanarak otomatik veri çekilmeyecektir.
+Banka API'leri üzerinden kullanıcının finansal kayıtları otomatik olarak okunmayacaktır.
+Kullanıcıdan internet bankacılığı kullanıcı adı veya şifresi istenmeyecektir.
+Gerçek kredi kartı numarası veya CVV saklanmayacaktır.
+İleride kullanıcıların kendi ekstre dosyalarını yüklemesi ayrı bir özelliktir; bu, banka hesabına bağlanmak veya bankadan otomatik veri çekmek anlamına gelmez.
+6.3. E-ticaret veya ödeme altyapısı değiliz
+Ürün, çevrim içi mağazalarla sipariş entegrasyonu sağlamak için tasarlanmamaktadır.
+Kullanıcının alışverişlerini e-ticaret platformlarından otomatik olarak almak temel hedef değildir.
+Platform üzerinden ödeme almak veya satıcı ödemelerini gerçekleştirmek ürünün amacı değildir.
+6.4. Yatırım danışmanlığı veya alım-satım platformu değiliz
+Gelecekte finans haberleri ve genel bilgilendirici içerikler sunulabilir. Ancak ürünün amacı kullanıcıya belirli bir finansal varlığı almasını veya satmasını söylemek değildir.
+İçerikler bilgilendirme amacı taşır; kaynakları ve tarihleri mümkün olduğunca açıkça belirtilir. Gelecekteki yatırım içeriklerinin kapsamı ve mevzuata uygunluğu ayrıca değerlendirilmelidir.
+7. Temel finansal kavramlar
+Teknik tasarımda aşağıdaki kavramlar birbirinden ayrılmalıdır.
+7.1. Harcama
+Kullanıcının bir ürün veya hizmet için yaptığı harcama kaydıdır.
+Örnekler: market alışverişi, kahvaltı, ulaşım, giyim.
+Harcama, paranın hangi amaçla kullanıldığını ifade eder. Harcamanın hangi kartla yapıldığı veya hangi tarihte ödendiği ayrı bilgiler olabilir.
+7.2. Ödeme
+Kullanıcının bir borcu, faturayı, kira giderini, taksidi, aboneliği veya başka bir ödeme yükümlülüğünü yerine getirmek için yaptığı işlemdir.
+Her ödeme yeni bir gider değildir. Örneğin kredi kartıyla yapılmış market alışverişi daha önce gider olarak kaydedilmişse kart borcunun ödenmesi aynı alışverişi ikinci kez gider olarak saymamalıdır.
+7.3. Borç
+Kullanıcının başka bir kişi veya kuruma geri ödemesi gereken tutardır.
+Borç, kaynağına, güncel bakiyesine ve varsa geri ödeme planına göre takip edilir. Bir borcun alınması ile geri ödenmesi birbirinden farklı olaylardır.
+7.4. Para girişi ve kaynağı
+Kullanıcının eline geçen para, kaynağıyla birlikte değerlendirilmelidir.
+Örnek kaynaklar:
+Maaş veya ticari gelir.
+Kredi kullanımı.
+Kredi kartından nakit avans.
+Bir kişiden borç alma.
+Altın veya başka bir varlığı paraya çevirme.
+Henüz sınıflandırılmamış diğer para girişleri.
+Her para girişi kazanılmış gelir değildir. Borçlanma kaynaklı para girişleri geri ödeme yükümlülüğü oluşturabilir. Bir varlığın satılması ise tek başına borç oluşturmaz.
+Uygulama, kaynak türünü korumalı; kullanıcıya gösterilen aylık raporlarda para girişlerini ve kazanılmış geliri gerektiğinde ayrı gösterebilmelidir.
+7.5. Kredi kartı ve ekstre
+Kullanıcının tanımladığı kredi kartı, harcamaları ve kart borcunu takip etmek için kullanılan bir kayıttır.
+Ekstre, belirli bir dönemin işlemlerini ve hesaplanan borcunu gösterir. Ekstre borcu, yapılan ödemeler ve sonraki döneme devreden borç birbirinden ayrılmalıdır.
+Kartla yapılan bir harcama, kart borcunu artırabilir. Kart borcuna yapılan ödeme ise borcu azaltır; aynı harcamayı ikinci kez gider olarak oluşturmaz.
+7.6. Kredi ve geri ödeme planı
+Kredi kullanımı bir para girişi oluşturabilir ve aynı zamanda gelecekteki ödeme yükümlülüklerini meydana getirir.
+Örneğin kullanıcı 100.000 TL kredi çekip toplam 120.000 TL geri ödeyecekse, uygulama 100.000 TL para girişini ve belirtilen geri ödeme planını takip edebilmelidir. Her taksidin anapara ve vergi bileşenlerini ayrıntılı olarak hesaplamak ilk ürün hedefi değildir.
+Taksit tarihleri, ödenen tutarlar ve kalan ödeme yükümlülükleri tutarlı biçimde takip edilmelidir.
+7.7. Abonelik
+Abonelik, belirli aralıklarla ücret doğurabilen ve iptal edilebilen bir hizmet kaydıdır.
+Aboneliğin aktif olması, her ödemenin kesinlikle gerçekleştiği anlamına gelmez. İptal edilmesi geçmiş ödeme kayıtlarını silmez.
+8. Aylık finansal kapanış ve raporlama
+Ürünün ay sonu özeti, kullanıcının finansal durumunu anlaşılır biçimde görmesini sağlayan temel özelliklerden biri olacaktır.
+Kullanıcının hedeflediği deneyim, günlük finansal hareketlerin ay sonunda bir Z raporu gibi özetlenmesidir.
+Gelir takibi eklendiğinde örneğin:
+Aylık para girişleri.
+Kazanılmış gelirler.
+Toplam harcamalar.
+Yapılan borç ve kart ödemeleri.
+Kredi kartı ve diğer borçların dönem sonundaki durumu.
+Önceki ayla karşılaştırma.
+Harcama kategorilerindeki artış ve azalışlar.
+Yaklaşan taksitler ve abonelik ödemeleri.
+gösterilebilir.
+Ancak aylık para girişi eksi gider sonucu, otomatik olarak kullanıcının banka bakiyesi veya eldeki nakdi anlamına gelmez. Uygulama banka hesaplarını izlemediği için rapor, yalnızca kapsamındaki kayıtların desteklediği sonuçları göstermelidir.
+Ayrıca kredi kartı borcu ödemesi gibi finansal hareketler ikinci kez gider sayılmamalı; borçlanma kaynaklı para girişleri de kazanılmış gelir gibi değerlendirilmemelidir.
+9. Kişiselleştirme ve bildirimler
+Kullanıcıların kayıt alışkanlıkları birbirinden farklıdır. Uygulama, kişiselleştirilmiş hatırlatmalar için kullanıcının tercihlerini ve geçmiş kayıt zamanlarını değerlendirebilir.
+Örnekler:
+Kullanıcı çoğu gün saat 09.30 civarında kahvaltı harcaması kaydediyorsa o gün kayıt olmadığında hatırlatma sunulabilir.
+Kullanıcı harcamalarını yalnızca cuma akşamı topluca giriyorsa bildirimler bu rutine uygun biçimde düzenlenebilir.
+Kullanıcı belirli bir saatte veya günde hatırlatma almak istemediğini belirtebilir.
+Bildirimler, kayıt yapılmamış olmasından hareketle harcama yapılmadığını veya kullanıcının kesinlikle bir işlemi unuttuğunu varsaymamalıdır.
+Uygulama, kesin yargılar yerine kullanıcıya kayıt yapmayı hatırlatan sorular sunmalıdır. Bildirim sıklığı ve zamanlaması kullanıcı kontrolüne açık olmalı; gereksiz bildirimler engellenmelidir.
+10. Yapay zekâ ve halüsinasyonlara karşı ürün ilkeleri
+Yapay zekâ, kullanıcının sağladığı finansal verileri sınıflandırmak, özetlemek, yorumlamak ve kullanıcıya yararlı içgörüler sunmak için kullanılabilir.
+Ancak finansal verilerin doğruluğu yapay zekânın tahminlerine bırakılmamalıdır.
+Temel kurallar:
+Kayıt uydurmama: Yapay zekâ, kullanıcı tarafından sağlanmayan bir harcama, gelir, ödeme, borç veya faiz oranını gerçekmiş gibi sunamaz.
+Hesaplama otoritesi olmama: Toplamlar, borç bakiyeleri ve ödeme planlarının temel hesaplamaları uygulamanın doğrulanabilir iş kuralları tarafından yapılmalıdır.
+Kaynak gösterme: Finansal analizlerde mümkün olduğunca hangi kayıtların veya dönemlerin kullanıldığı belirtilebilmelidir.
+Belirsizliği belirtme: Veri eksik veya çelişkiliyse sonuç kesinmiş gibi sunulmamalıdır.
+Kullanıcı onayı: Fiş ve ekstre gibi belgelerden çıkarılan belirsiz işlemler, gerekli durumlarda kullanıcı tarafından doğrulanmalıdır.
+Gerçek ve tahmini ayırma: Geleceğe yönelik tahminler, mevcut kayıtlar ve varsayımlar üzerinden üretilmiş tahminler olarak belirtilmelidir.
+Yapay zekâ hatalarına karşı koruma: Modelin ürettiği sonuçlar doğrulama kurallarından geçirilmeli; finansal kayıtlarda kontrolsüz değişiklik yapılması engellenmelidir.
+Yapay zekâ tarafından üretilen bir yorum, kaydedilmiş finansal gerçeklerin yerine geçmez.
+11. Veri gizliliği ve güvenlik yaklaşımı
+Ürün, finansal veriler içerdiği için gizlilik ve güvenlik temel tasarım gereksinimleridir.
+Gerçek kredi kartı numarası ve CVV saklanmaz.
+Banka kullanıcı bilgileri veya şifreleri istenmez.
+Banka API'leriyle hesaplara bağlanılmaz.
+Kullanıcının sağladığı finansal veriler amaçları dışında kullanılmamalıdır.
+Kimlik doğrulama, yetkilendirme, veri koruma, yedekleme ve silme süreçleri teknik tasarım aşamasında ele alınmalıdır.
+Mobil istemciye güvenilmeyen bir istemci olarak yaklaşılmalı; kritik doğrulamalar sunucu tarafında da uygulanmalıdır.
+Gelecekte yüklenen ekstre ve fiş dosyaları hassas bilgiler içerebileceğinden dosya saklama, erişim ve silme kuralları ayrıca tasarlanmalıdır.
+Kart adı ve logosu gibi kullanıcı tarafından tanımlanan bilgiler, gerçek kart verileriyle karıştırılmamalıdır.
+12. Mimari tasarıma yön veren ilkeler
+Bu belgeye göre teknik mimari aşağıdaki ürün ihtiyaçlarını desteklemelidir:
+Tek uygulama ve tek dağıtım birimi içinde modüler monolith yaklaşımı.
+İş odaklı modüller ve açık sorumluluk sınırları.
+Her modülün kendi iş kurallarını ve veri sahipliğini koruması.
+Modüller arasında kontrollü ve açık iletişim.
+Mobil istemcinin sunucu tarafındaki iş kurallarından ayrılması.
+Finansal hesaplamaların yapay zekâdan bağımsız ve test edilebilir olması.
+Zamanlanmış işler ve bildirimlerin sonradan eklenebilmesi.
+Gelecekte ekstre/fiş işleme ve gelir takibi gibi yeteneklerin mevcut yapıyı bozmadan eklenebilmesi.
+Gereksiz soyutlama, tasarım deseni veya altyapı bağımlılıklarından kaçınılması.
+Belirli bir kütüphane, mimari desen veya teknoloji, yalnızca popüler olduğu için zorunlu hale getirilmemelidir. Bu tür seçimler, iş gereksinimleri ve teknik tasarım gerekçeleriyle açıklanmalıdır.
+13. Ürün başarısını değerlendirme
+Başarı yalnızca uygulamaya kaç özellik eklendiğiyle ölçülmemelidir.
+İleride ölçülebilecek göstergeler:
+Kullanıcıların harcama kayıtlarını ne kadar düzenli oluşturduğu.
+Aylık raporların kullanıcıya fayda sağlayıp sağlamadığı.
+Harcamaların yanlış sınıflandırılma ve mükerrer kaydedilme oranı.
+Borç ve ödeme durumlarının ne kadar tutarlı gösterildiği.
+Bildirimlerin kullanıcı tarafından faydalı bulunması ve gereksiz bildirimlerin azaltılması.
+Yapay zekâ tarafından üretilen çıkarımların doğruluğu ve kullanıcı tarafından düzeltilme oranı.
+Kullanıcının geçmiş ayları karşılaştırarak finansal durumunu daha iyi anlayabilmesi.
+Ölçüm yöntemi, gizlilik gereksinimleri ve hedef değerler ayrıca belirlenecektir. Bu aşamada doğrulanmamış sayısal hedefler tanımlanmamıştır.
+14. Açık kalan kararlar
+Bu belge aşağıdaki konuları bilerek kesinleştirmemektedir:
+Mobil istemcinin teknoloji ve işletim sistemi tercihi.
+Sunucu tarafı teknoloji ve veritabanı seçimi.
+Nihai modül listesi ve modüller arası iletişim mekanizmaları.
+Finansal kavramların ayrıntılı veri modeli.
+Gelirlerin ilk sürümde hangi kapsamda yer alacağı.
+Borç ve ödeme planlarının ayrıntılı durum geçişleri.
+Bildirim tercihleri ve kişiselleştirme algoritmaları.
+Ekstre/fiş dosyalarının işlenmesi ve kullanıcı onay akışları.
+Finans haberlerinin kaynakları ve yayın politikası.
+Bu kararlar, sonraki tasarım adımlarında gerekçeleriyle ele alınacaktır. Açık bir kararın varlığı, kod ajanının kendi varsayımını kesin ürün kararı olarak uygulayabileceği anlamına gelmez.
+15. Geliştirme ajanları için bağlayıcı talimatlar
+Bu belgeyi kullanan Codex, Opus veya başka bir geliştirme ajanı:
+Ürünü muhasebe, bankacılık, e-ticaret veya yatırım alım-satım platformuna dönüştürecek kapsam genişletmeleri yapmamalıdır.
+Gerçek kart bilgileri veya banka giriş bilgileri saklayacak özellikler eklememelidir.
+Ürün gereksinimlerinde bulunmayan banka API entegrasyonlarını varsayılan olarak eklememelidir.
+Harcama, ödeme, para girişi ve borç kavramlarını tek bir genel işlem türüne indirgememelidir.
+Finansal hesaplamaları yalnızca yapay zekâ modeline bırakmamalıdır.
+Açık mimari kararları kendi varsayımlarıyla kesinleştirmemelidir.
+Yeni bir teknik bağımlılık veya mimari desen önerdiğinde gerekçesini belirtmelidir.
+Mobil uygulamanın nihai ürün olduğunu ve tarayıcı/Postman testlerinin geliştirme araçları olduğunu gözetmelidir.
+Gelecekteki özellikler için bugünden gereksiz altyapı oluşturmamalı, fakat mevcut mimariyi bu özelliklere kapatacak tasarımlardan da kaçınmalıdır.
+Belirsizlik veya çelişki tespit ettiğinde uygulamaya geçmeden önce ilgili gereksinimi veya mimari kararı açıklığa kavuşturmalıdır.
+
+16. Sonuç
+Bu ürünün amacı, kullanıcının kendi sağladığı finansal bilgiler üzerinden daha bilinçli ve anlaşılır bir kişisel finans takibi yapmasını sağlamaktır.
+Ürün, kullanıcının finansal gerçeklerini uydurmaz; bankacılık entegrasyonlarına bağımlı değildir; muhasebe karmaşıklığını gereksiz yere üstlenmez. Harcama, para girişi, ödeme ve borç kavramlarını doğru ayırarak kullanıcıya güvenilir özetler ve anlamlı içgörüler sunmayı hedefler.
+Teknik mimarinin görevi yalnızca bugünkü özellikleri çalıştırmak değil, ürünün bu amacını koruyarak gelecekte büyümesine imkân vermektir.
+Bu belge, sonraki aşamada hazırlanacak finansal alan modeli, mimari tasarım ve mimari karar kayıtları için temel referans olarak kullanılacaktır.
+Sonraki adım
+Bu belgeyi 1. adımın taslağı olarak kabul edelim. Özellikle bir noktayı sonraki adıma taşımak istiyorum: “gelir” kelimesini ürün arayüzünde nasıl kullanacağımız ile teknik modeldeki “para girişi” kavramını ayırdık. Böylece kredi veya nakit avans kullanıldığında kullanıcı eline geçen parayı görebilir, fakat uygulama bunu yanlışlıkla kazanılmış gelir olarak yorumlamaz.
+Bir sonraki adımda Finansal Alan Modeli ve İş Kuralları dokümanını hazırlayabiliriz. Burada harcama, ödeme, borç, para girişi, kredi kartı ekstresi, nakit avans, kredi taksidi ve abonelik arasındaki ilişkileri kesinleştireceğiz. Bu netleşmeden modül sınırlarını veya veritabanı şemasını kesinleştirmeyeceğiz.
+1. adımın taslağını beğendim güzel bir başlangıç oldu. öncelikli olarak Finansal Alan Modelini çıkaralım ne yapacağımızı bilirsek sonrasında iş kurallarını yazarız
+Bence de doğru sıra bu. İş kurallarını yazmadan önce finansal alanda hangi kavramların bulunduğunu, bunların birbirinden nasıl ayrıldığını ve aralarında nasıl ilişkiler kurulacağını netleştirelim. Böylece henüz veritabanı tablolarına, sınıflara veya modüllere karar vermeden uygulamanın gerçekte neyi modellemesi gerektiğini anlayabiliriz.
+Finansal Alan Modeli belgesinde üç şeyi özellikle ayıracağım:
+Kavramlar: Uygulamada takip edeceğimiz finansal şeyler.
+İlişkiler: Bir kavramın diğeriyle nasıl bağlantılı olduğu.
+Açık noktalar: Henüz karar vermediğimiz, iş kurallarını yazarken netleştireceğimiz konular.
+Önemli bir ilke de şu olacak: Bir finansal olay kullanıcının hayatında birden fazla sonuç doğurabilir; ancak aynı para hareketini raporlarda yanlışlıkla iki kez gelir veya gider saymamalıyız.
+Aşağıdaki belgeyi Finansal Alan Modeli — Taslak v0.1 olarak hazırladım. Bu sürümün amacı nihai kararları vermek değil; uygulamanın finansal dünyasını doğru temsil edip etmediğimizi kontrol etmek. Özellikle kredi kartı, nakit avans, borç ve ödeme arasındaki ilişkileri ayrı ayrı ele aldım.
+Yazma
+Finansal Alan Modeli
+Kişisel Finans ve Harcama Takibi Mobil Uygulaması
+Belge sürümü: 0.1 — Taslak
+Durum: Kavramları belirleme ve doğrulama aşamasında
+Bağlı belge: Product Vision & Scope
+Amaç: Uygulamanın takip edeceği finansal kavramları, bu kavramların ilişkilerini ve henüz karara bağlanmamış alanları tanımlamak.
+1. Modelleme yaklaşımı
+Bu belge, uygulamanın finansal alanını tanımlar. Henüz veritabanı şeması, sınıflar, API uç noktaları veya modül sınırları belirlemez.
+Modelin temel ilkeleri:
+Birbirine benzeyen finansal kavramlar, iş anlamları farklıysa ayrı tutulur.
+Bir finansal olayın nakit akışı, gelir-gider etkisi ve borç etkisi birbirinden ayrılır.
+Aynı ekonomik olay, raporlarda mükerrer gelir veya gider olarak sayılmaz.
+Kullanıcının manuel olarak kaydettiği bilgiler, uygulamanın hesapladığı sonuçlar ve yapay zekânın ürettiği yorumlar birbirine karıştırılmaz.
+Kullanıcı bir finansal yükümlülüğü henüz ödememiş olabilir. Ödeme yapılmamış olması, borcun veya yükümlülüğün yok olduğu anlamına gelmez.
+Kullanıcının uygulamaya veri girmemesi, ilgili finansal olayın gerçekleşmediğini kanıtlamaz.
+2. Temel finansal kavramlar
+2.1. Finansal olay
+Kullanıcının finansal durumunu etkileyen veya takip etmek istediği bir olaydır.
+Örnekler:
+Market alışverişi yapmak
+Maaş almak
+Arkadaşından borç para almak
+Kredi kullanmak
+Kredi kartı ekstresi oluşması
+Kredi kartı borcunun bir kısmını ödemek
+Kredi taksiti ödemek
+Bir aboneliğin ücretlendirilmesi
+Önemli ayrım: Finansal olay, kullanıcının kaydettiği tek bir hareketle her zaman bire bir örtüşmeyebilir. Örneğin kredi kullanımı, para girişi ve gelecekteki geri ödeme yükümlülüğü doğurabilir. Bunların ilişkili olması gerekir; ancak tek bir gelir kaydı gibi ele alınmaları doğru olmaz.
+2.2. Harcama / gider
+Kullanıcının mal veya hizmet tüketmesi sonucunda oluşan ekonomik giderdir.
+Örnekler:
+Market alışverişi
+Kahvaltı
+Ulaşım
+Elektrik faturası
+Dijital abonelik ücreti
+Bir harcamanın şu bilgileri olabilir:
+Tutar ve para birimi
+Tarih
+Kategori
+Açıklama
+Ödeme yöntemi
+İlişkili kredi kartı veya başka bir ödeme kaynağı
+Varsa ilişkili abonelik ya da başka bir finansal kayıt
+Burada harcamanın ne olduğu ile hangi araç kullanılarak ödendiği farklı kavramlardır. Örneğin market alışverişi harcamadır; kredi kartı ise bu harcamanın yapıldığı ödeme aracıdır.
+2.3. Para girişi
+Kullanıcının eline veya kullanımına para geçmesi olayıdır. Tek başına, bu paranın gelir olduğu ya da kullanıcının servetinin aynı miktarda arttığı anlamına gelmez.
+Para girişinin olası kaynakları:
+Maaş veya ticari kazanç
+Kredi
+Kredi kartından nakit avans
+Bir arkadaşından alınan borç
+Altın veya başka bir varlığın satılması
+Kaynağı henüz bilinmeyen para girişi
+Para girişinde kaynağın korunması önemlidir. Çünkü aynı tutardaki iki para girişi farklı anlamlara gelebilir.
+Örneğin:
+100.000 TL maaş veya ticari kazanç, kazanılmış gelir olabilir.
+100.000 TL kredi, para girişiyle birlikte geri ödeme yükümlülüğü doğurur.
+100.000 TL değerindeki altının satılması para girişi oluşturur; fakat kendiliğinden borç oluşturmaz ve mutlaka kazanılmış gelir olarak değerlendirilmemelidir.
+Bu nedenle para girişi ve gelir aynı kavram olarak modellenmemelidir.
+2.4. Gelir
+Kullanıcının kazanç niteliğindeki finansal girişlerini ifade eder.
+İlk sürümün odağı ağırlıklı olarak harcama ve borç takibi olsa da model, ileride gelir takibinin eklenmesine engel olmamalıdır.
+Gelir raporlamasında şu ayrım korunmalıdır:
+Kazanılmış gelir
+Diğer para girişleri
+Kaynağı veya niteliği henüz belirlenmemiş girişler
+Bir kredi tutarı, hesaba veya kullanıcının kullanımına para sağladığı için doğrudan kazanılmış gelir sayılmamalıdır.
+2.5. Borç
+Kullanıcının bir kişiye veya kuruma karşı yerine getirmesi gereken finansal yükümlülüktür.
+Örnekler:
+Kredi borcu
+Kredi kartı borcu
+Arkadaştan alınan borç
+Nakit avans borcu
+Borç, tek bir ödeme kaydından farklıdır. Bir borç zaman içinde artabilir, azalabilir, tamamen kapatılabilir veya yeniden yapılandırılabilir.
+Borç kavramı için takip edilmesi gerekebilecek bilgiler:
+Borcun kaynağı
+İlk tutar
+Güncel kalan tutar
+İlgili kişi veya kurum
+Oluşma tarihi
+Varsa vade veya ödeme planı
+Borcun hangi ödemelerle azaltıldığı
+Varsa faiz ve ücret bilgileri
+Bunların hepsinin ilk sürümde zorunlu alanlar olması gerekmiyor. Ayrıntı düzeyi, ürünün kullanım amacına göre belirlenecek.
+2.6. Ödeme
+Bir borcu, faturayı, harcamayı veya başka bir finansal yükümlülüğü yerine getirmek için yapılan işlemdir.
+Ödeme, harcama ve borçla ilişkili olabilir; ancak onlarla aynı şey değildir.
+Örnekler:
+Kredi kartı ekstresinin ödenmesi
+Kredi taksidinin ödenmesi
+Kira ödenmesi
+Abonelik ücretinin ödenmesi
+Önemli örnek: Kullanıcı daha önce kredi kartıyla 10.000 TL'lik market alışverişi yaptıysa, kart borcunu daha sonra ödemesi ikinci bir 10.000 TL market harcaması oluşturmaz. Ödeme, kart borcunu azaltır.
+Kira gibi bazı durumlarda ise ödeme ile gider aynı dönemde ilişkilendirilebilir. Bu ilişkinin nasıl kurulacağı, iş kurallarında netleştirilecektir.
+2.7. Ödeme planı ve taksit
+Bir borcun veya finansman işleminin gelecekteki ödeme düzenini ifade eder.
+Örnek:
+Kullanıcı 100.000 TL kredi alır.
+Toplam geri ödeme 120.000 TL'dir.
+12 taksit bulunur.
+Her taksit 10.000 TL'dir.
+Modelde kredi kullanımı, para girişi ve geri ödeme planı birbirinden ayrılmalıdır. Kullanıcının aldığı 100.000 TL, kazanılmış gelir gibi gösterilmemelidir. Gelecekteki 12 taksit ise gerçekleşmiş 12 ödeme değil, planlanmış ödeme yükümlülükleridir.
+Planlanan ödeme ile gerçekleşen ödeme ayrı kavramlar olarak ele alınmalıdır.
+3. Kredi kartı alanı
+3.1. Kredi kartı kaydı
+Kullanıcının kendi takibi için tanımladığı karttır.
+Örnek:
+Banka: Akbank
+Kart adı: Axess
+Kullanıcının verdiği kısa ad veya açıklama
+İsteğe bağlı logo veya görsel
+Bu kayıt, bankayla canlı bağlantı kurulduğu veya gerçek kart bilgilerinin saklandığı anlamına gelmez. Uygulamanın gerçek kart numarası, CVV ya da banka giriş bilgilerini toplaması bu modelin kapsamında değildir.
+3.2. Kart işlemi
+Kullanıcının karta ait olarak kaydettiği harcama, iade, nakit avans veya benzeri bir işlemdir.
+Kart işleminin niteliği önemlidir:
+Mal veya hizmet alışverişi, gider doğurabilir.
+Nakit avans, kullanıcıya para girişi sağlarken karta bağlı borç doğurabilir.
+İade, daha önceki bir harcamayı kısmen veya tamamen düzeltebilir.
+Kart borcunun ödenmesi ise kartın alışveriş işlemiyle aynı türden değildir.
+Kart hareketlerinin tamamını “harcama” olarak sınıflandırmak doğru olmaz.
+3.3. Ekstre dönemi ve ekstre
+Ekstre, belirli bir dönem için karta yansıtılan işlemleri ve ödeme durumunu takip etmeye yarayan kavramdır.
+İzlenebilecek bilgiler:
+Ekstre dönemi
+Ekstre tarihi
+Son ödeme tarihi
+Ekstre tutarı
+Yapılan ödemeler
+Kalan tutar
+Varsa devreden borç
+Ekstre tutarı, tek başına yeni bir gider değildir. Ekstre, daha önce kaydedilmiş kart işlemlerinin belirli bir dönemdeki finansal görünümünü sunar.
+İlk sürümde ekstre bilgileri kullanıcı tarafından manuel girilebilir. İleride ekstre belgesi yükleme ve belge üzerinden veri çıkarma ayrı bir özellik olarak değerlendirilebilir.
+3.4. Kart borcu
+Kart işlemleri ve ödemeler sonucunda oluşan, zaman içinde değişebilen borçtur.
+Örnek:
+Ekstre tutarı: 100.000 TL
+Yapılan ödeme: 50.000 TL
+Kalan tutar: 50.000 TL
+Bu örnekte kalan tutar borç durumudur; yeni bir 50.000 TL gider değildir.
+Faiz, vergi ve ücretlerin hesaplanması ya da manuel girilmesi konusu henüz kesinleşmemiştir. İlk aşamada kullanıcıya kalan borcu ve takip ettiği ödeme tutarlarını göstermek, kapsamı gereksiz yere muhasebe sistemine dönüştürmekten daha önemlidir.
+4. Nakit avans
+Nakit avans, özel olarak ele alınması gereken bir finansal olaydır.
+Örnek:
+Kullanıcı kredi kartından 10.000 TL nakit avans alır.
+Kullanımına 10.000 TL para geçer.
+Kartına bağlı bir borç oluşur.
+İlgili tutar kart işlemlerinde ve borç takibinde görünür.
+Sonraki dönemde ödeme yapılırsa borç azalır.
+Burada aynı olayın birden fazla görünümü vardır:
+Para girişi: Kullanıcıya para geçmiştir.
+Borç: Geri ödenmesi gereken tutar oluşmuştur.
+Kart hareketi: İşlem kredi kartıyla ilişkilidir.
+Ödeme: Daha sonra borcu azaltabilir.
+Bunlar birbiriyle ilişkili olmalı, ancak raporlarda birbirinden bağımsız dört yeni gider veya gelir gibi toplanmamalıdır.
+Nakit avans için ayrıca bağımsız bir borç kaydı mı oluşturulacağı, yoksa kart borcu içindeki ayrı bir borç bileşeni olarak mı takip edileceği henüz açık bir modelleme kararıdır. Her iki yaklaşımda da aynı borcun iki kez sayılmaması gerekir.
+5. Abonelik
+Abonelik, zaman içinde tekrar eden veya dönemsel ücret doğurabilen bir hizmet ilişkisidir.
+Örnekler:
+Müzik veya video hizmeti
+Bulut depolama
+Yazılım aboneliği
+Spor salonu üyeliği
+Abonelik ile gerçekleşmiş gider aynı şey değildir. Abonelik bir hizmet ilişkisidir; her ücretlendirme gerçekleştiğinde ilgili döneme ait gider veya borç etkisi ortaya çıkabilir.
+Abonelik için ileride şu bilgilerin takibi gerekebilir:
+Hizmet adı
+Tutar ve para birimi
+Ücretlendirme sıklığı
+Başlangıç ve varsa bitiş tarihi
+İptal durumu
+Fiyat değişiklikleri
+Ödeme yöntemi
+İptal edilen veya sona eren abonelikler geçmiş kayıtları silmek zorunda değildir. Geçmiş ücretler, abonelik sona erdikten sonra da raporlarda yer alabilir.
+6. İade ve düzeltmeler
+Finansal kayıtlar her zaman yalnızca artan yönde ilerlemez. İade, iptal veya yanlış kaydın düzeltilmesi gibi durumlar da bulunur.
+Örnekler:
+Market alışverişinin bir kısmının iade edilmesi
+Kredi kartı alışverişinin iptal edilmesi
+Yanlış girilen tutarın düzeltilmesi
+Planlanan ödemenin iptal edilmesi
+Model, geçmişte gerçekleşmiş bir olayın sonradan düzeltilebilmesini desteklemelidir. Bunun geçmiş raporları nasıl etkileyeceği ve değişiklik geçmişinin ne ölçüde tutulacağı iş kuralları ve denetim gereksinimleri aşamasında kararlaştırılacaktır.
+7. Finansal özet ve raporlar
+Raporlar, finansal olayların ve kayıtların üzerinden hesaplanan sonuçlardır. Kendileri yeni bir gelir, gider veya ödeme oluşturmaz.
+7.1. Aylık gider raporu
+Bir ay içinde gerçekleşen giderleri kategorilere ve uygun olduğunda ödeme yöntemlerine göre gösterir.
+7.2. Para girişleri ve gelir raporu
+Para girişlerini kaynaklarına göre ayırabilir. Kazanılmış gelir ile kredi, borç veya varlık satışı gibi diğer girişler ayrı gösterilmelidir.
+7.3. Borç durumu
+Kullanıcının takip ettiği borçların toplamını, kalan tutarlarını ve varsa yaklaşan ödeme tarihlerini gösterir.
+7.4. Aylık finansal özet
+Örneğin:
+Kazanılmış gelir: 250.000 TL
+Diğer para girişleri: 100.000 TL
+Giderler: 225.000 TL
+Dönem içindeki gelir ve gider farkı: 25.000 TL
+Bu rakamlar yalnızca örnektir. Gerçek rapor, uygulamada mevcut olan kayıtlar üzerinden hesaplanmalıdır.
+Gelir-gider farkı, banka bakiyesi veya eldeki nakit anlamına gelmez. Uygulama tüm banka hesaplarını ve cüzdanları takip etmediği için böyle bir iddiada bulunmamalıdır.
+Ayrıca kredi kartı borcu ödemesi, daha önce kaydedilmiş alışverişleri tekrar gider olarak saymamalıdır. Aksi takdirde aylık giderler olduğundan fazla görünür.
+8. Kavramlar arasındaki temel ilişkiler
+Aşağıdaki ilişkiler kavramsal düzeydedir; veritabanı ilişkileri veya kesin uygulama tasarımı değildir.
+Bir harcama, bir kategoriyle ve isteğe bağlı olarak bir kredi kartı veya ödeme yöntemiyle ilişkilendirilebilir.
+Bir para girişi, bir kaynağa ve gerekiyorsa bir borç ya da finansman ilişkisine bağlanabilir.
+Bir borç, bir kaynaktan doğabilir ve birden fazla ödeme ile azaltılabilir.
+Bir ödeme planı, bir borç veya finansman ilişkisi için gelecekteki ödeme beklentilerini tanımlayabilir.
+Bir gerçekleşen ödeme, ilgili borçla veya yükümlülükle ilişkilendirilebilir.
+Bir kredi kartı, birden fazla kart işlemine sahip olabilir.
+Bir ekstre, belirli bir döneme ait kart işlemlerini ve ödeme durumunu özetleyebilir.
+Bir nakit avans, aynı anda para girişi ve karta bağlı borç doğurabilir.
+Bir abonelik, zaman içinde birden fazla ücretlendirme veya gider kaydı oluşturabilir.
+Bir finansal rapor, ilgili dönem ve hesaplama kapsamına göre diğer kayıtlar üzerinden üretilir; ayrı bir finansal olay değildir.
+9. Kavramsal senaryolar
+Senaryo A — Kredi kartıyla alışveriş ve kısmi ödeme
+Kullanıcı 10.000 TL'lik alışveriş kaydeder.
+Alışveriş gider olarak değerlendirilir.
+İşlem seçilen kredi kartıyla ilişkilendirilir.
+Kart borcu bu işlemden etkilenir.
+Kullanıcı daha sonra 6.000 TL ödeme yapar.
+Ödeme kart borcunu azaltır.
+Kalan borç, ilgili diğer işlemler ve ücretler dikkate alınarak hesaplanır.
+Alışveriş ve kart ödemesi aynı gideri iki kez oluşturmaz.
+Senaryo B — Kredi kullanımı
+Kullanıcı 100.000 TL kredi aldığını kaydeder.
+Para girişi kaynağı “kredi” olarak saklanır.
+Geri ödeme yükümlülüğü takip edilir.
+Kullanıcı toplam 120.000 TL ve 12 taksitlik ödeme planı tanımlar.
+Her taksit zamanı geldiğinde beklenen ödeme izlenebilir.
+Ödeme yapıldığında gerçekleşen ödeme kaydedilir ve ilgili borç güncellenir.
+Kredi tutarı kazanılmış gelir olarak raporlanmaz. Planlanan taksitler de ödenmiş tutarlar gibi gösterilmez.
+Senaryo C — Kredi kartından nakit avans
+Kullanıcı 10.000 TL nakit avans aldığını kaydeder.
+Para girişi ve nakit avansın kaynağı belirtilir.
+Tutar, kredi kartıyla ilişkili borçta takip edilir.
+İşlem kart hareketlerinde gösterilir.
+Sonradan yapılan ödeme, ilgili borcu azaltır.
+Kart işlemi, para girişi ve borç takibi arasındaki bağlantı korunur; aynı olaydan kaynaklanan tutarlar raporlarda mükerrer sayılmaz.
+Senaryo D — Abonelik
+Kullanıcı aylık 500 TL'lik bir abonelik tanımlar.
+Abonelik aktif olduğu sürece gelecek ücretlendirmeler takip edilebilir.
+Gerçekleşmiş her ücret, ilgili dönemin gideri olarak kaydedilir.
+Kullanıcı aboneliği iptal ederse gelecek ücret beklentisi sonlandırılabilir.
+Geçmişte gerçekleşmiş giderler korunur.
+Aboneliğin varlığı, gelecekteki bütün ödemelerin kesinlikle gerçekleşeceği anlamına gelmez.
+10. Henüz karara bağlanmamış konular
+Bu soruların yanıtları, sonraki aşamada yazılacak iş kurallarını ve mimariyi etkileyecektir.
+Gelir kapsamı: İlk sürüm yalnızca harcama ve borç takibine mi odaklanacak, yoksa temel para girişi kaydı da ilk sürümde bulunacak mı?
+Kart borcunun kaynağı: Kart borcu, kart işlemlerinden hesaplanan bir durum olarak mı tutulacak, yoksa kullanıcı ayrıca borç kaydı da oluşturabilecek mi?
+Ekstre yaklaşımı: İlk sürümde kullanıcı ekstreyi manuel mi girecek, yoksa kart işlemlerinden uygulamanın hesapladığı dönem özeti mi yeterli olacak?
+Nakit avans modeli: Nakit avans, kart borcunun bir işlem türü olarak mı takip edilecek, yoksa ayrıca bir borç kaydı da gerektirecek mi?
+Faiz ve ücretler: İlk sürümde yalnızca kullanıcının girdiği tutarlar mı takip edilecek, yoksa sınırlı faiz ve ücret hesaplamaları da bulunacak mı?
+Ödeme planları: İlk sürümde kredi taksitleri ve gelecek ödemeler ne ölçüde takip edilecek?
+İadeler ve düzeltmeler: Kullanıcı kayıtları doğrudan değiştirebilecek mi, yoksa değişiklik geçmişi de tutulacak mı?
+Abonelikler: İlk sürümde abonelik takibi olacak mı, yoksa sonraki bir aşamaya mı bırakılacak?
+Rapor dönemi: Aylık raporlar hangi tarih aralığına ve hangi olayların gerçekleşmiş sayılmasına göre hesaplanacak?
+Eksik bilgiler: Kaynağı veya niteliği belirsiz bir para girişi, kullanıcı açıklama yapana kadar nasıl gösterilecek?
+11. Bir sonraki aşamaya geçiş ölçütü
+Finansal Alan Modeli yeterince netleştiğinde, her kavram için iş kurallarını tanımlayabiliriz:
+Hangi koşulda oluşur?
+Hangi bilgileri gerektirir?
+Hangi olaylar sonucunda değişir?
+Hangi durumlarda geçersiz, iptal edilmiş veya tamamlanmış sayılır?
+Diğer kavramları nasıl etkiler?
+Raporlara nasıl yansır?
+Hangi durumlar kullanıcı onayı veya ek bilgi gerektirir?
+Bu sorular yanıtlanmadan veritabanı şeması veya uygulama sınıfları tasarlamak için acele edilmemelidir.
+Bu taslakta özellikle doğrulamamız gereken üç konu
+Belgenin tamamını tek seferde kesinleştirmek yerine, önce finansal modelin temelini etkileyen şu üç ayrımı netleştirmemizi öneriyorum:
+1. İlk sürümde para girişi ve gelir takibi ne kadar kapsamlı olsun?
+Önce harcama ve borç; para girişi/gelir daha sonraki sürümde.
+Harcama ve borç yanında temel para girişi kaydı da olsun; gelir sınıflandırması basit tutulabilir.
+İlk sürümde gelir ve para girişleri de kapsamlı biçimde takip edilsin.
+2. Kredi kartı borcunun temel kaynağı nasıl ele alınsın?
+Borç, kart işlemleri ve ödemelerden hesaplanan bir durum olsun; ekstre bunun dönemsel özeti olsun.
+Kullanıcı ekstre borcunu manuel girsin; işlemler ve ödemelerle ilişkisi ayrıca kurulsun.
+İşlemlerden hesaplama ve manuel ekstre girişi birlikte desteklensin; tutarsızlıklar gösterilsin.
+3. Nakit avansın borç modeli nasıl olsun?
+Kartın borcu içinde, ayrı türde bir kart işlemi olarak takip edilsin; ikinci bir borç kaydı açılmasın.
+Ayrı bir nakit avans borcu da olsun; kart borcuyla ilişkisi kurularak çift sayım engellensin.
+İş kurallarını yazarken bu kararı verelim; şimdilik iki yaklaşım da açık kalsın.
+Bu üç konu netleştiğinde modeli bir sonraki sürümde güncelleyebiliriz. Sonrasında kalan açık soruları gözden geçirip Finansal Alan Modeli'ni onaylanabilir hâle getirmek, ardından iş kurallarına geçmek daha sağlıklı olur.
+Finansal Alan Modeli taslağı için kararlarım: 1. İlk sürüm gelir/para girişi kapsamı: Harcama ve borçla birlikte temel para girişi kaydı 2. Kredi kartı borcu yaklaşımı: İşlem ve ödemelerden hesaplanan borç; ekstre dönemsel özet 3. Nakit avans yaklaşımı: İlişkili ayrı nakit avans borcu; çift sayım engellenecek Bu kararları Finansal Alan Modeli v0.2'ye işle; henüz veritabanı şeması veya modül sınırları belirleme.
+Kararlarını Finansal Alan Modeli v0.2 sürümüne işliyorum. Bu üç karar, modelin temel yaklaşımını belirginleştiriyor:
+İlk sürümde harcama ve borç takibine ek olarak temel para girişi kaydı da bulunacak; kapsamlı gelir yönetimini şimdiden zorunlu kılmayacağız.
+Kredi kartı borcu, kart işlemleri ve ödemelerden hesaplanacak; ekstre ise belirli dönemin özeti olacak.
+Nakit avans, kart borcuyla ilişkili ayrı bir borç olarak izlenecek. Ancak aynı yükümlülük hem kart borcunda hem toplam borçta iki kez sayılmayacak.
+Özellikle son kararda “ayrı borç” ile “çift sayımı önleme” birlikte ele alınmalı. Ayrı takip edilebilirlik, aynı tutarın toplam borca iki defa eklenmesi anlamına gelmemeli.
+Yazma
+Finansal Alan Modeli
+Kişisel Finans ve Harcama Takibi Mobil Uygulaması
+Belge sürümü: 0.2
+Durum: Taslak — temel modelleme kararları işlendi
+Bağlı belge: Product Vision & Scope
+Amaç: Uygulamanın takip edeceği finansal kavramları, bunların ilişkilerini ve henüz karara bağlanmamış konuları tanımlamak.
+Kapsam dışı: Veritabanı şeması, sınıf tasarımları, API sözleşmeleri ve modül sınırları.
+1. Modelleme yaklaşımı
+Bu belge uygulamanın finansal alanını tanımlar. Teknik uygulama ayrıntıları henüz belirlenmez.
+Temel ilkeler:
+İş anlamları farklı olan finansal kavramlar birbirinden ayrılır.
+Para girişi, gelir, gider, ödeme ve borç farklı anlamlarda kullanılır.
+Aynı ekonomik olay, raporlarda mükerrer gelir veya gider olarak sayılmaz.
+Kullanıcı tarafından girilen bilgiler, uygulamanın hesapladığı sonuçlar ve yapay zekânın yorumları birbirinden ayrılır.
+Planlanan ödeme ile gerçekleşmiş ödeme aynı kabul edilmez.
+Kullanıcının kayıt girmemesi, ilgili finansal olayın gerçekleşmediğini kanıtlamaz.
+Hesaplamaların doğruluğu yapay zekâya değil, açıkça tanımlanmış finansal kurallara dayanır.
+2. Temel finansal kavramlar
+2.1. Finansal olay
+Kullanıcının finansal durumunu etkileyen veya takip etmek istediği olaydır.
+Örnekler:
+Market alışverişi yapmak
+Maaş almak
+Bir kişiden borç para almak
+Kredi kullanmak
+Kredi kartı ekstresinin oluşması
+Kredi kartı borcunun bir kısmını ödemek
+Kredi taksiti ödemek
+Bir aboneliğin ücretlendirilmesi
+Bir finansal olay birden fazla sonuç doğurabilir. Örneğin kredi kullanımı para girişi oluştururken geri ödeme yükümlülüğü de doğurabilir. Bu sonuçlar birbiriyle ilişkilendirilir ancak aynı tür finansal kayıt olarak değerlendirilmez.
+2.2. Harcama / gider
+Kullanıcının mal veya hizmet tüketmesi sonucunda oluşan giderdir.
+Örnekler:
+Market alışverişi
+Kahvaltı
+Ulaşım
+Elektrik faturası
+Dijital abonelik ücreti
+Bir harcamanın tutarı, para birimi, tarihi, kategorisi, açıklaması ve varsa ödeme yöntemi veya ilişkili kartı takip edilebilir.
+Harcamanın niteliği ile ödeme yöntemi ayrıdır. Örneğin market alışverişi giderdir; kredi kartı ise bu harcamanın yapıldığı ödeme aracıdır.
+2.3. Para girişi
+Kullanıcının eline veya kullanımına para geçmesi olayıdır. Tek başına bu para girişinin gelir olduğu veya kullanıcının servetinin aynı miktarda arttığı anlamına gelmez.
+Olası kaynaklar:
+Maaş veya ticari kazanç
+Kredi
+Kredi kartından nakit avans
+Bir kişiden alınan borç
+Altın veya başka bir varlığın satılması
+Kaynağı henüz bilinmeyen para girişi
+Karar — v0.2: İlk sürümde harcama ve borç takibine ek olarak temel para girişi kaydı bulunacaktır.
+Bu karar, ilk sürümde kapsamlı gelir yönetimi veya bütün varlıkların takibinin yapılacağı anlamına gelmez. Amaç, kullanıcının aldığı paranın tutarını ve kaynağını temel düzeyde kaydedebilmesidir.
+Para girişinin kaynağı korunmalıdır. Örneğin:
+Maaş, kazanılmış gelir olabilir.
+Kredi, para girişiyle birlikte geri ödeme yükümlülüğü doğurur.
+Varlık satışı para girişi oluşturur ancak borç oluşturmaz.
+Kaynağı bilinmeyen giriş, açıklama yapılana kadar belirsiz olarak kalır.
+2.4. Gelir
+Kullanıcının kazanç niteliğindeki finansal girişlerini ifade eder.
+Para girişi ile gelir aynı kavram değildir. Kredi kullanımı, arkadaşından borç alma veya nakit avans gibi işlemler para girişi oluşturabilir ancak kazanılmış gelir sayılmaz.
+İlk sürümde temel para girişi kaydı desteklenecektir. Ayrıntılı gelir sınıflandırması ve gelir raporlamasının kapsamı henüz kesinleştirilmemiştir.
+2.5. Borç
+Kullanıcının bir kişiye veya kuruma karşı yerine getirmesi gereken finansal yükümlülüktür.
+Örnekler:
+Kredi borcu
+Kredi kartı borcu
+Bir kişiden alınan borç
+Nakit avans borcu
+Borç, tek bir ödeme kaydı değildir. Zaman içinde artabilir, azalabilir, kapatılabilir veya yeniden yapılandırılabilir.
+Takip edilmesi gerekebilecek bilgiler:
+Borcun kaynağı
+İlk tutar ve güncel kalan tutar
+İlgili kişi veya kurum
+Oluşma tarihi
+Varsa vade ve ödeme planı
+Borcu azaltan ödemeler
+Varsa faiz ve ücretler
+Bunların tamamının ilk sürümde zorunlu olması gerekmemektedir.
+2.6. Ödeme
+Bir borcu, faturayı veya başka bir finansal yükümlülüğü yerine getirmek için yapılan işlemdir.
+Örnekler:
+Kredi kartı ekstresini ödeme
+Kredi taksiti ödeme
+Kira ödeme
+Abonelik ücreti ödeme
+Ödeme, ilişkili borcu azaltabilir. Ancak daha önce kaydedilmiş bir alışverişin yeniden gider olarak sayılmasına neden olmamalıdır.
+Örneğin kredi kartıyla yapılan 10.000 TL'lik alışveriş gider olarak kaydedilmişse, kart borcuna yapılan 6.000 TL ödeme yeni bir 6.000 TL alışveriş gideri oluşturmaz.
+2.7. Ödeme planı ve taksit
+Bir borcun veya finansman işleminin gelecekteki ödeme düzenini ifade eder.
+Örnek:
+Kredi tutarı: 100.000 TL
+Toplam geri ödeme: 120.000 TL
+Taksit sayısı: 12
+Taksit tutarı: 10.000 TL
+Kredi kullanımı, para girişi ve geri ödeme planı ayrı kavramlardır. Planlanan taksitler gerçekleşmiş ödeme sayılmaz. Gerçekleşen ödemeler, ilgili borçla ilişkilendirilerek takip edilir.
+3. Kredi kartı alanı
+3.1. Kredi kartı kaydı
+Kullanıcının kendi takibi için oluşturduğu kart tanımıdır.
+Örnek:
+Banka adı
+Kartın görünen adı
+Kullanıcının belirlediği kısa ad
+İsteğe bağlı logo veya görsel
+Bu kayıt gerçek bir banka bağlantısı anlamına gelmez. Gerçek kart numarası, CVV veya banka giriş bilgilerinin tutulması bu modelin kapsamında değildir.
+3.2. Kart işlemi
+Kullanıcının bir karta ait olarak kaydettiği alışveriş, iade, nakit avans veya başka bir kart hareketidir.
+İşlemin türü korunmalıdır:
+Alışveriş, gider doğurabilir.
+İade, önceki bir harcamayı düzeltebilir.
+Nakit avans, para girişi ve geri ödeme yükümlülüğü doğurabilir.
+Kart borcuna yapılan ödeme, kart alışverişiyle aynı türden işlem değildir.
+Kart hareketlerinin tamamı gider olarak değerlendirilmemelidir.
+3.3. Kart borcu
+Kart işlemleri ve ödemeler sonucunda hesaplanan, zaman içinde değişebilen borç durumudur.
+Karar — v0.2: Kredi kartı borcu, kart işlemleri ve ödemelerden hesaplanacaktır. Ekstre, borcun belirli bir dönemdeki görünümünü özetleyecektir.
+Bu yaklaşımda:
+Kart işlemleri borcun oluşumuna veya değişimine katkıda bulunur.
+Ödemeler ilgili borcu azaltır.
+İadeler ve düzeltmeler ilgili işlemlerin etkisini değiştirebilir.
+Ekstre, yeni bir gider veya ikinci bir borç kaynağı olarak sayılmaz.
+Örnek:
+Ekstre tutarı: 100.000 TL
+Yapılan ödeme: 50.000 TL
+Kalan tutar: 50.000 TL
+Bu basitleştirilmiş örnekte kalan tutar yeni bir gider değildir. Gerçek hesaplama, ilgili diğer kart işlemlerinin, iadelerin, ücretlerin ve varsa devreden borcun nasıl ele alınacağına ilişkin kurallara bağlı olacaktır.
+3.4. Ekstre dönemi ve ekstre
+Ekstre, belirli bir döneme ait kart işlemlerini ve ödeme durumunu özetler.
+İzlenebilecek bilgiler:
+Ekstre dönemi
+Ekstre tarihi
+Son ödeme tarihi
+Ekstre tutarı
+Yapılan ödemeler
+Kalan tutar
+Varsa devreden borç
+Ekstre bilgileri ilk sürümde kullanıcı tarafından girilebilir veya tanımlanmış kurallar kapsamında kart işlemlerinden hesaplanabilir. Ekstre belgesi yükleme ve belge üzerinden veri çıkarma, ileride değerlendirilebilecek özelliklerdir.
+4. Nakit avans
+Nakit avans, para girişi ve borç etkisi olan, kredi kartıyla ilişkili özel bir finansal olaydır.
+Örnek:
+Kullanıcı 10.000 TL nakit avans alır.
+Kullanımına 10.000 TL para geçer.
+Karta bağlı geri ödeme yükümlülüğü oluşur.
+Tutar, kart hareketlerinde takip edilir.
+Sonraki ödemeler borcu azaltır.
+Karar — v0.2: Nakit avans, kart borcuyla ilişkili ayrı bir borç olarak takip edilecektir. Çift sayım önlenecektir.
+Bu kararın anlamı:
+Nakit avansın kendi borç bilgisi ve durumu takip edilebilir.
+Nakit avans, ilgili kredi kartıyla ilişkili kalır.
+Aynı yükümlülük hem nakit avans borcunda hem kart borcunda iki ayrı bağımsız borçmuş gibi toplam borca eklenmez.
+Nakit avansın kullanıcıya sağladığı para girişi, kazanılmış gelir olarak değerlendirilmez.
+Nakit avansın alınması kendi başına tüketim gideri oluşturmaz; varsa ücret ve faizler ayrıca ele alınabilir.
+Borçların raporlarda nasıl birleştirileceği ve kart borcunun nakit avans borcunu hangi hesaplama kurallarıyla içereceği, iş kurallarının yazılacağı aşamada kesinleştirilecektir.
+5. Abonelik
+Abonelik, zaman içinde tekrar eden veya dönemsel ücret doğurabilen bir hizmet ilişkisidir.
+Örnekler:
+Müzik veya video hizmeti
+Bulut depolama
+Yazılım aboneliği
+Spor salonu üyeliği
+Aboneliğin kendisi, gerçekleşmiş her giderle aynı şey değildir. Abonelik bir hizmet ilişkisidir; ücretlendirme gerçekleştiğinde ilgili döneme ait gider veya borç etkisi oluşabilir.
+İleride takip edilmesi gerekebilecek bilgiler:
+Hizmet adı
+Tutar ve para birimi
+Ücretlendirme sıklığı
+Başlangıç ve varsa bitiş tarihi
+İptal durumu
+Fiyat değişiklikleri
+Ödeme yöntemi
+Abonelik takibinin ilk sürüme dahil olup olmayacağı henüz kararlaştırılmamıştır.
+6. İade ve düzeltmeler
+Model, iade, iptal ve yanlış kayıt düzeltme gibi durumları desteklemelidir.
+Örnekler:
+Bir alışverişin kısmen iade edilmesi
+Kredi kartı alışverişinin iptali
+Yanlış girilen tutarın düzeltilmesi
+Planlanan ödemenin iptal edilmesi
+Bu olaylar önceki finansal kayıtların etkisini değiştirebilir. Geçmiş kayıtların doğrudan düzenlenmesi, değişiklik geçmişinin tutulması ve raporların güncellenmesiyle ilgili kurallar henüz belirlenmemiştir.
+7. Finansal raporlar
+Raporlar, kayıtlar üzerinden hesaplanan sonuçlardır. Kendileri yeni bir gelir, gider veya ödeme oluşturmaz.
+7.1. Gider raporu
+Belirli bir dönemdeki giderleri kategorilere ve uygun olduğunda ödeme yöntemlerine göre gösterir.
+7.2. Para girişleri ve gelir
+Para girişlerini kaynaklarına göre ayırır. Kazanılmış gelir ile kredi, borç veya varlık satışı gibi diğer girişlerin birbirine karıştırılmaması gerekir.
+İlk sürümde temel para girişi kaydı bulunacaktır; kapsamlı gelir yönetiminin ayrıntıları açık kalacaktır.
+7.3. Borç durumu
+Kullanıcının takip ettiği borçların güncel durumunu, kalan tutarlarını ve varsa yaklaşan ödemelerini gösterir.
+Borçların toplamında ilişkili borçların mükerrer sayılması önlenmelidir. Bu gereklilik özellikle nakit avans ve kredi kartı borcu ilişkisi için önemlidir.
+7.4. Aylık finansal özet
+Örnek:
+Kazanılmış gelir: 250.000 TL
+Diğer para girişleri: 100.000 TL
+Giderler: 225.000 TL
+Dönem içindeki gelir-gider farkı: 25.000 TL
+Bu rakamlar yalnızca örnektir. Gerçek sonuçlar, uygulamada mevcut kayıtlar ve tanımlanmış hesaplama kuralları üzerinden üretilmelidir.
+Gelir-gider farkı, banka bakiyesi veya eldeki nakit anlamına gelmez. Uygulama bütün banka hesaplarını ve cüzdanları takip etmediğinden bu tür bir iddiada bulunmamalıdır.
+Kart borcunun ödenmesi de daha önce kaydedilmiş alışverişleri yeniden gider olarak saymamalıdır.
+8. Kavramlar arasındaki temel ilişkiler
+Aşağıdaki ilişkiler kavramsal düzeydedir; teknik veri modeli değildir.
+Bir harcama, kategoriyle ve isteğe bağlı olarak ödeme yöntemi veya kartla ilişkilendirilebilir.
+Bir para girişi, kaynağıyla ilişkilendirilir ve gerektiğinde borç veya finansman ilişkisiyle bağlantılandırılır.
+Bir borç, bir kaynak veya finansman olayından doğabilir ve birden fazla ödemeyle azalabilir.
+Bir ödeme planı, gelecekteki beklenen ödemeleri tanımlar.
+Gerçekleşen ödeme, ilgili borç veya yükümlülükle ilişkilendirilir.
+Bir kredi kartı, birden fazla kart işlemine sahip olabilir.
+Bir ekstre, belirli döneme ait kart hareketlerinin ve ödeme durumunun özetidir.
+Nakit avans, para girişi ve borç etkisi doğurur; kartıyla ilişkili ayrı bir borç olarak izlenir.
+Nakit avansın ilişkili kart borcuyla birlikte raporlanması, toplam borçta mükerrer sayım oluşturmamalıdır.
+Bir abonelik, zaman içinde birden fazla ücretlendirme veya gider kaydıyla ilişkili olabilir.
+Finansal raporlar, mevcut kayıtlar üzerinden hesaplanır ve yeni bir finansal olay oluşturmaz.
+9. Kavramsal senaryolar
+Senaryo A — Kredi kartıyla alışveriş ve kısmi ödeme
+Kullanıcı 10.000 TL'lik alışveriş kaydeder.
+Alışveriş gider olarak değerlendirilir.
+İşlem seçilen kartla ilişkilendirilir.
+Kart borcu bu işlemden etkilenir.
+Kullanıcı 6.000 TL ödeme yapar.
+Ödeme kart borcunu azaltır.
+Kalan borç, ilgili diğer işlemler ve ücretler dikkate alınarak hesaplanır.
+Alışveriş ve kart ödemesi aynı gideri iki kez oluşturmaz.
+Senaryo B — Kredi kullanımı
+Kullanıcı 100.000 TL kredi aldığını kaydeder.
+Para girişi kaynağı kredi olarak belirtilir.
+Geri ödeme yükümlülüğü takip edilir.
+Kullanıcı 120.000 TL toplam geri ödeme ve 12 taksitlik plan tanımlar.
+Gelecekteki taksitler beklenen ödeme olarak izlenir.
+Ödeme yapıldığında gerçekleşen ödeme kaydedilir ve ilgili borç güncellenir.
+Kredi tutarı kazanılmış gelir olarak raporlanmaz. Planlanan taksitler ödenmiş tutar gibi gösterilmez.
+Senaryo C — Kredi kartından nakit avans
+Kullanıcı 10.000 TL nakit avans aldığını kaydeder.
+Para girişi kaynağı nakit avans olarak belirtilir.
+Nakit avansın kartla ilişkili ayrı borcu izlenir.
+İşlem ilgili kart hareketlerinde görünür.
+Kart borcu ve nakit avans borcu birlikte raporlanırken aynı yükümlülük iki kez sayılmaz.
+Yapılan ödemeler, ilgili borç durumunu günceller.
+Senaryo D — Abonelik
+Kullanıcı aylık 500 TL'lik bir abonelik tanımlar.
+Abonelik aktif olduğu sürece gelecek ücretlendirmeler takip edilebilir.
+Gerçekleşen ücret, ilgili dönemin gideri olarak kaydedilir.
+Kullanıcı aboneliği iptal ederse gelecek ücret beklentisi sonlandırılabilir.
+Geçmişte gerçekleşmiş giderler korunur.
+10. Açık konular
+Aşağıdaki konular henüz karara bağlanmamıştır:
+Gelir sınıflandırması: İlk sürümde para girişlerinin ne ölçüde kategorize edileceği.
+Ekstre yönetimi: Ekstre tutarı, son ödeme tarihi ve devreden borç gibi bilgilerin hangi kapsamda kullanıcı tarafından girileceği.
+Nakit avans mutabakatı: Kart borcu ve ayrı nakit avans borcunun hesaplama ve raporlama kuralları.
+Faiz ve ücretler: İlk sürümde yalnızca kullanıcı tarafından girilen tutarların mı takip edileceği, yoksa sınırlı hesaplamaların da bulunup bulunmayacağı.
+Ödeme planları: Kredi taksitleri ve gelecek ödemelerin ilk sürümdeki kapsamı.
+İade ve düzeltmeler: Kayıt düzenleme ve değişiklik geçmişi yaklaşımı.
+Abonelikler: Abonelik takibinin ilk sürüme dahil edilip edilmeyeceği.
+Rapor dönemi: Aylık raporların tarih aralığı ve gerçekleşme ölçütleri.
+Belirsiz para girişleri: Kaynağı bilinmeyen girişlerin kullanıcı açıklama yapana kadar nasıl gösterileceği.
+Bu açık konular, mevcut kararların geri alındığı anlamına gelmez. v0.2'de kesinleştirilen kararlar korunur; yalnızca henüz çözülmemiş ayrıntılar açık bırakılır.
+11. İş kurallarına geçiş
+Finansal Alan Modeli, kavramları ve temel ilişkileri tanımlar. Bir sonraki aşamada her kavram için şu sorular cevaplanacaktır:
+Hangi koşulda oluşur?
+Hangi bilgiler gereklidir?
+Hangi olaylar sonucunda değişir?
+Hangi koşullarda tamamlanmış, iptal edilmiş veya geçersiz sayılır?
+İlişkili kavramları nasıl etkiler?
+Raporlara nasıl yansır?
+Hangi durumlarda kullanıcı onayı veya ek bilgi gerekir?
+Aynı finansal olayın birden fazla kez sayılması nasıl engellenir?
+Bu sorular yanıtlanmadan veritabanı şeması, sınıflar veya modül sınırları tasarlanmamalıdır.
+Sıradaki adım
+Modelin v0.2 sürümünde üç karar işlendi. Şimdi yeni bir teknik tasarıma geçmek yerine, kalan açık konuları sırayla ele alarak Finansal Alan Modeli'ni olgunlaştırmayı öneriyorum.
+Öncelik sırası olarak şunu uygun görüyorum:
+Para girişi ve gelir ayrımının ilk sürümdeki kapsamı.
+Kart işlemleri, ekstre ve borç arasındaki hesaplama ilişkisi.
+Nakit avans borcunun kart borcuyla birlikte raporlanması.
+Ödeme planları, iade ve düzeltmeler.
+Bunlar netleştiğinde iş kurallarını çok daha az varsayımla yazabiliriz.
+Finansal Alan Modeli'ni olgunlaştıralım,&#x20;&#x75;ygun gördüğün adımlarla ilerleyebiliriz
+Finansal Alan Modeli'ni adım adım olgunlaştıralım. Benim önerim, şu aşamada yeni kavramlar eklemekten çok mevcut kavramların birbiriyle çelişmeden çalıştığını doğrulamak.
+Özellikle üç sorunu baştan çözmemiz gerekiyor:
+Para girişi, gelir ve borçlanmayı birbirinden nasıl ayıracağız?
+Kredi kartı alışverişi, ekstre, ödeme ve kalan borç arasındaki ilişki nasıl işleyecek?
+Nakit avans hem para girişi hem ayrı bir borç olarak izlenirken toplamlar nasıl doğru kalacak?
+Bunları netleştirdikten sonra ödeme planları, iadeler ve düzeltmeler gibi konulara geçebiliriz. Henüz veritabanı şeması veya modül sınırları belirlemeyeceğim.
+İlk adım: Para girişinin finansal anlamı
+Bence en sağlıklı başlangıç bu; çünkü yanlış sınıflandırılan bir para girişi hem gelir raporunu hem borç takibini hem de aylık özeti bozabilir.
+1.1. Önerdiğim para girişi sınıflandırması
+Her para girişinde iki farklı soruya cevap vermeliyiz:
+Para nereden geldi? Örneğin maaş, kredi, nakit avans veya varlık satışı.
+Bu girişin finansal anlamı ne? Örneğin kazanılmış gelir mi, geri ödenecek borç mu, yoksa kişinin kendi varlığını paraya çevirmesi mi?
+Bu iki bilgiyi tek bir kategoriye sıkıştırmamak ileride daha esnek bir model sağlar.
+Örnek
+ | Para girişi
+ | Kazanılmış gelir
+ | Borç etkisi
+ | 
+Maaş
+ | Evet
+ | Evet
+ | Yok
+ | 
+Ticari kazanç
+ | Evet
+ | Evet
+ | Yok
+ | 
+Banka kredisi
+ | Evet
+ | Hayır
+ | Borç oluşur
+ | 
+Arkadaştan borç alma
+ | Evet
+ | Hayır
+ | Borç oluşur
+ | 
+Kredi kartı nakit avansı
+ | Evet
+ | Hayır
+ | Karta bağlı borç oluşur
+ | 
+Altın satışı
+ | Evet
+ | Otomatik olarak hayır
+ | Borç oluşmaz
+ | 
+Kaynağı bilinmeyen para
+ | Evet
+ | Henüz belirlenmez
+ | Henüz belirlenmez
+ | 
+Önceki alışverişin iadesi
+ | Para geri gelir
+ | Yeni gelir sayılmaz
+ | İlgili harcama veya kart borcu düzeltilir
+ | 
+Burada özellikle iade işlemini normal para girişinden ayrı tutmayı öneriyorum. Örneğin 1.000 TL'lik bir ürün alıp tamamını iade ettiğinde uygulama, 1.000 TL gider ve ayrıca 1.000 TL gelir göstermemeli; alışverişin net gideri sıfırlanmalıdır.
+Benzer şekilde, kullanıcı kendi birikimini başka bir yerdeki parasına dönüştürürse bu durum da otomatik olarak yeni gelir kabul edilmemelidir. Ancak ilk sürümde banka hesapları ve cüzdanlar arası transfer takibini zorunlu kılmaya gerek yok.
+1.2. Model için önerdiğim temel kurallar
+Kural A — Para girişi, gelir demek değildir.
+Gelir raporuna yalnızca gelir niteliği taşıyan kayıtlar dahil edilir.
+Kural B — Borçlanma, gelir oluşturmaz.
+Kredi veya nakit avans, para girişini ve geri ödeme yükümlülüğünü birlikte doğurabilir.
+Kural C — İade, yeni kazanç olarak raporlanmaz.
+İade, mümkün olduğunda asıl harcama veya ilişkili borçla bağlantılı tutulur.
+Kural D — Belirsiz kaynak, otomatik olarak tahmin edilmez.
+Kullanıcı kaynağı belirtmediyse uygulama bu kaydı belirsiz olarak tutar; yapay zekâ da bunu kesin bir gelir veya borç olarak sınıflandırmaz.
+1.3. Aylık rapora etkisi
+Örneğin bir kullanıcı aynı ayda şu hareketleri yapmış olsun:
+80.000 TL maaş almış.
+30.000 TL kredi kullanmış.
+5.000 TL nakit avans almış.
+2.000 TL'lik bir ürünü iade etmiş.
+50.000 TL harcama yapmış.
+Raporun mantığı şöyle olmalı:
+Gösterge
+ | Tutar
+ | 
+Kazanılmış gelir
+ | 80.000 TL
+ | 
+Diğer para girişleri — kredi
+ | 30.000 TL
+ | 
+Diğer para girişleri — nakit avans
+ | 5.000 TL
+ | 
+İade
+ | 2.000 TL, ilgili harcamayı azaltır
+ | 
+Harcamalar
+ | 50.000 TL brüt; iade dahil edildiğinde 48.000 TL net
+ | 
+Bu örnekte 115.000 TL'nin tamamı gelir değildir. Ayrıca 5.000 TL nakit avans, kredi kartı borcu toplamına dahil ediliyorsa toplam borç raporunda ikinci kez eklenmemelidir.
+Bu adımı nasıl kapatalım?
+Benim önerim, bu sınıflandırmayı Finansal Alan Modeli'nin temel ilkesi olarak kabul etmek ve henüz ayrıntılı gelir yönetimi tasarlamamaktır.
+Özellikle bir ayrıntıyı netleştirmek istiyorum: Altın veya başka bir varlık satıldığında, ilk sürümde bunu yalnızca “diğer para girişi — varlık satışı” olarak takip etmek yeterli mi? Yoksa ileride satış bedeli ile varlığın maliyeti arasındaki farkı, yani olası kazancı da hesaplamak istiyor musun?
+Ben ilk sürüm için yalnızca para girişini ve kaynağını kaydetmeyi öneriyorum. Varlık envanteri ve kazanç hesabı, uygulamayı gereksiz yere muhasebe ve yatırım takibi alanına taşımadan sonraki bir aşamaya bırakılabilir.

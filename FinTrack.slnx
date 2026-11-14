@@ -1,0 +1,47 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/FinTrack.ModuleContracts/FinTrack.ModuleContracts.csproj" />
+    <Project Path="src/BuildingBlocks/FinTrack.SharedKernel/FinTrack.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Host/">
+    <Project Path="src/Host/FinTrack.Api/FinTrack.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/CashInflows/">
+    <Project Path="src/Modules/CashInflows/FinTrack.Modules.CashInflows.Application/FinTrack.Modules.CashInflows.Application.csproj" />
+    <Project Path="src/Modules/CashInflows/FinTrack.Modules.CashInflows.Domain/FinTrack.Modules.CashInflows.Domain.csproj" />
+    <Project Path="src/Modules/CashInflows/FinTrack.Modules.CashInflows.Endpoints/FinTrack.Modules.CashInflows.Endpoints.csproj" />
+    <Project Path="src/Modules/CashInflows/FinTrack.Modules.CashInflows.Infrastructure/FinTrack.Modules.CashInflows.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/CreditCards/">
+    <Project Path="src/Modules/CreditCards/FinTrack.Modules.CreditCards.Application/FinTrack.Modules.CreditCards.Application.csproj" />
+    <Project Path="src/Modules/CreditCards/FinTrack.Modules.CreditCards.Domain/FinTrack.Modules.CreditCards.Domain.csproj" />
+    <Project Path="src/Modules/CreditCards/FinTrack.Modules.CreditCards.Endpoints/FinTrack.Modules.CreditCards.Endpoints.csproj" />
+    <Project Path="src/Modules/CreditCards/FinTrack.Modules.CreditCards.Infrastructure/FinTrack.Modules.CreditCards.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Debts/">
+    <Project Path="src/Modules/Debts/FinTrack.Modules.Debts.Application/FinTrack.Modules.Debts.Application.csproj" />
+    <Project Path="src/Modules/Debts/FinTrack.Modules.Debts.Domain/FinTrack.Modules.Debts.Domain.csproj" />
+    <Project Path="src/Modules/Debts/FinTrack.Modules.Debts.Endpoints/FinTrack.Modules.Debts.Endpoints.csproj" />
+    <Project Path="src/Modules/Debts/FinTrack.Modules.Debts.Infrastructure/FinTrack.Modules.Debts.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Expenses/">
+    <Project Path="src/Modules/Expenses/FinTrack.Modules.Expenses.Application/FinTrack.Modules.Expenses.Application.csproj" />
+    <Project Path="src/Modules/Expenses/FinTrack.Modules.Expenses.Domain/FinTrack.Modules.Expenses.Domain.csproj" />
+    <Project Path="src/Modules/Expenses/FinTrack.Modules.Expenses.Endpoints/FinTrack.Modules.Expenses.Endpoints.csproj" />
+    <Project Path="src/Modules/Expenses/FinTrack.Modules.Expenses.Infrastructure/FinTrack.Modules.Expenses.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/Reporting/">
+    <Project Path="src/Modules/Reporting/FinTrack.Modules.Reporting.Application/FinTrack.Modules.Reporting.Application.csproj" />
+    <Project Path="src/Modules/Reporting/FinTrack.Modules.Reporting.Endpoints/FinTrack.Modules.Reporting.Endpoints.csproj" />
+    <Project Path="src/Modules/Reporting/FinTrack.Modules.Reporting.Infrastructure/FinTrack.Modules.Reporting.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FinTrack.Api.IntegrationTests/FinTrack.Api.IntegrationTests.csproj" />
+    <Project Path="tests/FinTrack.Api.UnitTests/FinTrack.Api.UnitTests.csproj" />
+    <Project Path="tests/FinTrack.ArchitectureTests/FinTrack.ArchitectureTests.csproj" />
+    <Project Path="tests/FinTrack.Modules.CreditCards.Tests/FinTrack.Modules.CreditCards.Tests.csproj" />
+    <Project Path="tests/FinTrack.Modules.Expenses.Tests/FinTrack.Modules.Expenses.Tests.csproj" />
+  </Folder>
+</Solution>
