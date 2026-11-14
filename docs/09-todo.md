@@ -2,7 +2,7 @@
 
 **Sürüm:** 1.2
 **Tarih:** 2026-11-14
-**Bağlı belgeler:** [Durum notu v1.2](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v1.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -158,4 +158,4 @@ dotnet test FinTrack.slnx --nologo -v q
 |---|---|---|
 | 1.0 | 2026-11-14 | İlk sürüm; oturum protokolü, slice 3 görev kırılımı, açık sorular |
 | 1.1 | 2026-11-14 | Slice 3 tamamlandı; kutular işaretlendi, açık sorular yanıtlandı, sıradaki dilim slice 4 |
-| 1.2 | 2026-11-14 | Sürüm kontrolü başlatıldı; `docs/01` kapatıldı; CI platform seçimi bekliyor |
+| 1.2 | 2026-11-14 | Sürüm kontrolü başlatıldı; `docs/01` kapatıldı; GitHub Actions CI eklendi |
