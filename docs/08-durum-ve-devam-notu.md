@@ -1,6 +1,6 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 1.4
+**Sürüm:** 1.5
 **Tarih:** 2026-11-14
 **Bağlı belgeler:** [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.2](06-api-sozlesmeleri.md) · [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
@@ -174,6 +174,15 @@ migration, uç noktalar). Kalan iş modülleri yalnızca DI + route grubu + geç
   `DockerUnavailableException` ile toplu başarısız olur (33/40); hata koda değil
   ortama aittir. Testten önce `docker info` çalıştığını doğrula. GitHub Actions
   `ubuntu-latest` imajında Docker hazır gelir.
+- **Fixture yapılandırması:** `ApiFixture` bağlantı dizesi/JWT değerlerini
+  `WithWebHostBuilder` + `ConfigureAppConfiguration` ile vermek **yetmez**;
+  `Program.cs` bunları host kurulurken doğrudan okur ve
+  `appsettings.Development.json` kazanır. Değerler
+  `ConnectionStrings__FinTrackDb`, `Database__MigrateOnStartup`, `Jwt__*`
+  ortam değişkenleriyle verilir; `DisposeAsync` eski değerleri geri koyar.
+  Bu düzeltmeden önce testler Windows'ta sessizce LocalDB'ye yazıyordu
+  (`FinTrackDb` içinde 297 test kullanıcısı), Linux CI'da LocalDB olmadığı için
+  patlıyordu.
 - **`_status`:** Expenses ve CreditCards'tan kaldırıldı; CashInflows, Debts,
   Reporting'de duruyor (ilgili dilimde kalkacak).
 - **Bilinmeyen JSON alanı:** Minimal API gövde bağlama hatası varsayılan olarak
@@ -266,3 +275,4 @@ migration, uç noktalar). Kalan iş modülleri yalnızca DI + route grubu + geç
 | 1.2 | 2026-11-14 | Slice 3 tamamlandı: durum, test sayıları, kararlar, tuzaklar ve slice 4 hazırlığı güncellendi |
 | 1.3 | 2026-11-14 | Açık sorular yanıtlandı: `docs/01` gerekli değil, git başlatıldı, borçlarda faiz yok/aylık ödeme kullanıcıdan |
 | 1.4 | 2026-11-14 | Release build + 139/139 test doğrulandı; Docker kapalıyken entegrasyon testi tuzağı eklendi; depo/CI durumu güncellendi |
+| 1.5 | 2026-11-14 | Entegrasyon fixture'ı env var ile bağlanıyor: testler artık gerçekten Testcontainers MSSQL kullanıyor (önceden sessizce LocalDB) |

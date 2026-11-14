@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.3
+**Sürüm:** 1.4
 **Tarih:** 2026-11-14
-**Bağlı belgeler:** [Durum notu v1.4](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v1.5](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -163,3 +163,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.1 | 2026-11-14 | Slice 3 tamamlandı; kutular işaretlendi, açık sorular yanıtlandı, sıradaki dilim slice 4 |
 | 1.2 | 2026-11-14 | Sürüm kontrolü başlatıldı; `docs/01` kapatıldı; GitHub Actions CI eklendi |
 | 1.3 | 2026-11-14 | Release build + 139/139 doğrulandı; Docker ön koşulu not edildi |
+| 1.4 | 2026-11-14 | Entegrasyon fixture'ı env var'a geçti; testler gerçek konteynere bağlanıyor |

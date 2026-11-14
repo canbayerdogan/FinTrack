@@ -52,8 +52,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.0](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.2](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.5](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v1.4](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.3](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v1.5](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.4](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 

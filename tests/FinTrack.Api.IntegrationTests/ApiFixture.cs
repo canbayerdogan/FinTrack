@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
 using Testcontainers.MsSql;
 using Xunit;
 
@@ -17,6 +16,8 @@ public sealed class ApiFixture : IAsyncLifetime
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest")
         .Build();
 
+    private readonly Dictionary<string, string?> _originalEnvironment = new(StringComparer.Ordinal);
+
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
     public async Task InitializeAsync()
@@ -28,24 +29,23 @@ public sealed class ApiFixture : IAsyncLifetime
             InitialCatalog = "FinTrackTests",
         }.ConnectionString;
 
+        // Program.cs bu değerleri host kurulurken doğrudan okur. WithWebHostBuilder +
+        // ConfigureAppConfiguration bu noktada geç kalır; appsettings.Development.json
+        // içindeki LocalDB dizesi kazanır. Env var sağlayıcısı appsettings'ten sonra
+        // geldiği için geçersiz kılma garanti edilir.
+        ApplyEnvironmentOverrides(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings__FinTrackDb"] = connectionString,
+            ["Database__MigrateOnStartup"] = "true",
+            ["Jwt__Issuer"] = "FinTrack.Tests",
+            ["Jwt__Audience"] = "FinTrack.Tests",
+            ["Jwt__SigningKey"] = "test-signing-key-that-is-long-enough-1234567890",
+            ["Jwt__AccessTokenMinutes"] = "15",
+            ["Jwt__RefreshTokenDays"] = "30",
+        });
+
         Factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.UseEnvironment("Development");
-                builder.ConfigureAppConfiguration((_, configuration) =>
-                {
-                    configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                    {
-                        ["ConnectionStrings:FinTrackDb"] = connectionString,
-                        ["Database:MigrateOnStartup"] = "true",
-                        ["Jwt:Issuer"] = "FinTrack.Tests",
-                        ["Jwt:Audience"] = "FinTrack.Tests",
-                        ["Jwt:SigningKey"] = "test-signing-key-that-is-long-enough-1234567890",
-                        ["Jwt:AccessTokenMinutes"] = "15",
-                        ["Jwt:RefreshTokenDays"] = "30",
-                    });
-                });
-            });
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
 
         using var client = Factory.CreateClient();
         using var response = await client.GetAsync("/health");
@@ -56,5 +56,23 @@ public sealed class ApiFixture : IAsyncLifetime
     {
         await Factory.DisposeAsync();
         await _container.DisposeAsync();
+        RestoreEnvironment();
+    }
+
+    private void ApplyEnvironmentOverrides(IReadOnlyDictionary<string, string?> values)
+    {
+        foreach (var (key, value) in values)
+        {
+            _originalEnvironment[key] = Environment.GetEnvironmentVariable(key);
+            Environment.SetEnvironmentVariable(key, value);
+        }
+    }
+
+    private void RestoreEnvironment()
+    {
+        foreach (var (key, value) in _originalEnvironment)
+        {
+            Environment.SetEnvironmentVariable(key, value);
+        }
     }
 }
