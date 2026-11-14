@@ -52,8 +52,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.0](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.2](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.5](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v1.3](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.2](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v1.4](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.3](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -69,8 +69,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   CRUD + arşivleme, `GET /cards/{id}/balance` (harcama − iade; ödeme ve nakit
   avans sonraki dilimlerde). Bilinmeyen kart alanları (kart no/CVV/SKT) `400`
   ile reddedilir. 22 modül + 6 entegrasyon testi.
-- **Testler:** ✅ 139 test yeşil (3 mimari + 22 birim + 52 Expenses + 22
-  CreditCards + 40 entegrasyon; 7 smoke + 17 kimlik + 10 harcama + 6 kart).
+- **Testler:** ✅ 139 test yeşil — Debug ve Release (3 mimari + 22 birim + 52
+  Expenses + 22 CreditCards + 40 entegrasyon; 7 smoke + 17 kimlik + 10 harcama +
+  6 kart). Entegrasyon testleri için Docker Desktop açık olmalı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. `Idempotency-Key` uygulaması ayrı göreve ertelendi
   (`docs/06` §1.4, `docs/07` slice 2). Güncel durum: `docs/08`; sıradaki adımlar:

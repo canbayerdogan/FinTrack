@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.2
+**Sürüm:** 1.3
 **Tarih:** 2026-11-14
-**Bağlı belgeler:** [Durum notu v1.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v1.4](08-durum-ve-devam-notu.md) · [Yol haritası v1.5](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -129,8 +129,11 @@ dotnet test FinTrack.slnx --nologo -v q
 
 - [ ] `Idempotency-Key` (tüm POST) — ayrı görev
 - [x] Sürüm kontrolü (git) — başlatıldı
-- [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo bağlanınca doğrulanacak
+- [x] CI — GitHub Actions (`.github/workflows/ci.yml`); Release build + 139/139
+      yerelde doğrulandı, ilk CI çalıştırması uzak depo bağlanınca doğrulanacak
 - [x] `docs/01` ayrı dosya gerekli değil
+- [ ] Yerel entegrasyon testleri için Docker Desktop açık olmalı (aksi halde
+      33/40 `DockerUnavailableException`)
 
 ---
 
@@ -159,3 +162,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.0 | 2026-11-14 | İlk sürüm; oturum protokolü, slice 3 görev kırılımı, açık sorular |
 | 1.1 | 2026-11-14 | Slice 3 tamamlandı; kutular işaretlendi, açık sorular yanıtlandı, sıradaki dilim slice 4 |
 | 1.2 | 2026-11-14 | Sürüm kontrolü başlatıldı; `docs/01` kapatıldı; GitHub Actions CI eklendi |
+| 1.3 | 2026-11-14 | Release build + 139/139 doğrulandı; Docker ön koşulu not edildi |
