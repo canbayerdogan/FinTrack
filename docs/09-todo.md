@@ -35,7 +35,7 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | **6 — Nakit avans** (planlama; ADR-0009 ön koşulu) |
-| Son doğrulama | Build 0/0 · 185/185 birim testi · 50/50 entegrasyon (Docker açık) · toplam 235 · 2026-11-16 |
+| Son doğrulama | Build 0/0 · 185/185 birim · 50/50 entegrasyon · toplam 235 · CI yeşil (`43933066950`) · 2026-11-16 |
 | Sıradaki komut | ADR-0009 seçeneklerini değerlendir; `docs/05` §5.5, `docs/06` §6.5 ve `docs/07` §4 Slice 6'yı oku |
 
 ---
@@ -214,8 +214,8 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
-      Slice 4 sonrası yeşil (183/183, Ubuntu + Testcontainers MSSQL); Slice 5
-      commit'i sonrası 235/235 beklenir
+      Slice 5 commit'i sonrası yeşil (235/235, run `43933066950`, Ubuntu +
+      Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
       2026-11-16); Docker kapalıyken `DockerUnavailableException` beklenir

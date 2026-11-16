@@ -40,8 +40,8 @@
 
 **Çözüm:** `FinTrack.slnx`, **28 proje**. Depo **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
-GitHub Actions CI (`.github/workflows/ci.yml`) son yeşil çalıştırması Slice 4
-sonrası 183/183 testti; Slice 5 ile 235 test beklenir (Ubuntu, Testcontainers MSSQL).
+GitHub Actions CI (`.github/workflows/ci.yml`) Slice 5 commit'i sonrası
+**235/235** testle yeşil (run `43933066950`, Ubuntu, Testcontainers MSSQL).
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
@@ -57,7 +57,7 @@ grubu + geçici `_status` uç noktası içerir.
 
 > **2026-11-16 notu:** Slice 5 kodu tamamlandı. Docker Desktop motoru açık;
 > birim ve entegrasyon testleri yerelde çalıştırıldı ve **235/235** yeşil.
-> CI ilk çalıştırması Slice 5 commit'i push edildikten sonra doğrulanacak.
+> CI çalıştırması da yeşil: run `43933066950` (Ubuntu, Testcontainers MSSQL).
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
@@ -65,7 +65,7 @@ grubu + geçici `_status` uç noktası içerir.
 | Birim testleri (Debug) | `dotnet test tests/... --no-build` (5 proje) | ✅ 185/185 |
 | Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 50/50 (Docker Desktop açık) |
 | Release build | `dotnet build FinTrack.slnx --configuration Release` | ✅ 0 uyarı, 0 hata |
-| CI | GitHub Actions `build-test` | Slice 5 commit'i sonrası 235/235 beklenir |
+| CI | GitHub Actions `build-test` | ✅ 235/235 (run `43933066950`) |
 | Migration | `dotnet ef database update --context CashInflowsDbContext ...` | `InitialCashInflows` LocalDB'ye uygulandı; `has-pending-model-changes` → "No changes" |
 
 **Test dağılımı (235):**

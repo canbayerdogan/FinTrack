@@ -99,8 +99,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   `20261116182933_InitialCashInflows`.
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 4 sonrası 183/183 yeşildi;
-  Slice 5 commit'i sonrası build + 235/235 test beklenir (Ubuntu,
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 5 commit'i sonrası
+  build + **235/235** testle yeşil (run `43933066950`, Ubuntu,
   Testcontainers MSSQL).
 - **Sıradaki:** slice 6 — nakit avans (`docs/07` §4). **ADR-0009** (modüller
   arası atomik yazma) kabul edilmeden kod başlamaz; kapsam `docs/08` §7.3'te.
