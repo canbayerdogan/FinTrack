@@ -36,4 +36,15 @@ public static class UserTime
         var local = TimeZoneInfo.ConvertTimeFromUtc(utcNow, ResolveTimeZone(timeZoneId));
         return DateOnly.FromDateTime(local);
     }
+
+    /// <summary>
+    /// Kesit gününün sonunu (yerel <c>23:59:59.9999999</c>) UTC'ye çevirir.
+    /// İptal karşılaştırmasında kullanılır: <c>CancelledAtUtc</c> bu andan
+    /// <b>sonraysa</b> kayıt kesitte aktif, aksi halde iptal sayılır (docs/05 §5.3).
+    /// </summary>
+    public static DateTime EndOfDayUtc(DateOnly localDate, string? timeZoneId)
+    {
+        var endOfDay = localDate.ToDateTime(TimeOnly.MaxValue);
+        return TimeZoneInfo.ConvertTimeToUtc(endOfDay, ResolveTimeZone(timeZoneId));
+    }
 }

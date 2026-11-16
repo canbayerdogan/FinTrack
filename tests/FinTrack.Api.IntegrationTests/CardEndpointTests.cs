@@ -162,7 +162,7 @@ public sealed class CardEndpointTests(ApiFixture fixture)
         Assert.Equal(40m, balance.Breakdown.Refunds);
         Assert.Equal(0m, balance.Breakdown.CashAdvances);
         Assert.Equal(0m, balance.Breakdown.Payments);
-        Assert.NotEqual(default, balance.AsOfUtc);
+        Assert.Equal(Today, balance.AsOfDate);
     }
 
     [Fact]
@@ -368,7 +368,7 @@ public sealed class CardEndpointTests(ApiFixture fixture)
 
     private sealed record CardBalanceResponse(
         Guid CardId,
-        DateTime AsOfUtc,
+        DateOnly AsOfDate,
         string Currency,
         decimal Debt,
         bool IsInCredit,

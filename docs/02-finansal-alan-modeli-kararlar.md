@@ -1,7 +1,7 @@
 # Finansal Alan Modeli — Kararlar (v0.4)
 
 **Sürüm:** 0.4
-**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.2 (kaynak metinde) · [İş Kuralları v1.0](05-is-kurallari.md)
+**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.2 (kaynak metinde) · [İş Kuralları v1.2](05-is-kurallari.md)
 **Amaç:** v0.2 sonrası verilen kararları kayda geçirmek ve kavramları modül sahipliğine bağlamak.
 
 > v0.2'nin tam metni `_source/gemini-chatgpt-konusma.txt` içinde duruyor.
@@ -134,7 +134,7 @@ Rapor **banka bakiyesi iddiası taşımaz**.
 
 v0.2 §10'daki açık maddeler, v0.3'te kalan yedi madde ve kart alışverişi
 sahipliği **2026-11-13'te kapatılmıştır**. Bağlayıcı ayrıntı:
-[İş Kuralları v1.0](05-is-kurallari.md) §10.
+[İş Kuralları v1.2](05-is-kurallari.md) §10.
 
 | # | Konu | Karar | İş kuralları |
 |---|---|---|---|

@@ -26,3 +26,22 @@ public sealed record UpdateCardRequest(
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed record ArchiveCardRequest(string? RowVersion);
+
+public sealed record CreateCardPaymentRequest(
+    decimal Amount,
+    string? Currency,
+    DateOnly? PaidOn,
+    string? Note);
+
+// Ekstre türetilen alanları (carriedOverAmount, computedDebtAtPeriodEnd,
+// reconciliationDifference) istemci gönderemez; bilinmeyen alan 400 döner
+// (docs/06 §6.6).
+[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
+public sealed record CreateStatementRequest(
+    DateOnly? PeriodStart,
+    DateOnly? PeriodEnd,
+    DateOnly? DueDate,
+    decimal StatementAmount,
+    string? Currency);
+
+public sealed record CancelRequest(string? Reason, string? RowVersion);

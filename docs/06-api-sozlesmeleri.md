@@ -1,8 +1,8 @@
 # FinTrack — API Sözleşmeleri (v1)
 
-**Sürüm:** 1.2
-**Tarih:** 2026-11-14
-**Bağlı belgeler:** [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · ADR-0007, ADR-0008
+**Sürüm:** 1.4
+**Tarih:** 2026-11-15
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0007, ADR-0008
 **Hedef okuyucu:** geliştirme ajanları, mobil istemci geliştiricisi
 
 > Bu belge v1 REST API'sinin **davranış ve alan sözleşmesidir**. OpenAPI belgesi
@@ -581,12 +581,17 @@ Oluşturma/güncelleme: `bankName`, `displayName`, `logoKey?`, `creditLimit?`,
 - Arşivli karta yeni harcama/ödeme/nakit avans/ekstre eklenemez.
 - `POST /cards/{id}/archive` → `204`, gövde `ArchiveRequest`.
 
-### 6.3 `GET /cards/{id}/balance`
+### 6.3 `GET /cards/{id}/balance?asOf=YYYY-MM-DD`
+
+`asOf` opsiyoneldir; verilmezse kullanıcının bugünkü tarihi kullanılır. Değer
+kullanıcının saat diliminde bir `DateOnly`'dir; ilgili günün sonu dahildir.
+
+Yanıt `200`:
 
 ```json
 {
   "cardId": "9b7d...",
-  "asOfUtc": "2026-11-14T09:00:00Z",
+  "asOfDate": "2026-11-14",
   "currency": "TRY",
   "debt": 4200.00,
   "isInCredit": false,
@@ -605,13 +610,20 @@ Hesap:
 debt = expenses − refunds + cashAdvances − payments
 ```
 
-- **Tüm zamanlar** üzerinden hesaplanır; dönem filtresi yoktur.
+- Kesit: `OccurredOn` / `RefundedOn` / `PaidOn` / `TakenOn` tarihi `asOfDate`'e
+  **dahil** edilir; sonraki günler hariçtir.
+- İptal: kaydın `CancelledAtUtc` UTC zamanı kullanıcının saat dilimine çevrilir.
+  Yerel iptal tarihi `asOfDate`'ten **önce veya eşit** ise kayıt kesitte iptal
+  sayılır ve toplama girmez; **sonra** ise kesitte aktif sayılır. Aynı kural
+  harcama, iade ve kart ödemesi için geçerlidir.
 - `debt` negatif olabilir; `isInCredit = true` ise kart lehine bakiye vardır.
 - Devreden ekstre borcu ayrıca eklenmez.
-- Harcama/iade verisi Expenses'tan `ICardExpenseQuery` ile okunur.
-- Slice 3'te `cashAdvances` ve `payments` henüz yoktur; formülde `0` kabul edilir
-  (sırasıyla slice 6 ve slice 4'te eklenir). `ICardExpenseQuery` yalnızca tüm
-  zamanlar toplamını döner; `asOf` filtresi slice 4'e ertelendi.
+- Harcama/iade verisi Expenses'tan kesitli `ICardExpenseQuery` ile okunur.
+- Slice 4'te `cashAdvances` henüz yoktur; `0` kabul edilir (slice 6'da eklenir).
+  `payments` slice 4 ile dolar.
+- Geçersiz `asOf` formatı `400 ValidationFailed` döner. Gelecek tarihli `asOf`
+  (kullanıcının bugününden sonrası) da `400 ValidationFailed` döner; bugüne
+  kırpılmaz.
 
 ### 6.4 Kart ödemesi
 
@@ -645,8 +657,16 @@ Yanıt `201` + `CardPaymentDto`:
 - `amount > 0`, `paidOn <= bugün`, kart `Active` olmalı.
 - Kart ödemesi **gider değildir**; ikinci kez gider oluşturmaz.
 - Borcu aşan ödeme kabul edilir; bakiye negatife düşer (kart alacağı).
+- `paidOn` finansal gerçekleşme tarihidir. İptal zamanı `cancelledAtUtc` ayrı
+  bir sistem zamanıdır (sunucuda UTC); iptal `paidOn` değerini değiştirmez.
+- `GET /cards/{id}/payments?status=&includeCancelled=false&page=&pageSize=` →
+  `200` + `PagedResult<CardPaymentDto>`. Varsayılan yalnızca aktif ödemelerdir;
+  `status=Cancelled` iptalleri döner.
 - `POST /cards/{id}/payments/{paymentId}/cancel` gövde `CancelRequest` → `204`;
-  iptal borcu geri yükseltir.
+  iptal gerekçesi zorunludur ve iptal borcu geri yükseltir. Güncel bakiyede iptal
+  edilmiş ödeme sayılmaz. Kesitli hesapta `CancelledAtUtc` UTC zamanı kullanıcı
+  yerel tarihine çevrilir; yerel iptal tarihi kesitle aynı gün veya önceyse ödeme
+  kesitte iptal, sonraysa aktif sayılır (docs/05 §5.3–5.4).
 
 ### 6.5 Nakit avans
 
@@ -688,6 +708,11 @@ Yanıt `201` + `CashAdvanceDto`:
 
 ### 6.6 Ekstre
 
+`GET /cards/{id}/statements?status=&includeCancelled=false&page=&pageSize=` →
+`200` + `PagedResult<StatementDto>`. Varsayılan yalnızca aktif ekstrelerdir;
+`status=Cancelled` iptalleri döner. `GET /cards/{id}/statements/{statementId}`
+tek ekstreyi döner.
+
 `POST /cards/{id}/statements`:
 
 ```json
@@ -703,7 +728,7 @@ Yanıt `201` + `CashAdvanceDto`:
 | Alan | Kural |
 |---|---|
 | `periodStart` | Zorunlu; `<= periodEnd` |
-| `periodEnd` | Zorunlu; aynı kartta dönemler çakışamaz |
+| `periodEnd` | Zorunlu; aynı kartta yalnızca **aktif** ekstre dönemleriyle çakışamaz |
 | `dueDate` | Zorunlu; `>= periodEnd` |
 | `statementAmount` | Zorunlu; `>= 0` |
 | `currency` | Opsiyonel; varsayılan `TRY` |
@@ -729,11 +754,20 @@ Yanıt `201` + `StatementDto`:
 ```
 
 - `carriedOverAmount`, `computedDebtAtPeriodEnd`, `reconciliationDifference`
-  **türetilir**; istemci gönderemez.
+  **türetilir**; istemci gönderemez. Okuma anında güncel kayıtlardan hesaplanır,
+  saklanmaz; sonradan girilen geçmiş tarihli iade/ödeme veya iptal bu alanları
+  günceller.
+- `carriedOverAmount`: aynı kartta mevcut `periodEnd`'den küçük `periodEnd`'e
+  sahip **aktif** ekstreler arasından en büyük `periodEnd`'li ekstreye göre
+  hesaplanır; yoksa `0`. Formül ve sınırlar docs/05 §5.6'dadır.
+- `computedDebtAtPeriodEnd`: `periodEnd` gününün sonu (kullanıcı saat diliminde)
+  kesitiyle hesaplanan kart borcudur; docs/05 §5.3'teki kesit/iptal kuralları
+  geçerlidir.
 - `statementAmount` kart borcuna **eklenmez**, gider oluşturmaz.
 - Fark otomatik olarak gider/faiz/borç kaydı oluşturmaz; yalnızca gösterilir.
 - `POST /cards/{id}/statements/{statementId}/cancel` gövde `CancelRequest` → `204`;
-  iptal borç hesabını değiştirmez.
+  iptal borç hesabını değiştirmez, dönemi çakışma kontrolünde serbest bırakır ve
+  hard delete yapılmaz.
 
 ---
 
@@ -755,7 +789,7 @@ Yanıt `201` + `StatementDto`:
 ```json
 {
   "principal": 30000.00,
-  "totalRepayment": 36000.00,
+  "monthlyPayment": 3000.00,
   "installmentCount": 12,
   "firstDueDate": "2026-12-01",
   "bankName": "Örnek Bank",
@@ -767,14 +801,18 @@ Yanıt `201` + `StatementDto`:
 | Alan | Kural |
 |---|---|
 | `principal` | `> 0`; ele geçen tutar |
-| `totalRepayment` | `>= principal` |
+| `monthlyPayment` | `> 0`; aylık taksit tutarı; en fazla 4 ondalık |
 | `installmentCount` | 1–120 |
 | `firstDueDate` | Kredi tarihinden önce olamaz |
 | `bankName`, `description` | Opsiyonel |
 | `currency` | Opsiyonel; varsayılan `TRY` |
 
-Yanıt `201` + `LoanDto`. Aynı işlemde `CashInflow` (`source = BankLoan`,
-`amount = principal`) oluşturulur; para girişi **kazanılmış gelir değildir**.
+- `totalRepayment` istemci girdisi değildir; `monthlyPayment × installmentCount`
+  ile türetilir ve `>= principal` olmalıdır. Gönderilirse `400`.
+- Taksit tutarları eşittir; son taksite otomatik yuvarlama farkı eklenmez.
+  Yuvarlama yalnızca gösterimde 2 haneye yapılır.
+- Yanıt `201` + `LoanDto`. Aynı işlemde `CashInflow` (`source = BankLoan`,
+  `amount = principal`) oluşturulur; para girişi **kazanılmış gelir değildir**.
 
 `LoanDto`:
 
@@ -782,9 +820,9 @@ Yanıt `201` + `LoanDto`. Aynı işlemde `CashInflow` (`source = BankLoan`,
 {
   "id": "l1o2...",
   "principal": 30000.00,
-  "totalRepayment": 36000.00,
+  "monthlyPayment": 3000.00,
   "installmentCount": 12,
-  "installmentAmount": 3000.00,
+  "totalRepayment": 36000.00,
   "firstDueDate": "2026-12-01",
   "bankName": "Örnek Bank",
   "description": "İhtiyaç kredisi",
@@ -805,6 +843,11 @@ Yanıt `201` + `LoanDto`. Aynı işlemde `CashInflow` (`source = BankLoan`,
   ]
 }
 ```
+
+- `totalRepayment` yanıtta türetilmiş bilgi olarak gösterilir; `LoanDto`'da ayrı
+  `installmentAmount` alanı yoktur. Taksit tutarı `monthlyPayment` ve
+  `installments[].amount` ile ifade edilir.
+- `remainingAmount = totalRepayment − Σ(Paid taksit tutarları)`.
 
 `InstallmentDto.payment` (ödenmişse):
 
@@ -1109,6 +1152,8 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 | 8 | İdempotency | v1'de opsiyonel `Idempotency-Key`; 24 saat; v1.1'de zorunlu |
 | 9 | Auth yanıtı | Register/login/refresh aynı `AuthResponse`; rotating refresh |
 | 10 | Profil | `GET/PUT /auth/me`; saat dilimi buradan yönetilir |
+| 11 | Kart bakiyesi tarih kesiti | `GET /cards/{id}/balance?asOf=YYYY-MM-DD`; yoksa kullanıcının bugünü; yanıtta `asOfDate`; gelecek `asOf` `400` |
+| 12 | Kredi sözleşmesi | `monthlyPayment` + `installmentCount` girdi; `totalRepayment` türetilir; taksitler eşit |
 
 ---
 
@@ -1137,3 +1182,5 @@ Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'
 | 1.0 | 2026-11-14 | İlk sürüm; para/enum/iptal/eşzamanlılık kararları onaylandı |
 | 1.1 | 2026-11-14 | Slice 2 uygulama notu: `Idempotency-Key` ayrı göreve ertelendi |
 | 1.2 | 2026-11-14 | Slice 3 uygulama notları: kart listesi varsayılanı, bilinmeyen alan reddi, bakiye formülünde eksik terimler |
+| 1.3 | 2026-11-15 | Slice 4 bakiye `asOf`/kesit sözleşmesi, ekstre/ödeme listeleri ve türetilen alanlar; kredi `monthlyPayment` girdisi ve türetilen `totalRepayment` |
+| 1.4 | 2026-11-15 | Gelecek `asOf` için `400`; iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |

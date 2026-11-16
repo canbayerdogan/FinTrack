@@ -1,4 +1,3 @@
-using FinTrack.ModuleContracts;
 using FinTrack.Modules.CreditCards.Application.Abstractions;
 using FinTrack.Modules.CreditCards.Application.Common;
 using FinTrack.SharedKernel;
@@ -39,15 +38,15 @@ public sealed class GetCardHandler(
 }
 
 /// <summary>
-/// Kart borcunu harcama/iadeden hesaplar (docs/06 §6.3, docs/05 §5.3).
-/// Slice 3 formülü: <c>debt = expenses − refunds</c>; ödeme ve nakit avans
-/// terimleri sonraki dilimlerde eklenir. Tüm zamanlar üzerinden çalışır.
+/// Kart borcunu kesitli olarak hesaplar (docs/06 §6.3, docs/05 §5.3).
+/// <c>debt = expenses − refunds + cashAdvances − payments</c>. Kesit
+/// verilmezse kullanıcının bugünkü tarihi kullanılır; gelecek tarih reddedilir.
 /// Arşivli kartın geçmiş kayıtları korunur; bakiyesi okunabilir.
 /// </summary>
 public sealed class GetCardBalanceHandler(
     ICurrentUser currentUser,
     ICardQueries queries,
-    ICardExpenseQuery expenseQuery,
+    CardDebtService debtService,
     IClock clock)
     : IQueryHandler<GetCardBalanceQuery, Result<CardBalanceDto>>
 {
@@ -63,20 +62,32 @@ public sealed class GetCardBalanceHandler(
             return Result.Failure<CardBalanceDto>(ApplicationErrors.CardNotFound());
         }
 
-        var totals = await expenseQuery.GetCardTotalsAsync(userId, query.Id, cancellationToken);
+        var timeZoneId = currentUser.PreferredTimeZone;
+        var today = UserTime.Today(clock, timeZoneId);
+        var asOf = query.AsOf ?? today;
+        if (asOf > today)
+        {
+            return Result.Failure<CardBalanceDto>(ApplicationErrors.AsOfInFuture());
+        }
 
-        const decimal cashAdvances = 0m;
-        const decimal payments = 0m;
-
-        var debt = totals.Expenses - totals.Refunds + cashAdvances - payments;
+        var components = await debtService.ComputeAsync(
+            userId,
+            query.Id,
+            asOf,
+            timeZoneId,
+            cancellationToken);
 
         var balance = new CardBalanceDto(
             card.Id,
-            clock.UtcNow,
+            asOf,
             Money.DefaultCurrency,
-            debt,
-            IsInCredit: debt < 0m,
-            new CardBalanceBreakdownDto(totals.Expenses, totals.Refunds, cashAdvances, payments));
+            components.Debt,
+            IsInCredit: components.Debt < 0m,
+            new CardBalanceBreakdownDto(
+                components.Expenses,
+                components.Refunds,
+                components.CashAdvances,
+                components.Payments));
 
         return Result.Success(balance);
     }

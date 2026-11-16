@@ -31,6 +31,8 @@ public static class CreditCardsModule
             .WithTags(Name)
             .RequireAuthorization();
         CardEndpoints.Map(group);
+        CardPaymentEndpoints.Map(group);
+        StatementEndpoints.Map(group);
 
         return app;
     }

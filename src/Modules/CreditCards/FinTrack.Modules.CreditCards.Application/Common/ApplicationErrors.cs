@@ -19,4 +19,19 @@ internal static class ApplicationErrors
 
     public static Error DuplicateKey() =>
         Error.Conflict("StateConflict", "Aynı kayıt zaten mevcut.");
+
+    public static Error CardPaymentNotFound() =>
+        Error.NotFound("NotFound", "Kart ödemesi bulunamadı.");
+
+    public static Error StatementNotFound() =>
+        Error.NotFound("NotFound", "Ekstre bulunamadı.");
+
+    public static Error CardArchived() =>
+        Error.Validation("CardArchived", "Arşivlenmiş karta yeni kayıt eklenemez.");
+
+    public static Error AsOfInFuture() =>
+        Error.Validation("AsOfInFuture", "asOf, kullanıcının bugünkü tarihinden sonra olamaz.");
+
+    public static Error StatementPeriodOverlap() =>
+        Error.Validation("StatementPeriodOverlap", "Bu dönem, aynı kartta aktif bir ekstre dönemiyle çakışıyor.");
 }

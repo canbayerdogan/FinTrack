@@ -108,7 +108,7 @@ public sealed class CardHandlerTests
         Assert.Equal(CardStatus.Archived, fetched.Value.Status);
 
         // Arşivli kartın geçmiş kayıtları korunur; bakiyesi okunabilir.
-        factory.ExpenseQuery.Totals = new(1200m, 200m);
+        factory.ExpenseQuery.AsOfTotals = new(1200m, 200m);
         var balance = await factory.GetCardBalance().HandleAsync(
             new GetCardBalanceQuery(created.Id),
             CancellationToken.None);
@@ -127,7 +127,7 @@ public sealed class CardHandlerTests
             new CreateCardCommand("Banka", "Kart", null, null, null, null),
             CancellationToken.None)).Value;
 
-        factory.ExpenseQuery.Totals = new(12_000m, 800m);
+        factory.ExpenseQuery.AsOfTotals = new(12_000m, 800m);
 
         var balance = await factory.GetCardBalance().HandleAsync(
             new GetCardBalanceQuery(created.Id),
@@ -138,7 +138,7 @@ public sealed class CardHandlerTests
         Assert.Equal(11_200m, value.Debt);
         Assert.False(value.IsInCredit);
         Assert.Equal("TRY", value.Currency);
-        Assert.Equal(Now, value.AsOfUtc);
+        Assert.Equal(new DateOnly(2026, 11, 14), value.AsOfDate);
         Assert.Equal(12_000m, value.Breakdown.Expenses);
         Assert.Equal(800m, value.Breakdown.Refunds);
         Assert.Equal(0m, value.Breakdown.CashAdvances);
@@ -159,7 +159,7 @@ public sealed class CardHandlerTests
 
         // Slice 3'te geçerli işlemlerle negatif bakiye oluşamaz (iade harcamayı
         // aşamaz). Fazla ödeme slice 4'te gelecek; türetim burada doğrulanır.
-        factory.ExpenseQuery.Totals = new(100m, 150m);
+        factory.ExpenseQuery.AsOfTotals = new(100m, 150m);
 
         var balance = await factory.GetCardBalance().HandleAsync(
             new GetCardBalanceQuery(created.Id),

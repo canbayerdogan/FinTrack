@@ -1,7 +1,7 @@
 # FinTrack — Teknik Mimari
 
-**Sürüm:** 1.1 — tasarım
-**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.4 · İş Kuralları v1.0
+**Sürüm:** 1.2 — tasarım
+**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.4 · İş Kuralları v1.2
 **Hedef okuyucu:** geliştirme ajanları (Codex / Claude) ve geliştirici
 
 ---
@@ -182,9 +182,12 @@ kartBorc = Σ(aktif kart harcamaları)          // Expenses'tan okunur
          − Σ(aktif kart ödemeleri)
 ```
 
-Formül **tüm zamanlar** üzerinden çalışır; dönem filtresi uygulanmaz. **Devreden
-ekstre borcu ayrıca eklenmez** — geçmiş harcama/ödemelerin doğal sonucudur,
-eklenirse çift sayım olur.
+Güncel bakiye formülü **tüm zamanlar** üzerinden çalışır; dönem filtresi
+uygulanmaz. `GET /cards/{id}/balance?asOf=...` ve ekstre
+`ComputedDebtAtPeriodEnd` için finansal olay tarihine göre kesit uygulanır;
+iptal yerel tarihi kesitten sonraysa kayıt kesitte aktif sayılır (ayrıntı
+docs/05 §5.3). **Devreden ekstre borcu ayrıca eklenmez** — geçmiş
+harcama/ödemelerin doğal sonucudur, eklenirse çift sayım olur.
 
 Kurallar:
 - Kart borcu **saklanan bir alan değil, hesaplanan bir durumdur** (ADR-0004 ile tutarlı).
@@ -196,8 +199,10 @@ Kurallar:
   hem kart borcu bileşeni doğurur. **Toplam borç raporunda bir kez sayılır** — Reporting
   bunu bilmek zorundadır, çift sayım testi vardır.
 - Ekstre (`Statement`) dönemsel özettir: `PeriodStart`, `PeriodEnd`, `DueDate`,
-  `StatementAmount` kullanıcı tarafından manuel girilir; `CarriedOverAmount` ve
-  `ComputedDebtAtPeriodEnd` **türetilir**. Ekstre **yeni gider veya ikinci borç kaynağı
+  `StatementAmount` kullanıcı tarafından manuel girilir; `CarriedOverAmount`,
+  `ComputedDebtAtPeriodEnd` ve `ReconciliationDifference` **okuma anında türetilir,
+  saklanmaz**. Aynı kartta yalnızca aktif ekstrelerin dönemleri çakışamaz; iptal
+  edilmiş ekstre engel değildir. Ekstre **yeni gider veya ikinci borç kaynağı
   oluşturmaz**; `StatementAmount` borç formülüne girmez.
 - Gerçek kart numarası / CVV / SKT alanı **yoktur ve eklenemez**. `BankName`, `DisplayName`,
   `LogoKey` yeterlidir.
@@ -208,9 +213,10 @@ Kurallar:
 
 Sorumluluk: taksitli kredi ve kişiden alınan borç.
 
-`Loan`: `Principal` (ele geçen), `TotalRepayment`, `InstallmentCount`,
-`InstallmentAmount`, `FirstDueDate`. Taksit planı `Installment` alt kayıtları olarak üretilir.
-Faiz/KKDF/BSMV kırılımı **tutulmaz** — yalnızca taksit tutarı ve toplam.
+`Loan`: `Principal` (ele geçen), `MonthlyPayment`, `InstallmentCount`,
+`FirstDueDate`. `TotalRepayment = MonthlyPayment × InstallmentCount` türetilir;
+taksit tutarları eşittir ve son taksite yuvarlama farkı eklenmez. Taksit planı
+`Installment` alt kayıtları olarak üretilir. Faiz/KKDF/BSMV kırılımı **tutulmaz**.
 
 `PersonalDebt`: `CounterpartyName`, `Principal`, `RemainingAmount`, `DueDate?`.
 

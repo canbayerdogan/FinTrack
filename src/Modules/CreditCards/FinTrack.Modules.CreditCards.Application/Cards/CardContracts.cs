@@ -15,7 +15,7 @@ public sealed record CardDto(
     DateTime RecordedAtUtc,
     string RowVersion);
 
-/// <summary>Bakiye kırılımı (docs/06 §6.3). Slice 3'te ödeme/avans terimleri sıfırdır.</summary>
+/// <summary>Bakiye kırılımı (docs/06 §6.3). Nakit avans slice 6'da dolar; slice 4'te sıfırdır.</summary>
 public sealed record CardBalanceBreakdownDto(
     decimal Expenses,
     decimal Refunds,
@@ -25,10 +25,11 @@ public sealed record CardBalanceBreakdownDto(
 /// <summary>
 /// Hesaplanan kart borcu. Negatif <c>Debt</c> hata değildir; kart lehine bakiye
 /// (alacak) anlamına gelir ve <c>IsInCredit</c> ile işaretlenir.
+/// <c>AsOfDate</c> kullanıcının saat diliminde kesit günüdür (gün sonu dahil).
 /// </summary>
 public sealed record CardBalanceDto(
     Guid CardId,
-    DateTime AsOfUtc,
+    DateOnly AsOfDate,
     string Currency,
     decimal Debt,
     bool IsInCredit,
@@ -40,7 +41,8 @@ public sealed record ListCardsQuery(CardFilter Filter);
 
 public sealed record GetCardQuery(Guid Id);
 
-public sealed record GetCardBalanceQuery(Guid Id);
+/// <summary>Kesit opsiyoneldir; verilmezse kullanıcının bugünkü tarihi kullanılır (docs/06 §6.3).</summary>
+public sealed record GetCardBalanceQuery(Guid Id, DateOnly? AsOf = null);
 
 public sealed record CreateCardCommand(
     string? BankName,

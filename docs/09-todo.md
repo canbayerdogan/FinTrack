@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.5
-**Tarih:** 2026-11-14
-**Bağlı belgeler:** [Durum notu v1.6](08-durum-ve-devam-notu.md) · [Yol haritası v1.6](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Sürüm:** 1.8
+**Tarih:** 2026-11-16
+**Bağlı belgeler:** [Durum notu v1.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.9](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -17,7 +17,7 @@
 1. **Bu dosya** → sıradaki dilim + açık maddeler.
 2. `docs/08` §2–§4 → güncel durum, kararlar, tuzaklar.
 3. `docs/07` §4 ilgili dilim → bağlayıcı kapsam ve kabul kriterleri.
-4. Gereken tek tek dosyalar için §5'teki haritayı kullan (modül kopyalama yok).
+4. Gereken tek tek dosyalar için §6'daki haritayı kullan (modül kopyalama yok).
 5. Açık soru varsa **sor**; cevap gelmeden kod yazma.
 6. Dilim bitişi: build + test → doküman → bu dosya → `docs/08` → rapor.
 
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **4 — Ekstre + kart ödemesi** (planlama) |
-| Son doğrulama | Build 0/0 · 139/139 test · 2026-11-14 |
-| Sıradaki komut | Slice 4 açık soruları yanıtlanınca domain'den başla |
+| Aktif dilim | **5 — Para girişi** (planlama) |
+| Son doğrulama | Build 0/0 · 137/137 birim testi · 46 entegrasyon Docker kapalı (CI'da) · 2026-11-16 |
+| Sıradaki komut | `docs/05` §4 ve `docs/06` §5'i oku; Slice 5 `CashInflow` kapsamını planla |
 
 ---
 
@@ -110,12 +110,48 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ---
 
-## 4. Sonraki dilimler (yüksek seviye)
+## 4. Slice 4 — Ekstre + kart ödemesi ✅ (2026-11-16)
 
-- [ ] **Slice 4 — Ekstre + kart ödemesi:** `CardPayment`, `Statement`,
-      devreden borç, `computedDebtAtPeriodEnd`, mutabakat farkı; borç formülüne
-      ödeme terimi.
-- [ ] **Slice 5 — Para girişi:** `CashInflow`, kaynak türleri, `IsEarnedIncome`
+### 4.1 Planlama
+
+- [x] `docs/05` §5.3–5.6, `docs/06` §6.3–6.6, `docs/07` §4, `docs/08` §7 okundu
+- [x] `docs/answers-1.txt` kararları bağlayıcı belgelere uygulandı
+      (`docs/05`, `docs/06`, `docs/07`, `docs/08`)
+- [x] 21 test senaryosu hazır (tarih kesiti, iptal, iade, `asOf`)
+- [x] Test senaryoları onaylandı; gelecek `asOf` için `400`
+      kararı ve iptal UTC→yerel tarih kuralı dokümanlara işlendi
+- [x] Nihai doküman/senaryo kontrolü ve Slice 4 kodlama onayı
+- [x] Sıra: Domain → Application → Infrastructure → Endpoints → tests
+
+### 4.2 Kapsam (bağlayıcı: `docs/07` §4)
+
+- [x] `CardPayment`: oluşturma, listeleme, iptal (`CancellationReason` zorunlu)
+- [x] `Statement`: dönem/borç manuel; türetilen alanlar okuma anında
+- [x] Devreden borç: önceki **aktif** ekstre; `(önceki.PeriodEnd, mevcut.PeriodEnd]`
+- [x] Dönem çakışması yalnızca `Active` ekstrelerle
+- [x] Bakiye formülüne `− payments`; `GET /cards/{id}/balance?asOf=YYYY-MM-DD`
+- [x] `ICardExpenseQuery`'ye `asOf` (kullanıcı saat dilimi, gün sonu)
+- [x] Migration + uç noktalar + modül/entegrasyon testleri
+
+### 4.3 Doğrulama
+
+- [x] Domain testleri: `CardPayment`, `Statement`, `UserTime` kesiti
+- [x] Application testleri: ödeme, ekstre türetimi, devreden borç, iptal
+- [x] Expenses: `GetCardTotalsAsOfAsync` gelecek hareket, iade, aynı gün iptal,
+      UTC+14/UTC-11
+- [x] Entegrasyon: ödeme CRUD/iptal/arşiv/izolasyon, ekstre türetimi/çakışma,
+      bakiye `asOf` geçmiş/gelecek/format
+- [x] Build 0 hata/0 uyarı; birim testleri 137/137
+- [ ] Entegrasyon testleri (46) — Docker motoru kapalı; CI'da çalışacak
+
+---
+
+## 5. Sonraki dilimler (yüksek seviye)
+
+- [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
+      `Statement`, devreden borç, `computedDebtAtPeriodEnd`, mutabakat farkı;
+      borç formülüne ödeme terimi. Ayrıntı §4.
+- [ ] **Slice 5 — Para girişi:** sıradaki dilim. `CashInflow`, kaynak türleri, `IsEarnedIncome`
       türetimi, `Unknown` grubu; borç doğuran girişler.
 - [ ] **Slice 6 — Nakit avans:** `CashAdvance` + bağlı `CashInflow`, iptalde
       ikisinin birlikte iptali, borç formülüne avans terimi.
@@ -134,11 +170,11 @@ dotnet test FinTrack.slnx --nologo -v q
       ilk çalıştırma yeşil (139/139, Ubuntu + Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [ ] Yerel entegrasyon testleri için Docker Desktop açık olmalı (aksi halde
-      33/40 `DockerUnavailableException`)
+      46 `DockerUnavailableException`)
 
 ---
 
-## 5. Dosya haritası (tekrar okumayı önlemek için)
+## 6. Dosya haritası (tekrar okumayı önlemek için)
 
 | İhtiyaç | Bakılacak yer |
 |---|---|
@@ -156,7 +192,7 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ---
 
-## 6. Değişiklik geçmişi
+## 7. Değişiklik geçmişi
 
 | Sürüm | Tarih | Değişiklik |
 |---|---|---|
@@ -166,3 +202,6 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.3 | 2026-11-14 | Release build + 139/139 doğrulandı; Docker ön koşulu not edildi |
 | 1.4 | 2026-11-14 | Entegrasyon fixture'ı env var'a geçti; testler gerçek konteynere bağlanıyor |
 | 1.5 | 2026-11-14 | GitHub uzak depo + ilk yeşil CI çalıştırması işaretlendi |
+| 1.6 | 2026-11-15 | Slice 4 planlama bölümü eklendi; 21 test senaryosu onayı bekliyor olarak işaretlendi |
+| 1.7 | 2026-11-15 | Gelecek `asOf` `400` ve iptal UTC→yerel tarih kuralı işlendi; nihai kontrol ve açık kodlama onayı bekleniyor |
+| 1.8 | 2026-11-16 | Slice 4 tamamlandı ve kutular işaretlendi; 137 birim testi yeşil, 46 entegrasyon Docker kapalı olduğu için CI'ya bırakıldı; sıradaki dilim Slice 5 |

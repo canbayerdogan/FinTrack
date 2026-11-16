@@ -22,8 +22,8 @@ public interface ICardQuery
 /// </summary>
 /// <remarks>
 /// Dönem/<c>asOf</c> filtresi bilinçli olarak yoktur; kart borcu tüm zamanlar
-/// üzerinden hesaplanır. Ekstre karşılaştırması için tarih kesitli sorgu
-/// slice 4'te ayrı bir sözleşme olarak eklenir.
+/// üzerinden hesaplanır. Ekstre karşılaştırması için tarih kesitli toplam
+/// <see cref="ICardExpenseQuery.GetCardTotalsAsOfAsync"/> ile alınır.
 /// </remarks>
 public sealed record CardExpenseTotals(decimal Expenses, decimal Refunds);
 
@@ -32,5 +32,20 @@ public interface ICardExpenseQuery
     Task<CardExpenseTotals> GetCardTotalsAsync(
         Guid userId,
         Guid cardId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// <paramref name="asOfDate"/> kesitine <b>dahil</b> aktif harcama ve iade
+    /// toplamları (docs/05 §5.3, docs/06 §6.3). Kesit kullanıcının
+    /// <paramref name="timeZoneId"/> saat diliminde bir <see cref="DateOnly"/>'dir:
+    /// <c>OccurredOn</c>/<c>RefundedOn</c> kesite dahil edilir; kaydın
+    /// <c>CancelledAtUtc</c> değeri yerel tarihe çevrilir ve yerel iptal tarihi
+    /// kesitten <b>sonraysa</b> kayıt kesitte aktif sayılır.
+    /// </summary>
+    Task<CardExpenseTotals> GetCardTotalsAsOfAsync(
+        Guid userId,
+        Guid cardId,
+        DateOnly asOfDate,
+        string timeZoneId,
         CancellationToken cancellationToken);
 }

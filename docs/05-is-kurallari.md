@@ -1,8 +1,8 @@
 # FinTrack — İş Kuralları (Business Rules)
 
-**Sürüm:** 1.0
-**Tarih:** 2026-11-13
-**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.1 · ADR-0001…0008
+**Sürüm:** 1.2
+**Tarih:** 2026-11-15
+**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0008
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu doküman v1 iş kurallarını tanımlar. `docs/02` §5'teki 7 açık karar ile
@@ -285,8 +285,28 @@ kartBorc = Σ(aktif kart harcamaları)
          − Σ(aktif kart ödemeleri)
 ```
 
-- Formül **tüm zamanlar** üzerinden çalışır; dönem filtresi borç hesabına
+- **Güncel kart borcu** formülü tüm zamanlar üzerinden çalışır; dönem filtresi
   uygulanmaz.
+- **Kesitli hesap** (`GET /cards/{id}/balance?asOf=...` ve ekstre
+  `ComputedDebtAtPeriodEnd`) için kesit tarihi, kullanıcının saat diliminde bir
+  `DateOnly`'dir. Finansal olaylarda `OccurredOn` / `RefundedOn` / `PaidOn` /
+  `TakenOn` tarihi kesit gününe **dahil** edilir; sonraki gün hareketleri hesaba
+  girmez.
+- `asOf` verilmezse kullanıcının bugünkü tarihi kullanılır. Gelecek tarihli
+  `asOf` geçersizdir: kullanıcının bugününden sonraki tarih
+  `400 ValidationFailed` döner; bugüne kırpılmaz. Varsayılan bugün olduğundan ve
+  gelecek tarihli finansal kayıt oluşturulamadığından, parametresiz hesap mevcut
+  durumun tüm zamanlar toplamıyla aynı sonucu verir.
+- **Kesitte aktiflik:** Bir kayıt `CancelledAtUtc` taşımıyorsa aktif sayılır.
+  `CancelledAtUtc` UTC zamanı kullanıcının saat dilimine çevrilerek yerel iptal
+  tarihi bulunur:
+  - yerel iptal tarihi kesit tarihinden **önce veya eşit** ise kayıt kesitte
+    **iptal** sayılır ve toplama girmez;
+  - yerel iptal tarihi kesit tarihinden **sonra** ise kayıt kesitte **aktif**
+    sayılır.
+  - Aynı kural **harcama, iade ve kart ödemesi** için geçerlidir.
+- Ekstre `ComputedDebtAtPeriodEnd` hesabında kesit tarihi ilgili ekstre
+  `PeriodEnd`'idir; sunucu saatine göre "şimdi" kullanılmaz.
 - **Devreden ekstre borcu ayrıca eklenmez.** Devreden borç, geçmiş harcama ve
   ödemelerin doğal sonucudur; ayrıca eklenirse çift sayım olur.
 - Kart borcu **saklanan bir alan değil, hesaplanan bir durumdur**. Performans için
@@ -303,8 +323,17 @@ kartBorc = Σ(aktif kart harcamaları)
   gider saymaz.
 - Ödeme mevcut borcu aşabilir; bakiye negatife düşer ve kart alacağı olarak
   gösterilir. Bu durum hata değildir.
+- `PaidOn` finansal gerçekleşme tarihidir; iptal zamanı ayrı bir sistem
+  zamanıdır (`CancelledAtUtc`, sunucuda UTC). İptal `PaidOn` değerini değiştirmez.
 - Ödeme iptal edilebilir; `CancellationReason` zorunludur. İptal edilen ödeme
-  borcu geri yükseltir.
+  güncel bakiyeye girmez; borcu geri yükseltir. Kesitli hesapta `CancelledAtUtc`
+  UTC zamanı kullanıcı saat dilimine çevrilir; yerel iptal tarihi kesit
+  tarihinden sonra ise ödeme kesitte aktif sayılır, eşit veya önce ise girmez
+  (bkz. §5.3).
+- Ödeme-ekstre eşleştirmesi v1'de yoktur; ödeme yalnızca `PaidOn` tarihiyle
+  kesite girer.
+- İptal, önceki bir ekstre kesitinde ödenmiş görünen tutarı geriye dönük
+  değiştirebilir; ekstrenin türetilen alanları okuma anında yeniden hesaplanır.
 - Ödeme hard delete edilmez.
 
 ### 5.5 Nakit avans
@@ -332,20 +361,34 @@ Kullanıcı aşağıdaki alanları **manuel** girer:
 | `DueDate` | Zorunlu; `DueDate >= PeriodEnd` |
 | `StatementAmount` | Zorunlu; `>= 0` |
 
-- Aynı kartta dönemler **çakışamaz**.
+- Aynı kartta **aktif** ekstrelerin dönemleri çakışamaz. Çakışma, iki dönemin
+  gün kümelerinin kesişmesidir (`PeriodStart <= diğer.PeriodEnd` ve
+  `PeriodEnd >= diğer.PeriodStart`); başlangıç ve bitiş günleri dahildir.
+  İptal edilmiş ekstre yeni ekstre oluşturulmasını engellemez.
 - Ekstre **yeni gider veya ikinci borç kaynağı değildir**. `StatementAmount`
   kart borcuna eklenmez.
-- **Devreden borç** kullanıcı tarafından girilmez; türetilir:
-  - önceki ekstre yoksa `0`
-  - varsa `max(0, önceki.StatementAmount − önceki.PeriodEnd'den sonraki
-    ekstre.PeriodEnd'e kadar yapılan aktif kart ödemeleri)`
+- **Devreden borç** kullanıcı tarafından girilmez; okuma anında türetilir:
+  - Aynı kartta, mevcut `PeriodEnd`'den küçük `PeriodEnd`'e sahip **aktif**
+    ekstreler arasından en büyük `PeriodEnd`'li olan "önceki aktif ekstre"dir.
+    Yoksa `CarriedOverAmount = 0`.
+  - Varsa:
+    `max(0, önceki.StatementAmount − Σ(PaidOn ∈ (önceki.PeriodEnd, mevcut.PeriodEnd] olan ve mevcut.PeriodEnd kesitinde aktif kart ödemeleri))`
+  - Aralık alt sınırı **hariç**, üst sınır **dahildir**. Yalnızca `PaidOn`
+    finansal tarihi esas alınır; ödeme-ekstre eşleştirmesi yapılmaz.
   - Bu değer yalnızca bilgi amaçlıdır; borç formülüne girmez.
-- `ComputedDebtAtPeriodEnd` = `PeriodEnd` itibarıyla kart borcu (o tarihe kadar
-  olan harcama, iade, nakit avans ve ödemelerle).
+- `ComputedDebtAtPeriodEnd`, ilgili `PeriodEnd` gününün sonu (kullanıcı saat
+  diliminde) kesitiyle hesaplanan kart borcudur. Formül §5.3'teki gibidir;
+  harcama, iade, nakit avans ve ödemelerde finansal olay tarihi kesite dahil
+  edilir; iptal aktifliği §5.3'teki UTC→yerel tarih kuralına göre belirlenir.
 - `ReconciliationDifference = StatementAmount − ComputedDebtAtPeriodEnd`.
   Fark otomatik olarak gider, faiz veya borç kaydı **oluşturmaz**; kullanıcıya
   gösterilir. Kullanıcı isterse farkı ayrı bir harcama olarak girebilir.
-- Ekstre iptal edilebilir; iptal borç hesabını değiştirmez.
+- `CarriedOverAmount`, `ComputedDebtAtPeriodEnd` ve `ReconciliationDifference`
+  **saklanmaz; okuma anında güncel kayıtlardan hesaplanır.** Böylece sonradan
+  girilen geçmiş tarihli iade/ödeme veya iptal, geçmiş ekstrenin türetilen
+  alanlarını günceller.
+- Ekstre iptal edilebilir; iptal borç hesabını değiştirmez, dönem çakışması
+  engeli oluşturmaz ve hard delete yapılmaz.
 
 ### 5.7 Kart işlem türleri
 
@@ -367,7 +410,7 @@ Kart **alışverişi ve iadesi** bu listede yoktur; Expenses'a aittir (ADR-0008)
 | Alan | Kural |
 |---|---|
 | `Principal` | `> 0`; kullanıcının eline geçen tutar |
-| `TotalRepayment` | `>= Principal` |
+| `MonthlyPayment` | `> 0`; aylık taksit tutarı; en fazla 4 ondalık |
 | `InstallmentCount` | `>= 1`; v1 üst sınırı 120 |
 | `FirstDueDate` | Kredi tarihinden önce olamaz |
 | `BankName` | Opsiyonel |
@@ -377,15 +420,16 @@ Kart **alışverişi ve iadesi** bu listede yoktur; Expenses'a aittir (ADR-0008)
   tutar = `Principal`) oluşturulur.
 - Kredi tutarı **kazanılmış gelir değildir**; aylık özette "diğer para
   girişleri" altında görünür.
-- Faiz/KKDF/BSMV kırılımı tutulmaz; yalnızca toplam geri ödeme ve taksit tutarı
-  kullanılır. Otomatik faiz hesabı yoktur.
+- `TotalRepayment` kullanıcı girdisi değildir; `MonthlyPayment × InstallmentCount`
+  ile türetilir ve en az `Principal` olmalıdır (`TotalRepayment >= Principal`).
+- Faiz/KKDF/BSMV kırılımı tutulmaz; otomatik faiz hesabı yoktur.
 
 ### 6.2 Taksit planı
 
 - **Tüm vade** için taksit kayıtları üretilir (örn. 36 taksit).
-- `InstallmentAmount = round(TotalRepayment / InstallmentCount, 2, AwayFromZero)`.
-- Son taksit, yuvarlama farkını kapatacak şekilde hesaplanır:
-  `sonTaksit = TotalRepayment − (InstallmentAmount × (InstallmentCount − 1))`.
+- Taksit tutarları eşittir: her taksit `InstallmentAmount = MonthlyPayment`.
+- `TotalRepayment = MonthlyPayment × InstallmentCount` tam çarpımdır; son taksite
+  yuvarlama farkı eklenmez. Yuvarlama yalnızca gösterimde 2 haneye yapılır.
 - Vade tarihleri `FirstDueDate`'ten başlayarak aylık ilerler; ayın günü yoksa
   (örn. 31 Şubat) ayın son gününe sabitlenir.
 - Taksit durumları: `Planned`, `Paid`, `Cancelled`.
@@ -565,6 +609,9 @@ Aşağıdaki testler CI'da zorunludur; biri kırmızıysa sürüm çıkmaz.
 | 6 | Rapor dönemi | Takvim ayı + `OccurredOn` + `Europe/Istanbul` | §7.1 |
 | 7 | Belirsiz para girişi | Ayrı "Belirsiz" grubu; gelire dahil edilmez | §4.2 |
 | 8 | Kart alışverişi sahipliği | `Expense` + `CardId`; CreditCards satın alma kaydı tutmaz | §3.2, ADR-0008 |
+| 9 | Ekstre tarih kesiti ve devreden borç | `PeriodEnd` gün sonu; yalnızca aktif ekstreler; `(önceki.PeriodEnd, mevcut.PeriodEnd]` ödemeleri; türetilen alanlar okuma anında; iptal UTC→yerel tarih | §5.3–5.6 |
+| 10 | Kredi sözleşmesi | `MonthlyPayment` girdi; `TotalRepayment` türetilir; taksitler eşit | §6.1–6.2 |
+| 11 | Bakiye `asOf` ve gelecek tarih | Opsiyonel `asOf`; yoksa bugün; gelecek tarih `400 ValidationFailed` | §5.3–5.4 |
 
 ---
 
@@ -587,3 +634,5 @@ Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 | Sürüm | Tarih | Değişiklik |
 |---|---|---|
 | 1.0 | 2026-11-13 | İlk sürüm; doküman 02 §5 açık kararları ve kart alışverişi sahipliği kapatıldı |
+| 1.1 | 2026-11-15 | Slice 4 tarih kesiti/iptal/devreden borç kuralları netleştirildi; kredi sözleşmesi `MonthlyPayment` girdisine geçti, taksitler eşitlendi |
+| 1.2 | 2026-11-15 | Gelecek `asOf` reddi ve iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |

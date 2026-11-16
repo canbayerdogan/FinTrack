@@ -46,4 +46,123 @@ internal static class DomainErrors
 
     public static Error PaymentDueDayOutOfRange() =>
         Error.Validation("CardPaymentDueDayRange", "Son ödeme günü 1 ile 31 arasında olmalıdır.");
+
+    public static Error CardRequired() =>
+        Error.Validation("CardIdRequired", "Kart kimliği zorunludur.");
+
+    // Kart ödemesi (docs/05 §5.4).
+
+    public static Error PaymentAmountInvalid() =>
+        Error.Validation("CardPaymentAmountInvalid", "Ödeme tutarı 0'dan büyük olmalıdır.");
+
+    public static Error PaymentAmountScale() =>
+        Error.Validation("CardPaymentAmountScale", "Ödeme tutarı en fazla 4 ondalık basamak içerebilir.");
+
+    public static Error PaymentAmountTooLarge() =>
+        Error.Validation("CardPaymentAmountTooLarge", "Ödeme tutarı izin verilen üst sınırı aşıyor.");
+
+    public static Error PaymentCurrencyUnsupported() =>
+        Error.Validation("CardPaymentCurrencyUnsupported", "v1'de yalnızca TRY desteklenir.");
+
+    public static Error PaymentDateRequired() =>
+        Error.Validation("CardPaymentDateRequired", "Ödeme tarihi zorunludur.");
+
+    public static Error PaymentDateInFuture() =>
+        Error.Validation("CardPaymentDateInFuture", "Ödeme tarihi bugünden ileri olamaz.");
+
+    public static Error PaymentNoteTooLong() =>
+        Error.Validation(
+            "CardPaymentNoteTooLong",
+            $"Not en fazla {CardPayment.NoteMaxLength} karakter olabilir.");
+
+    // Ekstre (docs/05 §5.6).
+
+    public static Error StatementPeriodStartRequired() =>
+        Error.Validation("StatementPeriodStartRequired", "Dönem başlangıcı zorunludur.");
+
+    public static Error StatementPeriodEndRequired() =>
+        Error.Validation("StatementPeriodEndRequired", "Dönem bitişi zorunludur.");
+
+    public static Error StatementPeriodInvalid() =>
+        Error.Validation("StatementPeriodInvalid", "Dönem başlangıcı, dönem bitişinden sonra olamaz.");
+
+    public static Error StatementDueDateRequired() =>
+        Error.Validation("StatementDueDateRequired", "Son ödeme tarihi zorunludur.");
+
+    public static Error StatementDueDateBeforePeriodEnd() =>
+        Error.Validation("StatementDueDateBeforePeriodEnd", "Son ödeme tarihi, dönem bitişinden önce olamaz.");
+
+    public static Error StatementAmountInvalid() =>
+        Error.Validation("StatementAmountInvalid", "Ekstre tutarı negatif olamaz.");
+
+    public static Error StatementAmountScale() =>
+        Error.Validation("StatementAmountScale", "Ekstre tutarı en fazla 4 ondalık basamak içerebilir.");
+
+    public static Error StatementAmountTooLarge() =>
+        Error.Validation("StatementAmountTooLarge", "Ekstre tutarı izin verilen üst sınırı aşıyor.");
+
+    public static Error StatementCurrencyUnsupported() =>
+        Error.Validation("StatementCurrencyUnsupported", "v1'de yalnızca TRY desteklenir.");
+
+    // Ortak yardımcılar.
+
+    public static Error CancellationReasonRequired() =>
+        Error.Validation("CancellationReasonRequired", "İptal gerekçesi zorunludur.");
+
+    public static Error CancellationReasonTooLong(int maxLength) =>
+        Error.Validation("CancellationReasonTooLong", $"İptal gerekçesi en fazla {maxLength} karakter olabilir.");
+
+    public static Error? ValidateReason(string? reason, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return CancellationReasonRequired();
+        }
+
+        return reason.Trim().Length > maxLength
+            ? CancellationReasonTooLong(maxLength)
+            : null;
+    }
+
+    /// <summary><c>amount &gt; 0</c> ve <c>decimal(19,4)</c> sınırları.</summary>
+    public static Error? ValidatePositiveAmount(
+        decimal amount,
+        decimal maxAmount,
+        Func<Error> invalid,
+        Func<Error> scale,
+        Func<Error> tooLarge)
+    {
+        if (amount <= 0m)
+        {
+            return invalid();
+        }
+
+        if (decimal.Round(amount, Money.StorageScale) != amount)
+        {
+            return scale();
+        }
+
+        return amount > maxAmount ? tooLarge() : null;
+    }
+
+    /// <summary><c>amount &gt;= 0</c> ve <c>decimal(19,4)</c> sınırları.</summary>
+    public static Error? ValidateNonNegativeAmount(
+        decimal amount,
+        decimal maxAmount,
+        Func<Error> invalid,
+        Func<Error> scale,
+        Func<Error> tooLarge)
+    {
+        if (amount < 0m)
+        {
+            return invalid();
+        }
+
+        if (decimal.Round(amount, Money.StorageScale) != amount)
+        {
+            return scale();
+        }
+
+        return amount > maxAmount ? tooLarge() : null;
+    }
 }

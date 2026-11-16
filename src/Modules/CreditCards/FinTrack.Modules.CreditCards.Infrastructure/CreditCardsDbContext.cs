@@ -23,6 +23,10 @@ public sealed class CreditCardsDbContext : DbContext
 
     public DbSet<CreditCard> Cards => Set<CreditCard>();
 
+    public DbSet<CardPayment> CardPayments => Set<CardPayment>();
+
+    public DbSet<Statement> Statements => Set<Statement>();
+
     private Guid CurrentUserId => _currentUser.UserId ?? Guid.Empty;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -37,12 +41,22 @@ public sealed class CreditCardsDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CreditCardsDbContext).Assembly);
 
         modelBuilder.Entity<CreditCard>().HasQueryFilter(card => card.UserId == CurrentUserId);
+        modelBuilder.Entity<CardPayment>().HasQueryFilter(payment => payment.UserId == CurrentUserId);
+        modelBuilder.Entity<Statement>().HasQueryFilter(statement => statement.UserId == CurrentUserId);
 
         // SQLite rowversion üretmez; yalnızca testlerde kullanılan bu sağlayıcıda
         // sürüm alanı uygulama tarafından (test interceptor'ı) atanır.
         if (isSqlite)
         {
             modelBuilder.Entity<CreditCard>().Property(card => card.RowVersion)
+                .IsConcurrencyToken()
+                .ValueGeneratedNever();
+
+            modelBuilder.Entity<CardPayment>().Property(payment => payment.RowVersion)
+                .IsConcurrencyToken()
+                .ValueGeneratedNever();
+
+            modelBuilder.Entity<Statement>().Property(statement => statement.RowVersion)
                 .IsConcurrencyToken()
                 .ValueGeneratedNever();
         }

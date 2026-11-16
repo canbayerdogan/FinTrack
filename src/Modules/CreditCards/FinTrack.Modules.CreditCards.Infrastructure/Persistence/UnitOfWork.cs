@@ -1,3 +1,4 @@
+using System.Data;
 using FinTrack.Modules.CreditCards.Application.Abstractions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -25,4 +26,22 @@ internal sealed class UnitOfWork(CreditCardsDbContext db) : IUnitOfWork
 
     private static bool IsUniqueViolation(DbUpdateException exception) =>
         exception.InnerException is SqlException { Number: 2601 or 2627 };
+}
+
+internal sealed class TransactionScopeFactory(CreditCardsDbContext db) : ITransactionScopeFactory
+{
+    public async Task<ITransactionScope> BeginSerializableAsync(CancellationToken cancellationToken)
+    {
+        var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        return new EfTransactionScope(transaction);
+    }
+}
+
+internal sealed class EfTransactionScope(
+    Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction) : ITransactionScope
+{
+    public Task CommitAsync(CancellationToken cancellationToken) =>
+        transaction.CommitAsync(cancellationToken);
+
+    public ValueTask DisposeAsync() => transaction.DisposeAsync();
 }

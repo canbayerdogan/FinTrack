@@ -1,8 +1,8 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.6
-**Tarih:** 2026-11-14
-**Bağlı belgeler:** [Teknik Mimari v1.1](03-mimari.md) · [İş Kuralları v1.0](05-is-kurallari.md) · [API Sözleşmeleri v1.1](06-api-sozlesmeleri.md) · ADR-0001…0008
+**Sürüm:** 1.9
+**Tarih:** 2026-11-16
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu belge iki şeyi tanımlar:
@@ -46,14 +46,16 @@
 | Slice 1 — kimlik doğrulama | ✅ Identity + JWT, `identity` migration, 22 birim + 17 entegrasyon testi |
 | Slice 2 — harcama + kategori | ✅ `expenses` şeması, harcama/iade/kategori, 52 modül testi |
 | Slice 3 — kart + hesaplanan bakiye | ✅ `cards` şeması, kart CRUD/arşiv/bakiye, 22 modül + 6 entegrasyon testi |
+| Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf`, 57 modül + 6 entegrasyon testi |
 | Mimari testler | ✅ 3 test |
 | Entegrasyon smoke testleri | ✅ 7 test (health + 3 modül `_status` + harcama/kategori/kart 401) |
 | Entegrasyon kimlik testleri | ✅ 17 test (Testcontainers MSSQL) |
 | Entegrasyon harcama testleri | ✅ 10 test (Testcontainers MSSQL, gerçek `ICardQuery`) |
 | Entegrasyon kart testleri | ✅ 6 test (Testcontainers MSSQL) |
+| Entegrasyon ekstre/ödeme testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Birim testleri (kimlik) | ✅ 22 test (doğrulama + JWT) |
-| Modül testleri (Expenses) | ✅ 52 test (domain + handler, SQLite in-memory) |
-| Modül testleri (CreditCards) | ✅ 22 test (domain + handler, SQLite in-memory) |
+| Modül testleri (Expenses) | ✅ 55 test (domain + handler, SQLite in-memory) |
+| Modül testleri (CreditCards) | ✅ 57 test (domain + handler, SQLite in-memory) |
 
 ### 2.2 Ortam
 
@@ -94,8 +96,8 @@
 | 1 | Kimlik doğrulama | M | 0 | ✅ |
 | 2 | Harcama + kategori | L | 1 | ✅ |
 | 3 | Kart + hesaplanan bakiye | L | 2 | ✅ |
-| 4 | Ekstre + kart ödemesi | L | 3 | ⏳ sıradaki |
-| 5 | Para girişi | M | 1 | ⏳ |
+| 4 | Ekstre + kart ödemesi | L | 3 | ✅ |
+| 5 | Para girişi | M | 1 | ⏳ sıradaki |
 | 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ⏳ |
 | 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ |
 | 8 | Raporlama | L | 2–7 | ⏳ |
@@ -263,7 +265,10 @@ kullanılmaması; arşivli kartın geçmiş kayıtları.
 
 ---
 
-### Slice 4 — Ekstre + kart ödemesi
+### Slice 4 — Ekstre + kart ödemesi ✅
+
+**Durum:** ✅ Bitti (2026-11-16). 57 modül + 6 entegrasyon testi; toplam 183
+test. Migration: `20261116180727_AddCardPaymentsAndStatements`.
 
 **Amaç:** Ekstre özeti ve kart ödemelerini ekleyerek kart borcu formülünü
 tamamlamak.
@@ -271,28 +276,69 @@ tamamlamak.
 **Kapsam:**
 - `Statement`: `PeriodStart`, `PeriodEnd`, `DueDate`, `StatementAmount` manuel;
   `CarriedOverAmount`, `ComputedDebtAtPeriodEnd`, `ReconciliationDifference`
-  türetilir.
-- Dönem çakışması, tarih ve tutar kuralları.
-- `CardPayment`: oluşturma, listeleme, iptal.
-- Bakiye: `expenses − refunds + cashAdvances(0) − payments`.
-- Ekstre ve ödeme endpoint'leri (`docs/06` §6.4, §6.6).
+  okuma anında türetilir ve saklanmaz.
+- Dönem çakışması: aynı kartta yalnızca `Active` ekstreler engeller; iptal
+  edilmiş ekstre yeni oluşturmayı engellemez.
+- Devreden borç: önceki aktif ekstre (en büyük `PeriodEnd`) üzerinden
+  `max(0, önceki.StatementAmount − (önceki.PeriodEnd, mevcut.PeriodEnd]
+  aralığındaki, mevcut kesitte aktif ödemeler)`; bilgi amaçlıdır, bakiyeye
+  eklenmez. Ödeme-ekstre eşleştirmesi v1'de yoktur.
+- `CardPayment`: oluşturma, listeleme, iptal; `PaidOn` finansal tarih,
+  `CancelledAtUtc` sunucu UTC, iptal gerekçesi zorunlu.
+- Bakiye: `expenses − refunds + cashAdvances(0) − payments`;
+  `GET /cards/{id}/balance?asOf=YYYY-MM-DD` opsiyonel, yoksa kullanıcının bugünü,
+  yanıtta `asOfDate`; gelecek `asOf` `400 ValidationFailed`.
+- Tarih kesiti: kullanıcı saat diliminde `DateOnly`, gün sonu; finansal olaylarda
+  `OccurredOn`/`RefundedOn`/`PaidOn`/`TakenOn`; iptal UTC zamanı kullanıcı yerel
+  tarihine çevrilir ve kesitle aynı gün veya önceyse kayıt iptal sayılır.
+- `ICardExpenseQuery` sözleşmesine kesitli toplam (`asOfDate` + kullanıcı saat
+  dilimi) eklenmesi; mevcut tüm zamanlar toplamı geriye uyumlu kalır.
+- Ekstre ve ödeme endpoint'leri (`docs/06` §6.3–6.6).
 
-**Kapsam dışı:** Nakit avans (slice 6), otomatik ekstre içe aktarma, faiz hesabı.
+**Kapsam dışı:** Nakit avans (slice 6), otomatik ekstre içe aktarma, faiz/ücret
+hesabı, ödeme-ekstre eşleştirmesi, ekstreye özel ödeme kaydı.
+
+**Dokunulan yerler:**
+- `FinTrack.Modules.CreditCards.*` (`CardPayment`, `Statement`, handler'lar,
+  `CardDebtService`, `StatementDerivation`, EF config/migration, uç noktalar)
+- `FinTrack.ModuleContracts` (`ICardExpenseQuery.GetCardTotalsAsOfAsync`)
+- `FinTrack.Modules.Expenses.Infrastructure` (kesitli sorgu implementasyonu)
+- `tests/FinTrack.Modules.CreditCards.Tests`, `tests/FinTrack.Modules.Expenses.Tests`,
+  `tests/FinTrack.Api.IntegrationTests`
 
 **Testler:**
+- Ayrıntılı numaralı liste: `docs/08` §7 (21 senaryo); aşağıdakiler özet.
 - Ekstre yeni gider/borç oluşturmaz; `statementAmount` bakiyeye eklenmez.
 - Devreden borç türetilir; bakiyeye ikinci kez eklenmez.
 - Ödeme gider değildir; bakiyeyi düşürür; fazla ödeme kart alacağı üretir.
-- Ödeme iptali bakiyeyi geri yükseltir.
-- Dönem çakışması reddi; `dueDate >= periodEnd`.
+- Ödeme iptali bakiyeyi geri yükseltir; gerekçesiz iptal reddedilir.
+- Dönem çakışması yalnızca aktif ekstrelerde reddedilir; iptal edilmiş
+  ekstreyle çakışan dönem oluşturulabilir.
+- `dueDate >= periodEnd`, `periodStart <= periodEnd`.
 - Mutabakat farkı yalnızca bilgi; otomatik kayıt yok.
+- Kesit: dönem sonundan sonraki iade geçmiş ekstreyi değiştirmez; geçmiş
+  tarihli iade/ödeme/iptal sonradan girilirse türetilen alanlar güncellenir.
+  İptal UTC zamanı kullanıcı yerel tarihine çevrilir; yerel iptal tarihi kesitle
+  aynı gün veya önceyse kayıt kesitte iptal, sonraysa aktif sayılır (harcama,
+  iade ve ödeme için aynı kural).
+- Saat dilimi sınırında gün sonu doğru ana çevrilir.
+- Bakiye `asOf`: yoksa bugün; geçmiş kesit sonraki hareketleri dışlar; yanıtta
+  `asOfDate` döner; gelecek `asOf` `400 ValidationFailed` ile reddedilir.
+- Regresyon: `docs/05` §9/1, 8, 9.
 
 **Kabul kriterleri:**
-- `docs/05` §5.3–5.6, §9/8–9 ve `docs/06` §6 ile uyum.
+- `docs/05` §5.3–5.6, §9/1, 8–9 ve `docs/06` §6.3–6.6 ile uyum.
 - `cardBorc` formülü belgelenen haliyle çalışır.
+- Türetilen ekstre alanları okuma anında hesaplanır; geçmiş tarihli iade/iptal
+  geçmiş ekstreyi güncelleyebilir.
+- İptal, harcama/iade/ödeme için aynı kesit kuralıyla değerlendirilir; aynı
+  yerel gün iptali kesitte iptal sayılır.
+- Gelecek `asOf` `400 ValidationFailed` döner.
+- İptal edilmiş ekstre dönem çakışması engeli oluşturmaz.
+- Build 0 hata/0 uyarı, tüm testler yeşil, mimari testler yeşil.
 
-**Riskler:** Ekstre tarihleri ile bakiye "as of" hesabı; yuvarlama; iptal
-senaryolarında bakiye tutarlılığı.
+**Riskler:** Ekstre tarihleri ile bakiye "as of" hesabı; saat dilimi sınırı;
+iptal senaryolarında bakiye tutarlılığı; türetilen alanların okuma maliyeti.
 
 ---
 
@@ -369,7 +415,12 @@ hata durumunda rollback.
 
 **Kapsam:**
 - `Loan`, `Installment` (tüm vade planı), `PersonalDebt`, `PersonalDebtRepayment`.
-- Taksit üretimi, yuvarlama, son taksit düzeltmesi, ay sonu gün sabitleme.
+- Kredi girdisi: `Principal`, `MonthlyPayment`, `InstallmentCount`, `FirstDueDate`;
+  banka ve açıklama opsiyonel.
+- `TotalRepayment = MonthlyPayment × InstallmentCount` türetilir; kullanıcı
+  girdisi değildir. `TotalRepayment >= Principal` doğrulanır.
+- Taksitler eşittir (`InstallmentAmount = MonthlyPayment`); son taksite otomatik
+  yuvarlama farkı eklenmez. Ay sonu gün sabitleme uygulanır.
 - Sıralı taksit ödeme; kısmi ödeme yok; ödeme iptali.
 - Kredi/kişisel borç oluştururken bağlı `CashInflow` atomik oluşur.
 - Kredi iptali (ödenmiş taksit varsa `409`), kişisel borç iptali (aktif geri
@@ -379,7 +430,8 @@ hata durumunda rollback.
 **Kapsam dışı:** Faiz/KKDF/BSMV kırılımı, erken kapama, yeniden yapılandırma.
 
 **Testler:**
-- Taksit sayısı/tutarı; son taksit yuvarlama farkı.
+- `monthlyPayment × installmentCount = totalRepayment`; taksitler eşit.
+- `totalRepayment < principal` reddi; istemci `totalRepayment` gönderirse `400`.
 - Ayın 31'i → şubat son günü.
 - Planlanan taksit ödenmiş sayılmaz; kalan borç = planlanan toplam.
 - Sırasız ödeme reddi; ödeme iptali taksiti `Planned`'a döndürür.
@@ -389,9 +441,12 @@ hata durumunda rollback.
 
 **Kabul kriterleri:**
 - `docs/05` §6, §9/3–4, 10 ve `docs/06` §7 ile uyum.
+- `LoanDto` `monthlyPayment` ve türetilmiş `totalRepayment` içerir; ayrı
+  `installmentAmount` alanı yoktur.
 - `_status` uç noktası kaldırılır.
 
-**Riskler:** Tarih aritmetiği; yuvarlama; atomiklik; iptal kuralları.
+**Riskler:** Tarih aritmetiği; `monthlyPayment` ondalık hassasiyeti; atomiklik;
+iptal kuralları.
 
 ---
 
@@ -703,7 +758,7 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | Modüller arası atomik yazma | Nakit avans/kredi ile para girişi yarım kalabilir | Slice 6 öncesi ADR-0009; aynı DB transaction'ı veya outbox |
 | Test DB altyapısı | Integration testleri yavaş/kırılgan | Testcontainers MSSQL; test başına temiz şema |
 | Hesaplanan kart borcu | Sorgu maliyeti | Önce doğruluk; gerekirse snapshot (kaynak doğruluk korunur) |
-| Tarih/yuvarlama | Taksit ve rapor farkları | Domain testleri; `AwayFromZero`; son taksit düzeltmesi |
+| Tarih/yuvarlama | Taksit ve rapor farkları | Domain testleri; gösterimde `AwayFromZero`; eşit taksit, son taksit düzeltmesi yok |
 | Saat dilimi | Ay sınırı kayması | `DateOnly` + kullanıcı IANA; sınır testleri |
 | MAUI iş yükü | Slice 9 gecikmesi | Backend'i önce bitir; MAUI en sona bırakılabilir |
 | Git yokluğu | Değişiklik geri alınamaz | ✅ Çözüldü: git + GitHub uzak depo + zorunlu CI (`main` push/PR) |
@@ -722,3 +777,6 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.4 | 2026-11-14 | `docs/09` görev listesi eklendi; §6.7'ye dahil edildi |
 | 1.5 | 2026-11-14 | Slice 3 (kart + hesaplanan bakiye) tamamlandı; 22 modül + 6 entegrasyon testi eklendi, toplam 139 test yeşil |
 | 1.6 | 2026-11-14 | Git + GitHub uzak depo + GitHub Actions CI; ilk CI çalıştırması yeşil (139/139). Dilim kapanışında CI yeşili de aranır |
+| 1.7 | 2026-11-15 | Slice 4 kapsam/kabul kriterleri tarih kesiti, iptal, devreden borç ve bakiye `asOf` kararlarına göre güncellendi; Slice 7 kredi sözleşmesi `monthlyPayment` girdisine ve eşit taksite geçti |
+| 1.8 | 2026-11-15 | Gelecek `asOf` reddi ve aynı yerel gün iptal kuralı kabul kriterlerine eklendi; iptal kuralı harcama/iade/ödeme için birleştirildi; 21 senaryo referansı korundu |
+| 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |

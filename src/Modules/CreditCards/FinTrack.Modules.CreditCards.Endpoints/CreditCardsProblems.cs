@@ -102,6 +102,17 @@ internal static class CreditCardsProblems
         "CardStatementDayRange" => "statementDay",
         "CardPaymentDueDayRange" => "paymentDueDay",
         "RowVersionInvalid" => "rowVersion",
+        "CardIdRequired" or "CardArchived" => "cardId",
+        "AsOfInFuture" => "asOf",
+        "CardPaymentAmountInvalid" or "CardPaymentAmountScale" or "CardPaymentAmountTooLarge" => "amount",
+        "CardPaymentCurrencyUnsupported" or "StatementCurrencyUnsupported" => "currency",
+        "CardPaymentDateRequired" or "CardPaymentDateInFuture" => "paidOn",
+        "CardPaymentNoteTooLong" => "note",
+        "StatementPeriodStartRequired" => "periodStart",
+        "StatementPeriodEndRequired" or "StatementPeriodInvalid" or "StatementPeriodOverlap" => "periodEnd",
+        "StatementDueDateRequired" or "StatementDueDateBeforePeriodEnd" => "dueDate",
+        "StatementAmountInvalid" or "StatementAmountScale" or "StatementAmountTooLarge" => "statementAmount",
+        "CancellationReasonRequired" or "CancellationReasonTooLong" => "reason",
         _ => null,
     };
 }

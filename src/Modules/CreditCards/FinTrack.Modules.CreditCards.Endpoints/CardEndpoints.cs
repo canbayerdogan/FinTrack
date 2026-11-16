@@ -120,18 +120,42 @@ internal static class CardEndpoints
 
         group.MapGet("/{id:guid}/balance", async (
                 Guid id,
+                string? asOf,
                 IQueryHandler<GetCardBalanceQuery, Result<CardBalanceDto>> handler,
                 HttpContext context,
                 CancellationToken cancellationToken) =>
             {
-                var result = await handler.HandleAsync(new GetCardBalanceQuery(id), cancellationToken);
+                var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                var parsedAsOf = ParseDate(asOf, "asOf", errors);
+
+                if (errors.Count > 0)
+                {
+                    return CreditCardsProblems.Validation(context, ToErrors(errors));
+                }
+
+                var result = await handler.HandleAsync(
+                    new GetCardBalanceQuery(id, parsedAsOf),
+                    cancellationToken);
 
                 return result.IsSuccess
                     ? Results.Ok(result.Value)
                     : CreditCardsProblems.FromError(context, result.Error);
             })
             .WithName("GetCardBalance")
-            .WithSummary("Kart borcunu harcama ve iadelerden hesaplar (tüm zamanlar).");
+            .WithSummary("Kart borcunu kesitli hesaplar; asOf verilmezse kullanıcının bugünü kullanılır.");
+    }
+
+    private static DateOnly? ParseDate(
+        string? value,
+        string field,
+        IDictionary<string, List<string>> errors)
+    {
+        if (!RequestParsing.TryParseDate(value, out var parsed))
+        {
+            AddError(errors, field, "Tarih yyyy-MM-dd biçiminde olmalıdır.");
+        }
+
+        return parsed;
     }
 
     private static CardStatus? ParseStatus(
