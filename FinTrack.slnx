@@ -41,6 +41,7 @@
     <Project Path="tests/FinTrack.Api.IntegrationTests/FinTrack.Api.IntegrationTests.csproj" />
     <Project Path="tests/FinTrack.Api.UnitTests/FinTrack.Api.UnitTests.csproj" />
     <Project Path="tests/FinTrack.ArchitectureTests/FinTrack.ArchitectureTests.csproj" />
+    <Project Path="tests/FinTrack.Modules.CashInflows.Tests/FinTrack.Modules.CashInflows.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.CreditCards.Tests/FinTrack.Modules.CreditCards.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.Expenses.Tests/FinTrack.Modules.Expenses.Tests.csproj" />
   </Folder>

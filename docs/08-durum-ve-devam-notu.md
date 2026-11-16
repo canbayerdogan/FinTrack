@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 1.9
+**Sürüm:** 2.0
 **Tarih:** 2026-11-16
-**Bağlı belgeler:** [Yol haritası v1.9](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0001…0008
+**Bağlı belgeler:** [Yol haritası v1.10](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -32,21 +32,22 @@
 | 2 | Harcama + kategori | ✅ |
 | 3 | Kart + hesaplanan bakiye | ✅ |
 | 4 | Ekstre + kart ödemesi | ✅ |
-| 5 | Para girişi | ⏳ sıradaki |
-| 6 | Nakit avans | ⏳ |
+| 5 | Para girişi | ✅ |
+| 6 | Nakit avans | ⏳ sıradaki (ADR-0009) |
 | 7 | Kredi + kişisel borç | ⏳ |
 | 8 | Raporlama | ⏳ |
 | 9 | MAUI istemci | ⏳ |
 
-**Çözüm:** `FinTrack.slnx`, **27 proje**. Depo **git** (`main`); uzak depo
+**Çözüm:** `FinTrack.slnx`, **28 proje**. Depo **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
-GitHub Actions CI (`.github/workflows/ci.yml`) son yeşil çalıştırması 139/139
-testti; Slice 4 ile 183 test beklenir (Ubuntu, Testcontainers MSSQL).
+GitHub Actions CI (`.github/workflows/ci.yml`) son yeşil çalıştırması Slice 4
+sonrası 183/183 testti; Slice 5 ile 235 test beklenir (Ubuntu, Testcontainers MSSQL).
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
-migration, kart/ekstre/ödeme uç noktaları). Kalan iş modülleri yalnızca DI +
-route grubu + geçici `_status` uç noktası içerir.
+migration, kart/ekstre/ödeme uç noktaları), CashInflows (`inflows` şeması,
+migration, para girişi uç noktaları). Debts ve Reporting yalnızca DI + route
+grubu + geçici `_status` uç noktası içerir.
 
 ---
 
@@ -54,20 +55,20 @@ route grubu + geçici `_status` uç noktası içerir.
 
 **Tarih:** 2026-11-16 · **SDK:** `10.0.403` · **Microsoft paketleri:** `10.0.15`
 
-> **2026-11-16 notu:** Slice 4 kodu tamamlandı. Docker Desktop motoru kapalı
-> olduğu için entegrasyon testleri yerelde çalıştırılamadı; birim testleri
-> (`137/137`) yeşil. 46 entegrasyon testi CI'da `ubuntu-latest` üzerinde çalışacak.
+> **2026-11-16 notu:** Slice 5 kodu tamamlandı. Docker Desktop motoru açık;
+> birim ve entegrasyon testleri yerelde çalıştırıldı ve **235/235** yeşil.
+> CI ilk çalıştırması Slice 5 commit'i push edildikten sonra doğrulanacak.
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
 | Build (Debug) | `dotnet build FinTrack.slnx` | ✅ 0 uyarı, 0 hata |
-| Birim testleri (Debug) | `dotnet test tests/... --no-build` (4 proje) | ✅ 137/137 |
-| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ⏸ Docker motoru kapalı |
-| Release build | `dotnet build FinTrack.slnx --configuration Release` | CI'da doğrulanacak |
-| CI | GitHub Actions `build-test` | Slice 4 commit'i sonrası 183/183 beklenir |
-| Migration | `dotnet ef database update --context CreditCardsDbContext ...` | Migration üretildi; CI `MigrateOnStartup` ile uygular |
+| Birim testleri (Debug) | `dotnet test tests/... --no-build` (5 proje) | ✅ 185/185 |
+| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 50/50 (Docker Desktop açık) |
+| Release build | `dotnet build FinTrack.slnx --configuration Release` | ✅ 0 uyarı, 0 hata |
+| CI | GitHub Actions `build-test` | Slice 5 commit'i sonrası 235/235 beklenir |
+| Migration | `dotnet ef database update --context CashInflowsDbContext ...` | `InitialCashInflows` LocalDB'ye uygulandı; `has-pending-model-changes` → "No changes" |
 
-**Test dağılımı (183):**
+**Test dağılımı (235):**
 
 | Proje | Adet | Kapsam |
 |---|---|---|
@@ -75,7 +76,8 @@ route grubu + geçici `_status` uç noktası içerir.
 | `FinTrack.Api.UnitTests` | 22 | Kimlik doğrulama, JWT |
 | `FinTrack.Modules.Expenses.Tests` | 55 | Domain + handler (SQLite in-memory) |
 | `FinTrack.Modules.CreditCards.Tests` | 57 | Domain + handler (SQLite in-memory) |
-| `FinTrack.Api.IntegrationTests` | 46 | 7 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme (Testcontainers MSSQL) |
+| `FinTrack.Modules.CashInflows.Tests` | 48 | Domain + handler (SQLite in-memory) |
+| `FinTrack.Api.IntegrationTests` | 50 | 6 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme + 5 para girişi (Testcontainers MSSQL) |
 
 **Uygulanan migration'lar:**
 - `20261113215049_InitialExpenses` (`expenses.Categories`, `expenses.Expenses`,
@@ -84,6 +86,8 @@ route grubu + geçici `_status` uç noktası içerir.
   `cards.__EFMigrationsHistory`; `IX_Cards_UserId_IsArchived`).
 - `20261116180727_AddCardPaymentsAndStatements` (`cards.CardPayments`,
   `cards.Statements` ve kullanıcı/kart/dönem indeksleri).
+- `20261116182933_InitialCashInflows` (`inflows.CashInflows`,
+  `inflows.__EFMigrationsHistory`; kullanıcı/tarih/kaynak/durum indeksleri).
 
 ---
 
@@ -174,7 +178,21 @@ route grubu + geçici `_status` uç noktası içerir.
 | `carriedOverAmount` aralığı `(önceki.PeriodEnd, mevcut.PeriodEnd]` | Sınır günleri ve çift sayım netleşti |
 | `GET /cards/{id}/balance` opsiyonel `asOf`; yanıtta `asOfDate` | Geçmiş bakiye ve ekstre karşılaştırması |
 
-### 4.8 Slice 7 — kredi sözleşmesi (2026-11-15)
+### 4.8 Slice 5 — para girişi (2026-11-16)
+
+| Karar | Gerekçe |
+|---|---|
+| `IsEarnedIncome` kolon değil; `CashInflow.EarnedIncomeFor(source)` ile türetilir | Tek doğruluk; istemci alanı gönderemez (`400 ValidationFailed`) |
+| `Unknown` → `null`; `Salary`/`BusinessIncome` → `true`; diğerleri `false` | docs/05 §4.2 tablosu; `Unknown` gelir toplamlarına katılmaz |
+| `BankLoan`, `CashAdvance`, `PersonalBorrowing` doğrudan `POST /cash-inflows` ile oluşturulamaz | Sahibi modül atomik oluşturur; aksi halde `400 DebtSourceRequiresOwnerEndpoint` |
+| DB'de yalnızca nullable `DebtLinkId`; DTO `debtLink.type` kaynaktan türetilir | `BankLoan→Loan`, `CashAdvance→CashAdvance`, `PersonalBorrowing→PersonalDebt`; modüller arası FK yok |
+| Slice 6/7 için `CreateFromDebtOwner(...)` ve `LinkToDebt(...)` hazır | Sahibi modül bağlantıyı aynı işlemde kurar; normal POST bu yolu kullanamaz |
+| Borç bağlantılı kayıtta `PUT`/iptal `409 StateConflict` | Bağlı kayıt sahibi borç kaydından yönetilir |
+| İptal gerekçesi zorunlu; iptal idempotent | docs/05 §4.4; ikinci iptal `204` |
+| `recordedAtUtc` istemciden alınmaz; PUT'ta `400` | Sunucu zamanı |
+| `from`/`to` `occurredOn` üzerinde; varsayılan `Active`, `includeCancelled` ile iptaller | docs/06 §5.2 |
+
+### 4.9 Slice 7 — kredi sözleşmesi (2026-11-15)
 
 | Karar | Gerekçe |
 |---|---|
@@ -196,10 +214,11 @@ route grubu + geçici `_status` uç noktası içerir.
 - **SQLite test modeli:** varsayılan şema yok; `rowversion` 8 baytlık manuel değer,
   test-only interceptor ile artırılır. Gerçek eşzamanlılık API/MSSQL testlerinde.
 - **Global filtre:** `ICurrentUser.UserId ?? Guid.Empty`.
-- **Smoke testleri DB'siz** (`WebApplicationFactory<Program>`); kimlik, harcama ve
-  kart entegrasyon testleri Testcontainers MSSQL + `Database:MigrateOnStartup=true`.
+- **Smoke testleri DB'siz** (`WebApplicationFactory<Program>`); kimlik, harcama,
+  kart ve para girişi entegrasyon testleri Testcontainers MSSQL +
+  `Database:MigrateOnStartup=true`.
 - **Docker zorunlu (yerel):** Entegrasyon testleri Docker Desktop motoru kapalıyken
-  `DockerUnavailableException` ile toplu başarısız olur (46 test); hata koda değil
+  `DockerUnavailableException` ile toplu başarısız olur (50 test); hata koda değil
   ortama aittir. Testten önce `docker info` çalıştığını doğrula. GitHub Actions
   `ubuntu-latest` imajında Docker hazır gelir.
 - **Ekstre türetimi:** `ComputedDebtAtPeriodEnd` ve `CarriedOverAmount` saklanmaz;
@@ -212,6 +231,17 @@ route grubu + geçici `_status` uç noktası içerir.
   kontrol + ekleme `Serializable` transaction içinde.
 - **Kart ödemesi gider değildir:** Expenses'a kayıt yazmaz; yalnızca bakiye
   formülündeki `payments` terimini besler. Fazla ödeme negatif bakiye üretir.
+- **Para girişi türetimi:** `CashInflow.IsEarnedIncome` ve `DebtType` kolon
+  değildir; kaynaktan hesaplanır. `bool?` olduğu için `Unknown` JSON'da `null`
+  döner ve gelir toplamlarına katılmaz.
+- **Borç kaynakları:** Normal `POST /cash-inflows` `BankLoan`, `CashAdvance`,
+  `PersonalBorrowing` kaynaklarını reddeder. Sahibi modül Slice 6/7'de
+  `CreateFromDebtOwner(...)` kullanır; `LinkToDebt(...)` yalnızca borç
+  bağlantısı olmayan kaydı bağlar. DB'de modüller arası FK yoktur.
+- **Borç bağlantılı kayıt:** `DebtLinkId` doluysa `PUT` ve iptal
+  `409 StateConflict` döner; iptal/güncelleme sahibi borç kaydından yapılır.
+- **İptal idempotent:** İkinci iptal gerekçe doğrulamasına takılmadan `204`
+  döner; ilk iptalde gerekçe zorunludur.
 - **Fixture yapılandırması:** `ApiFixture` bağlantı dizesi/JWT değerlerini
   `WithWebHostBuilder` + `ConfigureAppConfiguration` ile vermek **yetmez**;
   `Program.cs` bunları host kurulurken doğrudan okur ve
@@ -221,8 +251,8 @@ route grubu + geçici `_status` uç noktası içerir.
   Bu düzeltmeden önce testler Windows'ta sessizce LocalDB'ye yazıyordu
   (`FinTrackDb` içinde 297 test kullanıcısı), Linux CI'da LocalDB olmadığı için
   patlıyordu.
-- **`_status`:** Expenses ve CreditCards'tan kaldırıldı; CashInflows, Debts,
-  Reporting'de duruyor (ilgili dilimde kalkacak).
+- **`_status`:** Expenses, CreditCards ve CashInflows'tan kaldırıldı; yalnızca
+  Debts ve Reporting'de duruyor (slice 7–8'de kalkacak).
 - **Bilinmeyen JSON alanı:** Minimal API gövde bağlama hatası varsayılan olarak
   Development'ta istisna fırlatır ve `UseExceptionHandler` bunu `500` yapar.
   `RouteHandlerOptions.ThrowOnBadRequest = false` ile tüm ortamlarda `400` döner.
@@ -237,7 +267,8 @@ route grubu + geçici `_status` uç noktası içerir.
   ASCII çapa veya tam metin kullan.
 - **Migration üretimi:** `dotnet ef migrations add ... --project ... --startup-project
   src/Host/FinTrack.Api`; tasarım zamanı fabrikası mevcut. Birden fazla DbContext
-  olduğundan `--context CreditCardsDbContext` gibi açık seçim gerekir.
+  olduğundan `--context CreditCardsDbContext` veya `--context CashInflowsDbContext`
+  gibi açık seçim gerekir.
 
 ---
 
@@ -255,7 +286,9 @@ route grubu + geçici `_status` uç noktası içerir.
 
 ---
 
-## 7. Slice 4 — Ekstre + kart ödemesi ✅ (2026-11-16)
+## 7. Dilim kapanış notları
+
+### 7.1 Slice 4 — Ekstre + kart ödemesi ✅ (2026-11-16)
 
 **Bağlayıcı kaynak:** `docs/07` §4 Slice 4, `docs/05` §5.3–5.6, `docs/06` §6.3–6.6.
 
@@ -346,17 +379,50 @@ hesabı, ödeme-ekstre eşleştirmesi ve ekstreye özel ödeme kaydı.
 21. Geçersiz `asOf` formatı ve gelecek tarihli `asOf` (kullanıcının bugününden
     sonrası) `400 ValidationFailed` döner; gelecek tarih bugüne kırpılmaz.
 
-### 7.1 Sıradaki dilim — Slice 5: Para girişi
+### 7.2 Slice 5 — Para girişi ✅ (2026-11-16)
 
 **Bağlayıcı kaynak:** `docs/07` §4 Slice 5, `docs/05` §4, `docs/06` §5.
 
-**Kapsam:** `CashInflow` aggregate ve `inflows` şeması; kaynak türleri;
-`IsEarnedIncome` türetimi (kullanıcı gönderemez); `Unknown` grubu; borç doğuran
-kaynakların (`BankLoan`, `CashAdvance`, `PersonalBorrowing`) doğrudan
-oluşturulmasının reddi; iptal ve kullanıcı izolasyonu.
+**Sonuç:** Domain (`CashInflow`, `EarnedIncomeFor`, `CreateFromDebtOwner`,
+`LinkToDebt`), Application (oluşturma/güncelleme/iptal + liste/detay),
+Infrastructure (`inflows` şeması, migration, global filtre, sorgular) ve
+Endpoints (`docs/06` §5) tamamlandı. 48 modül + 5 entegrasyon testi eklendi;
+toplam **235/235** test yerelde yeşil. `CashInflows` `_status` uç noktası
+kaldırıldı.
 
-**Başlamadan önce:** `docs/05` §4 ve `docs/06` §5 okunur; açık soru varsa kod
-yazılmadan sorulur (`docs/07` §1/5).
+**Kapsam özeti:**
+- `CashInflow` alanları: `amount`, `currency`, `occurredOn`, `source`,
+  `description?`, `recordedAtUtc`, `status`, `debtLink`, `rowVersion`.
+- `IsEarnedIncome` kaynaktan türetilir; `Unknown` → `null`.
+- `BankLoan`, `CashAdvance`, `PersonalBorrowing` doğrudan oluşturulamaz.
+- `PUT` ve iptal borç bağlantılı kayıtta `409`; iptal gerekçeli ve idempotent.
+- Liste filtreleri: `from`, `to`, `source`, `status`, `includeCancelled`,
+  `page`, `pageSize` (varsayılan `Active`).
+
+**Kapsam dışı:** Borç kaydı oluşturma (slice 6/7), raporlama (slice 8).
+
+**Doğrulama:**
+- Build 0 hata/0 uyarı (Debug + Release).
+- Birim testleri 185/185 (48 CashInflows dahil).
+- Entegrasyon testleri 50/50 (Docker Desktop açık).
+- Migration `20261116182933_InitialCashInflows`; LocalDB'de uygulandı,
+  `has-pending-model-changes` → "No changes".
+
+### 7.3 Sıradaki dilim — Slice 6: Nakit avans
+
+**Bağlayıcı kaynak:** `docs/07` §4 Slice 6, `docs/05` §5.5, `docs/06` §6.5.
+
+**Ön koşul:** **ADR-0009 — modüller arası atomik yazma mekanizması** kabul
+edilmeden kod başlamaz. Adaylar: aynı DB transaction'ında orkestrasyon, sync
+writer sözleşmesi, outbox.
+
+**Kapsam:** `CashAdvance` aggregate; kart borcuna tek kez dahil; aynı kullanıcı
+işleminde `CashInflow` (`source = CashAdvance`, `isEarnedIncome = false`)
+oluşturma; iptalde bağlı para girişinin de iptali; kart ödemeleri geri alınmaz,
+borç yeniden hesaplanır.
+
+**Başlamadan önce:** ADR-0009 kararı verilir; `docs/05` §5.5, `docs/06` §6.5 ve
+`docs/07` §4 Slice 6 yeniden okunur; açık soru varsa kod yazılmadan sorulur.
 
 ---
 
@@ -376,13 +442,18 @@ yazılmadan sorulur (`docs/07` §1/5).
 | Slice 4 — tarih kesiti | `OccurredOn`/`RefundedOn`/`PaidOn`/`TakenOn` esas; geriye dönük kayıt geçmiş kesiti günceller; kesitten sonraki iade geçmiş ekstreyi değiştirmez. İptal yerel tarihi kesitten önce veya eşitse kayıt iptal, sonraysa aktif sayılır; kural harcama/iade/ödeme için aynıdır. |
 | Slice 4 — bakiye `asOf` | Opsiyonel `asOf=YYYY-MM-DD`; yoksa kullanıcının bugünü; ekstreyle aynı semantik; yanıtta `asOfDate`; gelecek tarih `400 ValidationFailed`. |
 | Slice 4 — gelecek `asOf` | Kullanıcının bugününden sonraki `asOf` `400 ValidationFailed` döner; bugüne kırpılmaz. |
+| Slice 5 — gelir niteliği | `IsEarnedIncome` kaynaktan türetilir; `Unknown` → `null`; istemci gönderirse `400 ValidationFailed`. |
+| Slice 5 — borç kaynakları | `BankLoan`, `CashAdvance`, `PersonalBorrowing` normal uç noktadan oluşturulamaz; `400 DebtSourceRequiresOwnerEndpoint`. |
+| Slice 5 — borç bağlantısı | DB'de nullable `DebtLinkId`; DTO `debtLink` türü kaynaktan türetilir; bağlantılı kayıtta `PUT`/iptal `409 StateConflict`. |
+| Slice 5 — iptal | Gerekçe zorunlu; ikinci iptal idempotent `204`. |
 | Slice 7 — kredi sözleşmesi | Girdi `Principal`, `MonthlyPayment`, `InstallmentCount`, `FirstDueDate`; `TotalRepayment` türetilir; taksitler eşit; son taksit yuvarlama düzeltmesi yok; `TotalRepayment >= Principal`. |
 
 ### 8.2 Açık kalanlar
 
 - Slice 4 kapandı; 21 senaryo uygulandı ve dokümanlarla eşleşiyor.
-- Slice 5 için açık iş kuralı belirsizliği yok; başlamadan önce `docs/05` §4 ve
-  `docs/06` §5 tekrar okunur.
+- Slice 5 kapandı; 48 modül + 5 entegrasyon testi yeşil, dokümanlarla uyumlu.
+- Slice 6 için **ADR-0009** (modüller arası atomik yazma) açık karardır; kabul
+  edilmeden kod başlamaz.
 
 ---
 
@@ -400,3 +471,4 @@ yazılmadan sorulur (`docs/07` §1/5).
 | 1.7 | 2026-11-15 | Slice 4 kararları (kesit, devreden borç, iptal, `asOf`) ve 21 test senaryosu eklendi; Slice 7 kredi sözleşmesi netleştirildi |
 | 1.8 | 2026-11-15 | Gelecek `asOf` `400` kesinleşti; iptal UTC→yerel tarih kuralı ve aynı gün iptali senaryo 10/13/17'ye işlendi; 21 senaryo korundu |
 | 1.9 | 2026-11-16 | Slice 4 tamamlandı: ekstre/ödeme domain-API-testleri, migration, 137 birim + 46 entegrasyon testi; Docker kapalı olduğundan entegrasyon CI'ya bırakıldı; sıradaki dilim Slice 5 |
+| 2.0 | 2026-11-16 | Slice 5 tamamlandı: `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi, iptal/bağlantı kuralları; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; `_status` yalnızca Debts ve Reporting'de; sıradaki dilim Slice 6 (ADR-0009) |

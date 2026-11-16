@@ -118,7 +118,7 @@ builder.Services.AddAuthorization();
 // Modüller kendi servislerini kendileri kaydeder. Host, modül iç tiplerini görmez.
 builder.Services
     .AddExpensesModule(connectionString)
-    .AddCashInflowsModule()
+    .AddCashInflowsModule(connectionString)
     .AddCreditCardsModule(connectionString)
     .AddDebtsModule()
     .AddReportingModule();

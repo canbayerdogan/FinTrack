@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.8
+**Sürüm:** 1.9
 **Tarih:** 2026-11-16
-**Bağlı belgeler:** [Durum notu v1.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.9](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.0](08-durum-ve-devam-notu.md) · [Yol haritası v1.10](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -17,7 +17,7 @@
 1. **Bu dosya** → sıradaki dilim + açık maddeler.
 2. `docs/08` §2–§4 → güncel durum, kararlar, tuzaklar.
 3. `docs/07` §4 ilgili dilim → bağlayıcı kapsam ve kabul kriterleri.
-4. Gereken tek tek dosyalar için §6'daki haritayı kullan (modül kopyalama yok).
+4. Gereken tek tek dosyalar için §7'deki haritayı kullan (modül kopyalama yok).
 5. Açık soru varsa **sor**; cevap gelmeden kod yazma.
 6. Dilim bitişi: build + test → doküman → bu dosya → `docs/08` → rapor.
 
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **5 — Para girişi** (planlama) |
-| Son doğrulama | Build 0/0 · 137/137 birim testi · 46 entegrasyon Docker kapalı (CI'da) · 2026-11-16 |
-| Sıradaki komut | `docs/05` §4 ve `docs/06` §5'i oku; Slice 5 `CashInflow` kapsamını planla |
+| Aktif dilim | **6 — Nakit avans** (planlama; ADR-0009 ön koşulu) |
+| Son doğrulama | Build 0/0 · 185/185 birim testi · 50/50 entegrasyon (Docker açık) · toplam 235 · 2026-11-16 |
+| Sıradaki komut | ADR-0009 seçeneklerini değerlendir; `docs/05` §5.5, `docs/06` §6.5 ve `docs/07` §4 Slice 6'yı oku |
 
 ---
 
@@ -142,19 +142,66 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Entegrasyon: ödeme CRUD/iptal/arşiv/izolasyon, ekstre türetimi/çakışma,
       bakiye `asOf` geçmiş/gelecek/format
 - [x] Build 0 hata/0 uyarı; birim testleri 137/137
-- [ ] Entegrasyon testleri (46) — Docker motoru kapalı; CI'da çalışacak
+- [x] Entegrasyon testleri (46) — CI'da yeşil; güncel toplam 50 (Slice 5 dahil)
 
 ---
 
-## 5. Sonraki dilimler (yüksek seviye)
+## 5. Slice 5 — Para girişi ✅ (2026-11-16)
+
+### 5.1 Planlama
+
+- [x] `docs/05` §4, `docs/06` §5, `docs/07` §4 Slice 5 okundu
+- [x] Gelir niteliği türetimi, `Unknown` grubu ve borç kaynağı reddi netleşti
+- [x] Borç bağlantısı için `DebtLinkId` + DTO `debtLink` kararı verildi
+- [x] İptal/güncelleme kuralları ve hata eşlemesi belirlendi
+
+### 5.2 Kapsam
+
+- [x] `CashInflow` aggregate: tutar, para birimi, `occurredOn`, kaynak,
+      açıklama, iptal, `rowVersion`
+- [x] `IsEarnedIncome` kaynaktan türetilir; istemci gönderirse `400`
+- [x] `Unknown` → `null`, gelire katılmaz; `Salary`/`BusinessIncome` → `true`
+- [x] `BankLoan`, `CashAdvance`, `PersonalBorrowing` doğrudan oluşturma `400`
+- [x] `CreateFromDebtOwner(...)` ve `LinkToDebt(...)` (slice 6/7 hazırlığı)
+- [x] `inflows` şeması, DbContext, global query filter, migration
+- [x] `GET/POST /cash-inflows`, `GET/PUT /cash-inflows/{id}`,
+      `POST /cash-inflows/{id}/cancel`
+- [x] Liste filtreleri + sayfalama; kullanıcı izolasyonu
+- [x] `_status` uç noktası ve smoke test vakası kaldırıldı
+
+### 5.3 Doğrulama
+
+- [x] Domain + Application testleri: kaynak/gelir tablosu, doğrulama, iptal,
+      borç bağlantısı, oluşturma/güncelleme, filtre/sayfalama, izolasyon
+      (`tests/FinTrack.Modules.CashInflows.Tests`, 48 test)
+- [x] Entegrasyon: yaşam döngüsü, türetim/borç reddi, filtre, izolasyon,
+      OpenAPI (5 test)
+- [x] Build 0 hata/0 uyarı (Debug + Release)
+- [x] Birim 185/185, entegrasyon 50/50; toplam 235/235
+- [x] Migration `20261116182933_InitialCashInflows`; LocalDB'de uygulandı,
+      `has-pending-model-changes` → "No changes"
+
+### 5.4 Doküman ve kapanış
+
+- [x] `docs/07` Slice 5 → ✅, test sayıları, changelog
+- [x] `docs/08` durum, doğrulama, kararlar, tuzaklar, changelog
+- [x] `README.md` mevcut durum + doküman tablosu
+- [x] `docs/09` kutular ve sıradaki dilim
+- [x] Dilim raporu
+
+---
+
+## 6. Sonraki dilimler (yüksek seviye)
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
       `Statement`, devreden borç, `computedDebtAtPeriodEnd`, mutabakat farkı;
       borç formülüne ödeme terimi. Ayrıntı §4.
-- [ ] **Slice 5 — Para girişi:** sıradaki dilim. `CashInflow`, kaynak türleri, `IsEarnedIncome`
-      türetimi, `Unknown` grubu; borç doğuran girişler.
-- [ ] **Slice 6 — Nakit avans:** `CashAdvance` + bağlı `CashInflow`, iptalde
-      ikisinin birlikte iptali, borç formülüne avans terimi.
+- [x] **Slice 5 — Para girişi:** ✅ 2026-11-16. `CashInflow`, kaynak türleri,
+      `IsEarnedIncome` türetimi, `Unknown` grubu; borç doğuran girişlerin reddi.
+      Ayrıntı §5.
+- [ ] **Slice 6 — Nakit avans:** sıradaki dilim; **ADR-0009** ön koşulu.
+      `CashAdvance` + bağlı `CashInflow`, iptalde ikisinin birlikte iptali,
+      borç formülüne avans terimi.
 - [ ] **Slice 7 — Kredi + kişisel borç:** tam vade planı, taksit ödemesi,
       kalan borç; borç doğuran giriş zorunluluğu.
 - [ ] **Slice 8 — Raporlama:** aylık özet, kategori kırılımı, borç özeti,
@@ -167,14 +214,15 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
-      ilk çalıştırma yeşil (139/139, Ubuntu + Testcontainers MSSQL)
+      Slice 4 sonrası yeşil (183/183, Ubuntu + Testcontainers MSSQL); Slice 5
+      commit'i sonrası 235/235 beklenir
 - [x] `docs/01` ayrı dosya gerekli değil
-- [ ] Yerel entegrasyon testleri için Docker Desktop açık olmalı (aksi halde
-      46 `DockerUnavailableException`)
+- [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
+      2026-11-16); Docker kapalıyken `DockerUnavailableException` beklenir
 
 ---
 
-## 6. Dosya haritası (tekrar okumayı önlemek için)
+## 7. Dosya haritası (tekrar okumayı önlemek için)
 
 | İhtiyaç | Bakılacak yer |
 |---|---|
@@ -185,6 +233,7 @@ dotnet test FinTrack.slnx --nologo -v q
 | Query projeksiyon deseni | `...Expenses.Infrastructure/Queries/Queries.cs` |
 | ProblemDetails eşlemesi | `...Expenses.Endpoints/ExpensesProblems.cs`, `RequestParsing.cs` |
 | SQLite test altyapısı | `tests/FinTrack.Modules.Expenses.Tests/Support/` |
+| Para girişi modülü | `src/Modules/CashInflows/`, `tests/FinTrack.Modules.CashInflows.Tests/` |
 | Testcontainers fixture | `tests/FinTrack.Api.IntegrationTests/ApiFixture.cs` |
 | Mimari sınırlar | `tests/FinTrack.ArchitectureTests/` |
 | Ortak tipler | `src/BuildingBlocks/FinTrack.SharedKernel/` |
@@ -192,7 +241,7 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ---
 
-## 7. Değişiklik geçmişi
+## 8. Değişiklik geçmişi
 
 | Sürüm | Tarih | Değişiklik |
 |---|---|---|
@@ -205,3 +254,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.6 | 2026-11-15 | Slice 4 planlama bölümü eklendi; 21 test senaryosu onayı bekliyor olarak işaretlendi |
 | 1.7 | 2026-11-15 | Gelecek `asOf` `400` ve iptal UTC→yerel tarih kuralı işlendi; nihai kontrol ve açık kodlama onayı bekleniyor |
 | 1.8 | 2026-11-16 | Slice 4 tamamlandı ve kutular işaretlendi; 137 birim testi yeşil, 46 entegrasyon Docker kapalı olduğu için CI'ya bırakıldı; sıradaki dilim Slice 5 |
+| 1.9 | 2026-11-16 | Slice 5 tamamlandı ve kutular işaretlendi; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; aktif dilim Slice 6 (ADR-0009 ön koşulu) |

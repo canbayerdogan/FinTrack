@@ -1,6 +1,6 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.9
+**Sürüm:** 1.10
 **Tarih:** 2026-11-16
 **Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0008
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
@@ -42,20 +42,23 @@
 |---|---|
 | Dokümanlar 01–07 | ✅ |
 | ADR-0001…0008 | ✅ |
-| Slice 0 — iskelet | ✅ 25 proje (slice 3 sonrası 27), 0 hata/0 uyarı |
+| Slice 0 — iskelet | ✅ 28 proje (slice 5 sonrası), 0 hata/0 uyarı |
 | Slice 1 — kimlik doğrulama | ✅ Identity + JWT, `identity` migration, 22 birim + 17 entegrasyon testi |
 | Slice 2 — harcama + kategori | ✅ `expenses` şeması, harcama/iade/kategori, 52 modül testi |
 | Slice 3 — kart + hesaplanan bakiye | ✅ `cards` şeması, kart CRUD/arşiv/bakiye, 22 modül + 6 entegrasyon testi |
-| Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf`, 57 modül + 6 entegrasyon testi |
+| Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf` |
+| Slice 5 — para girişi | ✅ `inflows` şeması, `CashInflow` CRUD/iptal, kaynaktan türetilen `isEarnedIncome`, borç kaynaklarının reddi, 48 modül + 5 entegrasyon testi |
 | Mimari testler | ✅ 3 test |
-| Entegrasyon smoke testleri | ✅ 7 test (health + 3 modül `_status` + harcama/kategori/kart 401) |
+| Entegrasyon smoke testleri | ✅ 6 test (health + 2 modül `_status` + harcama/kategori/kart 401) |
 | Entegrasyon kimlik testleri | ✅ 17 test (Testcontainers MSSQL) |
 | Entegrasyon harcama testleri | ✅ 10 test (Testcontainers MSSQL, gerçek `ICardQuery`) |
 | Entegrasyon kart testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon ekstre/ödeme testleri | ✅ 6 test (Testcontainers MSSQL) |
+| Entegrasyon para girişi testleri | ✅ 5 test (Testcontainers MSSQL) |
 | Birim testleri (kimlik) | ✅ 22 test (doğrulama + JWT) |
 | Modül testleri (Expenses) | ✅ 55 test (domain + handler, SQLite in-memory) |
 | Modül testleri (CreditCards) | ✅ 57 test (domain + handler, SQLite in-memory) |
+| Modül testleri (CashInflows) | ✅ 48 test (domain + handler, SQLite in-memory) |
 
 ### 2.2 Ortam
 
@@ -73,18 +76,20 @@
 ### 2.3 Mevcut iskelet sınırları
 
 - Modül `_status` uç noktaları **geçicidir**; ilgili dilim bitince kaldırılır.
-  Slice 2 ile `Expenses`, slice 3 ile `CreditCards` `_status` uç noktası kaldırıldı;
-  kalanlar slice 4–8'de kaldırılacaktır.
+  Slice 2 ile `Expenses`, slice 3 ile `CreditCards`, slice 5 ile `CashInflows`
+  `_status` uç noktası kaldırıldı; yalnızca `Debts` ve `Reporting` kaldı
+  (slice 7–8'de kaldırılacaktır).
 - `ExpensesModule` harcama/kategori uç noktalarını, `expenses` DbContext'ini ve
-  migration'ını içerir. `CreditCardsModule` kart uç noktalarını, `cards`
-  DbContext'ini ve migration'ını içerir. `CashInflowsModule`, `DebtsModule`,
-  `ReportingModule` yalnızca DI ve route grubu kaydeder.
+  migration'ını içerir. `CreditCardsModule` kart/ekstre/ödeme uç noktalarını,
+  `cards` DbContext'ini ve migration'ını içerir. `CashInflowsModule` para girişi
+  uç noktalarını, `inflows` DbContext'ini ve migration'ını içerir. `DebtsModule`
+  ve `ReportingModule` yalnızca DI ve route grubu kaydeder.
 - Identity katmanı hazırdır: `FinTrack.Api/Identity`, `identity` şeması,
   `ApplicationUser`, `RefreshToken`, migration ve auth uç noktaları.
-- CashInflows, Debts ve Reporting modüllerinde henüz DbContext, migration veya
-  handler yoktur.
-- `FinTrack.Modules.Expenses.Tests` ve `FinTrack.Modules.CreditCards.Tests`
-  mevcuttur; diğer modül test projeleri ilgili dilimde oluşturulur.
+- Debts ve Reporting modüllerinde henüz DbContext, migration veya handler yoktur.
+- `FinTrack.Modules.Expenses.Tests`, `FinTrack.Modules.CreditCards.Tests` ve
+  `FinTrack.Modules.CashInflows.Tests` mevcuttur; Debts ve Reporting test
+  projeleri ilgili dilimde oluşturulur.
 
 ---
 
@@ -97,8 +102,8 @@
 | 2 | Harcama + kategori | L | 1 | ✅ |
 | 3 | Kart + hesaplanan bakiye | L | 2 | ✅ |
 | 4 | Ekstre + kart ödemesi | L | 3 | ✅ |
-| 5 | Para girişi | M | 1 | ⏳ sıradaki |
-| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ⏳ |
+| 5 | Para girişi | M | 1 | ✅ |
+| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ⏳ sıradaki |
 | 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ |
 | 8 | Raporlama | L | 2–7 | ⏳ |
 | 9 | MAUI istemci | L | 1–8 | ⏳ |
@@ -342,32 +347,48 @@ iptal senaryolarında bakiye tutarlılığı; türetilen alanların okuma maliye
 
 ---
 
-### Slice 5 — Para girişi
+### Slice 5 — Para girişi ✅
+
+**Durum:** ✅ Bitti (2026-11-16). 48 modül + 5 entegrasyon testi; toplam 235
+test. Migration: `20261116182933_InitialCashInflows`.
 
 **Amaç:** Para girişlerini kaynağıyla kaydetmek ve gelir niteliğini türetmek.
 
 **Kapsam:**
-- `CashInflow` aggregate; `Source` enum; `IsEarnedIncome` **türetilir**,
+- `CashInflow` aggregate; `CashInflowSource` enum; `IsEarnedIncome` **türetilir**,
   kullanıcı set edemez.
 - `inflows` şeması, DbContext, migration, global query filter.
 - Endpoint'ler: `docs/06` §5.
 - `Unknown` ayrı grup; `AssetSale` kazanç hesabı yok.
 - Borç doğuran kaynaklar (`BankLoan`, `CashAdvance`, `PersonalBorrowing`) bu
-  uç noktadan oluşturulamaz.
+  uç noktadan oluşturulamaz (`400 DebtSourceRequiresOwnerEndpoint`).
+- Borç bağlantılı kayıtlar için sahibi modülün kullanacağı
+  `CreateFromDebtOwner(...)` ve `LinkToDebt(...)` yolları hazır; DTO'da
+  `debtLink` türü kaynaktan türetilir.
+- İptal gerekçesi zorunlu ve idempotent; borç bağlantılı kayıtta doğrudan
+  güncelleme/iptal `409 StateConflict`.
 
 **Kapsam dışı:** Borç kaydı oluşturma (slice 6/7), raporlama (slice 8).
 
+**Dokunulan yerler:**
+- `FinTrack.Modules.CashInflows.{Domain,Application,Infrastructure,Endpoints}`
+- `tests/FinTrack.Modules.CashInflows.Tests` (yeni)
+- `FinTrack.Api.IntegrationTests` (para girişi + smoke `_status` temizliği)
+
 **Testler:**
-- Kaynak → `IsEarnedIncome` tablosu (doküman 05 §4.2).
-- İstemci `isEarnedIncome` gönderirse `400`.
-- `Unknown` → `null`, gelire katılmaz.
+- Kaynak → `IsEarnedIncome` tablosu (docs/05 §4.2); `Unknown` → `null`.
+- İstemci `isEarnedIncome` gönderirse `400 ValidationFailed`.
 - Borç doğuran kaynakla doğrudan oluşturma `400`.
-- İptal; borç bağlantılı girişin doğrudan iptali `409`.
-- Kullanıcı izolasyonu, sayfalama, filtreler.
+- `PUT` ve iptalde borç bağlantılı kayıt `409`; iptal gerekçesiz `400`,
+  gerekçeli iptal `204`, ikinci iptal idempotent.
+- Kullanıcı izolasyonu (404), sayfalama, `from`/`to`/`source`/`status`/
+  `includeCancelled` filtreleri.
+- OpenAPI şemasında para girişi uç noktaları var; `_status` yok.
 
 **Kabul kriterleri:**
 - `docs/05` §4 ve `docs/06` §5 ile uyum.
-- `_status` uç noktası kaldırılır.
+- `_status` uç noktası kaldırılır. ✅
+- Build 0 hata/0 uyarı, tüm testler yeşil, mimari testler yeşil.
 
 **Riskler:** `bool?` serileştirme; ileride borç modülleriyle bağlantı alanları.
 
@@ -780,3 +801,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.7 | 2026-11-15 | Slice 4 kapsam/kabul kriterleri tarih kesiti, iptal, devreden borç ve bakiye `asOf` kararlarına göre güncellendi; Slice 7 kredi sözleşmesi `monthlyPayment` girdisine ve eşit taksite geçti |
 | 1.8 | 2026-11-15 | Gelecek `asOf` reddi ve aynı yerel gün iptal kuralı kabul kriterlerine eklendi; iptal kuralı harcama/iade/ödeme için birleştirildi; 21 senaryo referansı korundu |
 | 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |
+| 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |

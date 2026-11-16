@@ -27,7 +27,6 @@ public sealed class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Theory]
-    [InlineData("/api/v1/cash-inflows/_status", "CashInflows")]
     [InlineData("/api/v1/debts/_status", "Debts")]
     [InlineData("/api/v1/reports/_status", "Reporting")]
     public async Task Modul_status_uc_noktasi_calisir(string url, string expectedModule)
