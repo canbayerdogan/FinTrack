@@ -1,6 +1,6 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.4
+**Sürüm:** 2.5
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
@@ -639,6 +639,45 @@ Token'lar loglanmaz, hata mesajlarına eklenmez.
 - Yerel Android SDK/JDK ve emülatör kurulmadı; manuel uçtan uca smoke emülatör
   kurulumuna bırakıldı.
 
+### 8.3 Oturum devri notu (2026-11-18)
+
+**Depo durumu:** `HEAD` = `origin/main` = `7455546` (`docs: record green CI run
+44189257561 for slice 9`); çalışma ağacı temiz. Slice 9 kodu `7b4e00a`,
+dokümanları `7455546` commit'inde. CI: run `44189257561` (kod, 335/335) ve
+`44190582258` (dokümanlar) `success`; `main` rozeti yeşil.
+
+**Tamamlanan:** Slice 0–9 kod + test + doküman + CI. Çözümde 33 proje; 263
+birim/mimari + 72 entegrasyon = **335/335**. Backend ve Windows MAUI Debug/Release
+0 uyarı/0 hata; Android derlemesi CI Ubuntu job'ında (Java 17 + `dotnet workload
+restore`) yeşil. Release XAML `XC0022` uyarıları `x:DataType` ile temizlendi.
+
+**Devam noktaları (öncelik sırası):**
+
+1. **Android uçtan uca smoke — tek kalan kod tarafı iş:** Yerel Windows'ta Android
+   SDK + JDK 17 (mevcut JRE 1.8, `jar` yok) ve emülatör kur; giriş → harcama
+   ekle → kartlar/detay → rapor akışını doğrula. Hata çıkarsa ilgili ViewModel/
+   `AuthHandler` testiyle birlikte düzelt.
+2. **Windows manuel UI smoke (opsiyonel):** Build 0/0 ama uygulama elle açılıp
+   denmedi; aynı akış Windows hedefinde denenebilir.
+3. **CI bakımı (bloker değil):** Run `44190582258` annotasyonları — Node 20
+   deprecated (actions v4, Node 24'e zorlanıyor), `actions/setup-java@v4`
+   deprecated → v5, `ubuntu-latest` 19 Ekim 2026 sonrası Ubuntu 26'ya geçiyor.
+   Ayrı bakım görevi olarak planla; Slice 9 kapsamı dışı.
+4. **Ertelenen kapsam:** `Idempotency-Key` (`docs/06` §1.4 / `docs/07` Slice 2);
+   okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
+   cihaz oturum ekranı v1 dışı.
+
+**Ortam notları:** `gh` CLI kurulu değil → GitHub API `webfetch` ile kullanılıyor;
+kimliksiz API 403 rate limit döndürebilir (HTML run sayfası alternatifi). PowerShell
+`&&` desteklemez; `git rev-parse '@{u}'` tırnak ister. Yerel Docker daemon kapalı
+→ entegrasyon testleri CI'da koşuyor.
+
+**Yeniden doğrulama komutları:**
+`dotnet build src/Host/FinTrack.Api/FinTrack.Api.csproj -c Release --nologo` ·
+`dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -c Release -f net10.0-windows10.0.19041.0` ·
+8 birim/mimari projesi için `dotnet test <proje> -c Release` → 263/263 ·
+Android doğrulaması CI run'ında (yerel SDK yok).
+
 ---
 
 ## 9. Değişiklik geçmişi
@@ -660,3 +699,4 @@ Token'lar loglanmaz, hata mesajlarına eklenmez.
 | 2.2 | 2026-11-17 | Slice 7 tamamlandı: `debts` şeması, tam taksit planı, ödeme/iptal kuralları, kişisel borç ve geri ödemeler, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 2.3 | 2026-11-17 | Slice 8 tamamlandı: 3 salt okunur rapor uç noktası, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
 | 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil |
+| 2.5 | 2026-11-18 | Oturum devri notu eklendi (§8.3): depo/CI durumu, kalan manuel smoke, CI bakım uyarıları ve yeniden doğrulama komutları |
