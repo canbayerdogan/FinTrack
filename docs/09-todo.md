@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **7 — Kredi + kişisel borç** (planlama) |
-| Son doğrulama | Build 0/0 (Debug + Release) · 206/206 birim/mimari · 55/55 entegrasyon · toplam **261/261** · CI yeşil (`44141605019`) · migration senkron · 2026-11-17 |
-| Sıradaki komut | `docs/05` §6, `docs/06` §7 ve `docs/07` §4 Slice 7'yi oku |
+| Aktif dilim | **8 — Raporlama** (planlama) |
+| Son doğrulama | Build 0/0 (Debug + Release) · 237/237 birim/mimari · 63/63 entegrasyon · toplam **300/300** · CI yeşil (`44150709461`) · migration senkron · 2026-11-17 |
+| Sıradaki komut | `docs/05` §9, `docs/06` §8 ve `docs/07` §4 Slice 8'i oku |
 
 ---
 
@@ -225,8 +225,9 @@ dotnet test FinTrack.slnx --nologo -v q
       transaction'da oluşturulur/iptal edilir; rollback testleri yeşil.
 - [x] **Kurallar:** 31'e ay sonu, eşit taksit, sıralı ödeme, her ödenmiş taksitin
       iptali, kalan borç formülleri, türetilmiş alan reddi, kullanıcı izolasyonu.
-- [x] **Testler:** 31 yeni modül + 8 yeni API entegrasyon testi; yerelde
-      237/237 birim/mimari, toplam 300/300 CI doğrulaması bekleniyor.
+- [x] **Testler:** 31 yeni modül + 8 yeni API entegrasyon testi; toplam
+      300/300 (237 birim/mimari + 63 entegrasyon), CI run `44150709461` yeşil.
+- [x] **CI:** run `44150709461` başarılı (Ubuntu + Testcontainers MSSQL).
 - [x] **Dokümanlar:** `docs/05` §6, `docs/06` §7, `docs/07` v1.12, `docs/08`
       v2.2, `README.md`, bu dosya.
 
@@ -254,7 +255,7 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
-      Slice 6 commit'i sonrası yeşil (261/261, run `44141605019`, Ubuntu +
+      Slice 7 commit'i sonrası yeşil (300/300, run `44150709461`, Ubuntu +
       Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
@@ -299,3 +300,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.8 | 2026-11-16 | Slice 4 tamamlandı ve kutular işaretlendi; 137 birim testi yeşil, 46 entegrasyon Docker kapalı olduğu için CI'ya bırakıldı; sıradaki dilim Slice 5 |
 | 1.9 | 2026-11-16 | Slice 5 tamamlandı ve kutular işaretlendi; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; aktif dilim Slice 6 (ADR-0009 ön koşulu) |
 | 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı; 21 modül + 5 entegrasyon testi eklendi, toplam 261/261, CI run `44141605019` yeşil, migration senkron; aktif dilim Slice 7 |
+| 1.11 | 2026-11-17 | Slice 7 tamamlandı; 31 modül + 8 entegrasyon testi eklendi, toplam 300/300, CI run `44150709461` yeşil, migration senkron; aktif dilim Slice 8 |

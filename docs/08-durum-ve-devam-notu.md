@@ -40,8 +40,8 @@
 
 **Çözüm:** `FinTrack.slnx`, **29 proje**. Depo **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
-GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 sonrası build + testleri
-doğrulayacak (run numarası kapanışta eklenecek; Slice 6 run `44141605019` idi).
+GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 build + testlerini
+doğruladı: run `44150709461` yeşil (300/300; Slice 6 run `44141605019` idi).
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
@@ -56,19 +56,18 @@ geçici `_status` uç noktası içerir; Debts `_status` uç noktası kaldırıld
 
 **Tarih:** 2026-11-17 · **SDK:** `10.0.404` · **Microsoft paketleri:** `10.0.15`
 
-> **2026-11-17 notu:** Slice 7 tamamlandı. Debug/Release build 0/0, birim/mimari
-> testler **237/237**, yeni 8 API entegrasyon testi dahil toplam **300/300**
-> hedefleniyor. Yerel Docker daemon'u kapalı olduğundan
-> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı) API testleri CI'da
-> Ubuntu + Testcontainers MSSQL ile doğrulanacak.
+> **2026-11-17 notu:** Slice 7 tamamlandı. Debug/Release build 0/0; birim/mimari
+> **237/237** yerelde, yeni 8 API entegrasyon testi dahil toplam **300/300** CI
+> run `44150709461` ile yeşil (Ubuntu + Testcontainers MSSQL). Yerel Docker
+> daemon'u kapalıydı (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı).
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
 | Build (Debug) | `dotnet build --no-restore` | ✅ 0 uyarı, 0 hata |
 | Birim testleri (Debug) | `dotnet test FinTrack.slnx --no-build --filter "FullyQualifiedName!~FinTrack.Api.IntegrationTests"` | ✅ 237/237 |
-| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ⏳ 63/63 (8 yeni test CI'da; yerel daemon kapalı) |
+| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 63/63 (CI run `44150709461`; yerel daemon kapalı) |
 | Release build | `dotnet build FinTrack.slnx --configuration Release --no-restore` | ✅ 0 uyarı, 0 hata |
-| CI | GitHub Actions `build-test` | ⏳ Slice 7 run numarası kapanışta eklenecek |
+| CI | GitHub Actions `build-test` | ✅ run `44150709461` yeşil — 300/300 |
 | Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." |
 
 **Test dağılımı (300 = 237 birim + 63 entegrasyon):**
@@ -286,8 +285,8 @@ geçici `_status` uç noktası içerir; Debts `_status` uç noktası kaldırıld
   Bu düzeltmeden önce testler Windows'ta sessizce LocalDB'ye yazıyordu
   (`FinTrackDb` içinde 297 test kullanıcısı), Linux CI'da LocalDB olmadığı için
   patlıyordu.
-- **`_status`:** Expenses, CreditCards ve CashInflows'tan kaldırıldı; yalnızca
-  Debts ve Reporting'de duruyor (slice 7–8'de kalkacak).
+- **`_status`:** Expenses, CreditCards, CashInflows ve Debts'tan kaldırıldı;
+  yalnızca Reporting'de duruyor (slice 8'de kalkacak).
 - **Bilinmeyen JSON alanı:** Minimal API gövde bağlama hatası varsayılan olarak
   Development'ta istisna fırlatır ve `UseExceptionHandler` bunu `500` yapar.
   `RouteHandlerOptions.ThrowOnBadRequest = false` ile tüm ortamlarda `400` döner.
@@ -483,7 +482,7 @@ repository/sorgu, migration) ve Endpoints (`GET/POST /loans`,
 `GET/POST /personal-debts`, taksit ve geri ödeme alt kaynakları) tamamlandı.
 ADR-0009 ile kredi/borç ve bağlı `CashInflow` aynı `DbTransaction` içinde
 oluşturulur/iptal edilir. 31 modül + 8 API entegrasyon testi eklendi; birim/mimari
-**237/237** yerelde yeşil, toplam **300/300** CI doğrulaması bekleniyor.
+**237/237** yerelde yeşil, toplam **300/300** CI run `44150709461` ile doğrulandı.
 
 **Kapsam özeti:**
 - Kredi: `TotalRepayment = MonthlyPayment × InstallmentCount` türetilir;
@@ -504,12 +503,12 @@ oluşturulur/iptal edilir. 31 modül + 8 API entegrasyon testi eklendi; birim/mi
   authorization kontrolü eklendi.
 
 **Doğrulama:**
-- Debug + Release build 0 hata/0 uyarı; birim/mimari 237/237.
+- Debug + Release build 0 hata/0 uyarı; birim/mimari 237/237 yerelde.
 - Migration `20261117180809_InitialDebts`; `has-pending-model-changes` →
   "No changes have been made to the model since the last migration."
 - 8 yeni API entegrasyon testi (oluşturma/liste/iptal, taksit ödeme/iptal,
   geri ödeme/iptal, kullanıcı izolasyonu, türetilmiş alan reddi, 31'e ay sonu,
-  atomik giriş bağlantısı) CI'da doğrulanacak.
+  atomik giriş bağlantısı) CI run `44150709461` ile yeşil; toplam 300/300.
 
 ### 7.5 Sıradaki dilim — Slice 8: Raporlama
 
@@ -548,10 +547,9 @@ raporlama için hazır. Başlamadan önce `docs/07` §4 Slice 8 yeniden okunur.
 - Slice 5 kapandı; 48 modül + 5 entegrasyon testi yeşil, dokümanlarla uyumlu.
 - Slice 6 kapandı; ADR-0009 kabul edilip uygulandı, 21 modül + 5 entegrasyon
   testi yeşil; CI run `44141605019` ile toplam 261/261.
-- Slice 7 kapandı; 31 modül + 8 entegrasyon testi eklendi; yerelde 237/237,
-  CI doğrulaması sonrası toplam 300/300.
-- Yerel açık doğrulama kalmadı; sıradaki dilim Slice 8 (CI run numarası ve
-  kapanış notu push sonrası eklenecek).
+- Slice 7 kapandı; 31 modül + 8 entegrasyon testi eklendi; toplam 300/300,
+  CI run `44150709461` yeşil.
+- Yerel açık doğrulama kalmadı; sıradaki dilim Slice 8 — raporlama.
 
 ---
 
@@ -571,4 +569,4 @@ raporlama için hazır. Başlamadan önce `docs/07` §4 Slice 8 yeniden okunur.
 | 1.9 | 2026-11-16 | Slice 4 tamamlandı: ekstre/ödeme domain-API-testleri, migration, 137 birim + 46 entegrasyon testi; Docker kapalı olduğundan entegrasyon CI'ya bırakıldı; sıradaki dilim Slice 5 |
 | 2.0 | 2026-11-16 | Slice 5 tamamlandı: `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi, iptal/bağlantı kuralları; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; `_status` yalnızca Debts ve Reporting'de; sıradaki dilim Slice 6 (ADR-0009) |
 | 2.1 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı: `cards.CashAdvances`, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
-| 2.2 | 2026-11-17 | Slice 7 tamamlandı: `debts` şeması, tam taksit planı, ödeme/iptal kuralları, kişisel borç ve geri ödemeler, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, yerelde 237/237 |
+| 2.2 | 2026-11-17 | Slice 7 tamamlandı: `debts` şeması, tam taksit planı, ödeme/iptal kuralları, kişisel borç ve geri ödemeler, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |

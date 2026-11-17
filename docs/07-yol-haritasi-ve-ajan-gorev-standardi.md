@@ -78,9 +78,9 @@
 ### 2.3 Mevcut iskelet sınırları
 
 - Modül `_status` uç noktaları **geçicidir**; ilgili dilim bitince kaldırılır.
-  Slice 2 ile `Expenses`, slice 3 ile `CreditCards`, slice 5 ile `CashInflows`
-  `_status` uç noktası kaldırıldı; yalnızca `Debts` ve `Reporting` kaldı
-  (slice 7–8'de kaldırılacaktır).
+  Slice 2 ile `Expenses`, slice 3 ile `CreditCards`, slice 5 ile `CashInflows`,
+  slice 7 ile `Debts` `_status` uç noktası kaldırıldı; yalnızca `Reporting` kaldı
+  (slice 8'de kaldırılacaktır).
 - `ExpensesModule` harcama/kategori uç noktalarını, `expenses` DbContext'ini ve
   migration'ını içerir. `CreditCardsModule` kart/ekstre/ödeme/nakit avans uç
   `cards` DbContext'ini ve migration'ını içerir. `CashInflowsModule` para girişi
@@ -106,8 +106,8 @@
 | 4 | Ekstre + kart ödemesi | L | 3 | ✅ |
 | 5 | Para girişi | M | 1 | ✅ |
 | 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ |
-| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ sıradaki |
-| 8 | Raporlama | L | 2–7 | ⏳ |
+| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ✅ |
+| 8 | Raporlama | L | 2–7 | ⏳ sıradaki |
 | 9 | MAUI istemci | L | 1–8 | ⏳ |
 
 **Büyüklük:** S ≈ 1 oturum, M ≈ 2–3 oturum, L ≈ 4+ oturum. Takvim taahhüdü değildir.
@@ -453,8 +453,8 @@ entegrasyon testleriyle doğrulandı.
 ### Slice 7 — Kredi + kişisel borç ✅
 
 **Durum:** ✅ Bitti (2026-11-17). 31 yeni modül testi ve 8 yeni API entegrasyon
-testi eklendi; birim/mimari **237/237** yerelde yeşil, toplam **300/300** CI
-doğrulaması bekleniyor. Migration: `20261117180809_InitialDebts`.
+testi eklendi; toplam **300/300** (237 birim/mimari + 63 entegrasyon) CI run
+`44150709461` ile yeşil. Migration: `20261117180809_InitialDebts`.
 
 **Amaç:** Taksitli kredi ve kişisel borç yaşam döngüsünü kurmak.
 
@@ -505,6 +505,7 @@ doğrulaması bekleniyor. Migration: `20261117180809_InitialDebts`.
 - [x] `LoanDto` `monthlyPayment` ve türetilmiş `totalRepayment` içerir; ayrı
       `installmentAmount` alanı yoktur.
 - [x] `_status` uç noktası kaldırılır.
+- [x] 8 yeni entegrasyon testi CI run `44150709461` ile yeşil; toplam 300/300.
 
 **Riskler:** Tarih aritmetiği; `monthlyPayment` ondalık hassasiyeti; atomiklik;
 iptal kuralları.
@@ -843,4 +844,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |
 | 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |
 | 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
-| 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, yerelde 237/237 |
+| 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |

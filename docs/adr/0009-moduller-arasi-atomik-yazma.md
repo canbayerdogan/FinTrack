@@ -69,7 +69,7 @@ handler → BeginAsync()
 - `docs/06` §6.5'teki anlık atomicite korunur: ya iki kayıt da vardır ya hiçbiri.
 - Modül sınırı korunur: CreditCards, CashInflows tipi/DbContext'i görmez;
   yalnızca `ModuleContracts` sözleşmesini kullanır.
-- Aynı mekanizma Slice 7'de kredi/kişisel borç için tekrar kullanılabilir.
+- Aynı mekanizma Slice 7'de kredi/kişisel borç için de kullanıldı.
 - `DbTransaction` tabanlı sözleşme sayesinde modül testleri SQLite'ta gerçek
   rollback davranışını doğrulayabilir.
 

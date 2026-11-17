@@ -9,12 +9,12 @@ Kişisel finans ve harcama takibi uygulaması.
 **Mimari:** modüler monolit · modül içi Clean Architecture · CQRS (mediator'süz)
 
 > Bu depo şu anda **tasarım + iskelet + kimlik doğrulama + harcama/kategori +
-> kredi kartı + ekstre/ödeme + para girişi + nakit avans** aşamasındadır. Çözüm
-> iskeleti (slice 0), kimlik doğrulama (slice 1), harcama/kategori (slice 2),
-> kart + hesaplanan bakiye (slice 3), ekstre + kart ödemesi (slice 4), para
-> girişi (slice 5) ve nakit avans (slice 6) derlenir ve birim/mimari testleri
-> geçer; kredi/kişisel borç ve raporlama modülleri (slice 7+) henüz yazılmadı.
-> Kod yazılmadan önce dokümanların okunması zorunludur.
+> kredi kartı + ekstre/ödeme + para girişi + nakit avans + kredi/kişisel borç**
+> aşamasındadır. Çözüm iskeleti (slice 0), kimlik doğrulama (slice 1),
+> harcama/kategori (slice 2), kart + hesaplanan bakiye (slice 3), ekstre + kart
+> ödemesi (slice 4), para girişi (slice 5), nakit avans (slice 6) ve kredi/kişisel
+> borç (slice 7) derlenir ve testleri geçer; raporlama (slice 8) ve MAUI istemci
+> (slice 9) henüz yazılmadı. Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
 
@@ -96,11 +96,10 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   ve ADR-0009 ile atomik para girişi. `GET/POST /loans` ve
   `GET/POST /personal-debts` uç noktaları; Debts `_status` kaldırıldı.
   31 modül + 8 yeni API entegrasyon testi eklendi.
-- **Testler:** ✅ yerelde **237/237** birim/mimari (3 mimari + 22 birim +
-  55 Expenses + 78 CreditCards + 48 CashInflows + 31 Debts). Slice 7'nin 8
-  entegrasyon testi dahil toplam **300/300** CI doğrulaması bekleniyor. Yerel
-  Docker motoru kapalıydı; entegrasyon testleri CI'da Ubuntu + Testcontainers
-  MSSQL ile çalıştırılacak.
+- **Testler:** ✅ toplam **300/300** (237 birim/mimari + 63 entegrasyon); CI run
+  `44150709461` yeşil (Ubuntu + Testcontainers MSSQL). Birim/mimari dağılımı:
+  3 mimari + 22 birim + 55 Expenses + 78 CreditCards + 48 CashInflows + 31
+  Debts. Yerel Docker motoru kapalıydı; entegrasyon testleri CI'da doğrulandı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -113,8 +112,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Slice 7: `20261117180809_InitialDebts` (`DebtsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 sonrası build + testleri
-  doğrulayacak (run numarası kapanışta eklenecek; Slice 6 run `44141605019` idi).
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 build + testlerini
+  doğruladı: run `44150709461` yeşil (300/300; Slice 6 run `44141605019` idi).
 - **Sıradaki:** slice 8 — raporlama (`docs/07` §4). Slice 7 uçtan uca tamamlandı;
   borç ve para girişi verileri raporlama için hazır.
 
