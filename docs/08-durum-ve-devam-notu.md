@@ -641,9 +641,10 @@ Token'lar loglanmaz, hata mesajlarına eklenmez.
 
 ### 8.3 Oturum devri notu (2026-11-18)
 
-**Depo durumu:** `HEAD` = `origin/main` = `7455546` (`docs: record green CI run
-44189257561 for slice 9`); çalışma ağacı temiz. Slice 9 kodu `7b4e00a`,
-dokümanları `7455546` commit'inde. CI: run `44189257561` (kod, 335/335) ve
+**Depo durumu:** Slice 9 kodu `7b4e00a`, yeşil CI run ID'sinin dokümanlara
+eklenmesi `7455546` commit'inde. Bu devir notundan sonra yalnızca docs
+commit'leri eklenebilir → güncel HEAD ve çalışma ağacı için `git log -1` /
+`git status` ile kontrol et. CI: run `44189257561` (kod, 335/335) ve
 `44190582258` (dokümanlar) `success`; `main` rozeti yeşil.
 
 **Tamamlanan:** Slice 0–9 kod + test + doküman + CI. Çözümde 33 proje; 263
