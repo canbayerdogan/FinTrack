@@ -86,16 +86,15 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   oluşturulamaz (`400 DebtSourceRequiresOwnerEndpoint`). Borç bağlantılı kayıt
   `debtLink` döner; doğrudan güncelleme/iptal `409`. 48 modül + 5 entegrasyon
   testi; `_status` yalnızca Debts ve Reporting'de kaldı.
-- **Slice 6 — Nakit avans:** ✅ Kod/mimari tamam. `cards.CashAdvances` migration'ı,
+- **Slice 6 — Nakit avans:** ✅ Tamamlandı ve CI'da doğrulandı. `cards.CashAdvances` migration'ı,
   `GET/POST /cards/{id}/cash-advances` ve iptal uç noktası; borç formülünde
   `+ cashAdvances`. ADR-0009 ile avans ve bağlı `CashInflow` aynı DB
   transaction'ında yazılır/iptal edilir; yarı kayıt kalmaz. 21 yeni modül + 5
   yeni API entegrasyon testi eklendi.
-- **Testler:** ✅ 206/206 birim testi yeşil (3 mimari + 22 birim + 55 Expenses +
-  78 CreditCards + 48 CashInflows). Son çalıştırılan entegrasyon sonucu 50/50;
-  Slice 6'nın 5 yeni entegrasyon testi derlendi ancak yerel Docker motoru kapalı
-  olduğu için çalıştırılamadı. Entegrasyon testleri Docker Desktop açıkken veya
-  CI'da (Ubuntu + Testcontainers MSSQL) çalışır.
+- **Testler:** ✅ **261/261** yeşil: 206 birim testi (3 mimari + 22 birim +
+  55 Expenses + 78 CreditCards + 48 CashInflows) + 55 entegrasyon testi
+  (Slice 6'nın 5 yeni testi dahil). Yerel Docker motoru kapalıydı; entegrasyon
+  testleri CI'da Ubuntu + Testcontainers MSSQL ile çalıştırıldı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -107,11 +106,11 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   `20261117174437_AddCashAdvances` (`CreditCardsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 5 commit'i sonrası
-  build + **235/235** testle yeşil (run `43933066950`, Ubuntu,
-  Testcontainers MSSQL); Slice 6 commit'i sonrası CI doğrulaması bekliyor.
-- **Sıradaki:** slice 7 — kredi + kişisel borç (`docs/07` §4). Slice 6'nın 5
-  yeni entegrasyon testinin CI'da yeşil olması geçiş ön koşuludur.
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 6 commit'i sonrası
+  build + **261/261** testle yeşil (run `44141605019`, Ubuntu,
+  Testcontainers MSSQL).
+- **Sıradaki:** slice 7 — kredi + kişisel borç (`docs/07` §4). Slice 6 CI
+  doğrulaması tamamlandı; geçiş ön koşulu karşılandı.
 
 ## Çözüm yapısı (özet)
 

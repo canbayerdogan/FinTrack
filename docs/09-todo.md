@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **7 — Kredi + kişisel borç** (planlama; Slice 6 CI doğrulaması koşulu) |
-| Son doğrulama | Build 0/0 (Debug + Release) · 206/206 birim/mimari · migration senkron · 50/50 son entegrasyon + 5 yeni test derlendi (yerel daemon kapalı) · 2026-11-17 |
-| Sıradaki komut | Slice 6 entegrasyon testlerini CI'da doğrula; `docs/05` §6, `docs/06` §7 ve `docs/07` §4 Slice 7'yi oku |
+| Aktif dilim | **7 — Kredi + kişisel borç** (planlama) |
+| Son doğrulama | Build 0/0 (Debug + Release) · 206/206 birim/mimari · 55/55 entegrasyon · toplam **261/261** · CI yeşil (`44141605019`) · migration senkron · 2026-11-17 |
+| Sıradaki komut | `docs/05` §6, `docs/06` §7 ve `docs/07` §4 Slice 7'yi oku |
 
 ---
 
@@ -206,11 +206,10 @@ dotnet test FinTrack.slnx --nologo -v q
       `docs/06` §6.5 ile uyum.
 - [x] **Atomiklik:** avans + bağlı `CashInflow` aynı transaction; iptalde ikisi
       birlikte kapanır; kart ödemeleri geri alınmaz.
-- [x] **Testler:** 21 yeni modül testi; birim/mimari 206/206, 5 yeni API
-      entegrasyon testi derlendi.
+- [x] **Testler:** 21 yeni modül + 5 yeni API entegrasyon testi; toplam
+      261/261 (206 birim/mimari + 55 entegrasyon).
+- [x] **CI:** run `44141605019` başarılı (Ubuntu + Testcontainers MSSQL).
 - [x] **Dokümanlar:** `docs/07` v1.11, `docs/08` v2.1, `README.md`, ADR-0009.
-- [ ] **Bekleyen:** 5 yeni entegrasyon testinin CI'da Testcontainers MSSQL ile
-      yeşil olması (yerel Docker daemon kapalı).
 
 ### Yüksek seviye
 
@@ -235,12 +234,12 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
-      Slice 5 commit'i sonrası yeşil (235/235, run `43933066950`, Ubuntu +
-      Testcontainers MSSQL); Slice 6 commit'i sonrası CI bekleniyor
+      Slice 6 commit'i sonrası yeşil (261/261, run `44141605019`, Ubuntu +
+      Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
-      2026-11-16); Slice 6 sırasında daemon kapalıydı, 5 yeni test derlendi
-      ancak çalıştırılamadı; CI doğrulaması bekleniyor
+      2026-11-16); Slice 6 sırasında daemon kapalıydı, 5 yeni test CI'da
+      doğrulandı
 
 ---
 
@@ -279,4 +278,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.7 | 2026-11-15 | Gelecek `asOf` `400` ve iptal UTC→yerel tarih kuralı işlendi; nihai kontrol ve açık kodlama onayı bekleniyor |
 | 1.8 | 2026-11-16 | Slice 4 tamamlandı ve kutular işaretlendi; 137 birim testi yeşil, 46 entegrasyon Docker kapalı olduğu için CI'ya bırakıldı; sıradaki dilim Slice 5 |
 | 1.9 | 2026-11-16 | Slice 5 tamamlandı ve kutular işaretlendi; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; aktif dilim Slice 6 (ADR-0009 ön koşulu) |
-| 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 kodu ve kutuları tamamlandı; 21 modül + 5 entegrasyon testi eklendi, birim 206/206, migration senkron; aktif dilim Slice 7 (CI entegrasyon doğrulaması koşulu) |
+| 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı; 21 modül + 5 entegrasyon testi eklendi, toplam 261/261, CI run `44141605019` yeşil, migration senkron; aktif dilim Slice 7 |

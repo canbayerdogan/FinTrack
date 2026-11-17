@@ -48,7 +48,7 @@
 | Slice 3 — kart + hesaplanan bakiye | ✅ `cards` şeması, kart CRUD/arşiv/bakiye, 22 modül + 6 entegrasyon testi |
 | Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf` |
 | Slice 5 — para girişi | ✅ `inflows` şeması, `CashInflow` CRUD/iptal, kaynaktan türetilen `isEarnedIncome`, borç kaynaklarının reddi, 48 modül + 5 entegrasyon testi |
-| Slice 6 — nakit avans | ✅ Kod/mimari tamam; `cards.CashAdvances`, ADR-0009 atomik yazma, avans + bağlı giriş, bakiye formülü, 21 modül + 5 entegrasyon testi (CI bekliyor) |
+| Slice 6 — nakit avans | ✅ `cards.CashAdvances`, ADR-0009 atomik yazma, avans + bağlı giriş, bakiye formülü, 21 modül + 5 entegrasyon testi; CI yeşil |
 | Mimari testler | ✅ 3 test |
 | Entegrasyon smoke testleri | ✅ 6 test (health + 2 modül `_status` + harcama/kategori/kart 401) |
 | Entegrasyon kimlik testleri | ✅ 17 test (Testcontainers MSSQL) |
@@ -56,7 +56,7 @@
 | Entegrasyon kart testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon ekstre/ödeme testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon para girişi testleri | ✅ 5 test (Testcontainers MSSQL) |
-| Entegrasyon nakit avans testleri | ✅ 5 test yazıldı/derlendi; yerel Docker motoru kapalı, CI doğrulaması bekliyor |
+| Entegrasyon nakit avans testleri | ✅ 5 test; CI run `44141605019` ile yeşil (Testcontainers MSSQL) |
 | Birim testleri (kimlik) | ✅ 22 test (doğrulama + JWT) |
 | Modül testleri (Expenses) | ✅ 55 test (domain + handler, SQLite in-memory) |
 | Modül testleri (CreditCards) | ✅ 78 test (domain + handler, SQLite in-memory; nakit avans dahil) |
@@ -105,8 +105,8 @@
 | 3 | Kart + hesaplanan bakiye | L | 2 | ✅ |
 | 4 | Ekstre + kart ödemesi | L | 3 | ✅ |
 | 5 | Para girişi | M | 1 | ✅ |
-| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ kod/mimari (CI entegrasyonu bekliyor) |
-| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ sıradaki (CI koşuluyla) |
+| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ |
+| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ sıradaki |
 | 8 | Raporlama | L | 2–7 | ⏳ |
 | 9 | MAUI istemci | L | 1–8 | ⏳ |
 
@@ -398,10 +398,10 @@ test. Migration: `20261116182933_InitialCashInflows`.
 
 ### Slice 6 — Nakit avans ✅
 
-**Durum:** ✅ Kod/mimari tamamlandı (2026-11-17). 21 yeni modül testi ve 5 yeni
-API entegrasyon testi eklendi; birim/mimari **206/206** yeşil. Migration:
-`20261117174437_AddCashAdvances`. Entegrasyon testleri derlendi; yerel Docker
-motoru kapalı olduğu için son CI doğrulaması bekliyor.
+**Durum:** ✅ Bitti (2026-11-17). 21 yeni modül testi ve 5 yeni API entegrasyon
+testi eklendi; toplam **261/261** test yeşil (206 birim/mimari + 55 entegrasyon).
+Migration: `20261117174437_AddCashAdvances`. CI run `44141605019` (Ubuntu,
+Testcontainers MSSQL) başarılı.
 
 **Amaç:** Nakit avansı kart borcuna bağlamak ve para girişiyle atomik oluşturmak.
 
@@ -442,11 +442,11 @@ motoru kapalı olduğu için son CI doğrulaması bekliyor.
 **Kabul kriterleri:**
 - [x] `docs/05` §5.5, §9/2 ve `docs/06` §6.5 ile uyum.
 - [x] ADR-0009 sonucu uygulanmış ve birim/mimari düzeyde test edilmiş.
-- [ ] 5 yeni entegrasyon testi CI'da yeşil (yerel daemon kapalı).
+- [x] 5 yeni entegrasyon testi CI run `44141605019` ile yeşil.
 
 **Riskler:** Atomiklik; iki modülün aynı DB'de farklı DbContext kullanması;
-hata durumunda rollback. Bunlar ADR-0009 ve SQLite rollback testleriyle
-doğrulandı; SQL Server tarafı CI'da doğrulanacak.
+hata durumunda rollback. ADR-0009, SQLite rollback testleri ve SQL Server
+entegrasyon testleriyle doğrulandı.
 
 ---
 
@@ -824,4 +824,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.8 | 2026-11-15 | Gelecek `asOf` reddi ve aynı yerel gün iptal kuralı kabul kriterlerine eklendi; iptal kuralı harcama/iade/ödeme için birleştirildi; 21 senaryo referansı korundu |
 | 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |
 | 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |
-| 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) kod/mimari tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; birim 206/206; entegrasyon CI doğrulaması bekliyor |
+| 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
