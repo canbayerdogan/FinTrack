@@ -1,7 +1,7 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.3
-**Tarih:** 2026-11-17
+**Sürüm:** 2.4
+**Tarih:** 2026-11-18
 **Bağlı belgeler:** [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
@@ -36,13 +36,21 @@
 | 6 | Nakit avans | ✅ |
 | 7 | Kredi + kişisel borç | ✅ |
 | 8 | Raporlama | ✅ |
-| 9 | MAUI istemci | ⏳ |
+| 9 | MAUI istemci | ✅ |
 
-**Çözüm:** `FinTrack.slnx`, **30 proje** (Slice 8 ile Reporting test projesi
-eklendi). Depo **git** (`main`); uzak depo
+**Çözüm:** `FinTrack.slnx`, **33 proje** (Slice 8 ile Reporting test, Slice 9 ile
+`FinTrack.Mobile.Core`, `FinTrack.Mobile`, `FinTrack.Mobile.Tests` eklendi). Depo
+**git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
 GitHub Actions CI (`.github/workflows/ci.yml`) Slice 8 build + testlerini
 doğruladı: run `44156632893` yeşil (320/320; Slice 7 run `44150709461` idi).
+Slice 9 push sonrası CI doğrulaması bekleniyor (Android hedefi dahil).
+
+**Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
+typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
+ViewModel), `src/Mobile/FinTrack.Mobile` (MAUI Shell + v1 XAML ekranları,
+`SecureStorageTokenStore`, `MauiNavigator`), `tests/FinTrack.Mobile.Tests`
+(15 xUnit testi). Hedefler: Android + Windows.
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
@@ -57,24 +65,29 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 ## 3. Son doğrulama
 
-**Tarih:** 2026-11-17 · **SDK:** `10.0.404` · **Microsoft paketleri:** `10.0.15`
+**Tarih:** 2026-11-18 · **SDK:** `10.0.404` · **MAUI iş yükü:** `10.0.110/10.0.100` · **Microsoft paketleri:** `10.0.15`
 
-> **2026-11-17 notu:** Slice 8 tamamlandı. Debug/Release build 0/0; birim/mimari
-> **248/248** yerelde, yeni 7 API entegrasyon testi dahil toplam **320/320** CI
-> run `44156632893` ile yeşil (Ubuntu + Testcontainers MSSQL). Yerel Docker
-> daemon'u kapalıydı (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı).
+> **2026-11-18 notu:** Slice 9 tamamlandı. Backend Debug/Release build 0/0;
+> Windows MAUI build (Debug + Release) 0/0; birim/mimari **263/263** (248
+> backend + 15 mobile). Android SDK/JDK yerel eksik → `net10.0-android` CI
+> Ubuntu job'ında doğrulanacak. Entegrasyon 72/72 (CI run `44156632893`),
+> beklenen toplam **335/335**. Yerel Docker daemon'u kapalıydı
+> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı).
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
-| Build (Debug) | `dotnet build FinTrack.slnx --no-restore` | ✅ 0 uyarı, 0 hata |
-| Birim testleri (Debug) | 7 birim/mimari projesi ayrı ayrı | ✅ 248/248 |
+| Build (Debug, backend) | `dotnet build FinTrack.slnx --no-restore` (Slice 8 sonu) | ✅ 0 uyarı, 0 hata |
+| Build (Windows MAUI, Debug) | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-windows10.0.19041.0` | ✅ 0 uyarı, 0 hata |
+| Build (Release, backend) | `dotnet build src/Host/FinTrack.Api -c Release` | ✅ 0 uyarı, 0 hata |
+| Build (Release, Windows MAUI) | `dotnet build src/Mobile/FinTrack.Mobile -c Release -f net10.0-windows10.0.19041.0` | ✅ 0 uyarı, 0 hata |
+| Birim testleri (Debug) | 8 birim/mimari projesi ayrı ayrı | ✅ 263/263 |
+| Release testleri | 8 birim/mimari projesi `-c Release` | ✅ 263/263 |
 | Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (CI run `44156632893`; yerel daemon kapalı) |
-| Release build | `dotnet build FinTrack.slnx --configuration Release` | ✅ 0 uyarı, 0 hata |
-| Release testleri | 7 birim/mimari projesi `-c Release` | ✅ 248/248 |
-| CI | GitHub Actions `build-test` | ✅ run `44156632893` yeşil — 320/320 |
-| Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 8'de yeni DbContext/entity/migration yok) |
+| Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` | ⏳ Yerel SDK/JDK yok; CI Ubuntu job'ında |
+| CI | GitHub Actions `build-test` | ✅ Son yeşil: run `44156632893` (320/320); Slice 9 run'ı push sonrası |
+| Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 9'da DbContext/entity/migration yok) |
 
-**Test dağılımı (320 = 248 birim + 72 entegrasyon):**
+**Test dağılımı (335 = 263 birim + 72 entegrasyon):**
 
 | Proje | Adet | Kapsam |
 |---|---|---|
@@ -85,6 +98,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `FinTrack.Modules.CashInflows.Tests` | 48 | Domain + handler (SQLite in-memory) |
 | `FinTrack.Modules.Debts.Tests` | 31 | Domain + handler + ADR-0009 atomiklik (SQLite in-memory) |
 | `FinTrack.Modules.Reporting.Tests` | 10 | Handler, fake `ModuleContracts` |
+| `FinTrack.Mobile.Tests` | 15 | `AuthHandler`, token akışı, ViewModel doğrulama/hata eşlemesi |
 | `FinTrack.Api.IntegrationTests` | 72 | 9 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme + 5 para girişi + 4 nakit avans + 8 kredi/borç + 7 raporlama (Testcontainers MSSQL) |
 
 **Uygulanan migration'lar:**
@@ -230,6 +244,22 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `LoanDto` `monthlyPayment` kullanır; ayrı `installmentAmount` yok | Kavram tekliği |
 | Her ödenmiş taksit ödemesi iptal edilebilir; sıra kuralı yalnızca ödeme anında | 2026-11-17 onayı; iptal yalnızca ilgili taksiti `Planned` yapar |
 
+### 4.11 Slice 9 — MAUI istemci (2026-11-18)
+
+| Karar | Gerekçe |
+|---|---|
+| Hedefler Android + Windows; iOS/macOS kapsam dışı | Kullanıcı kararı (2026-11-17) |
+| `FinTrack.Mobile.Core` (net10.0) platform bağımsız; MAUI projesi yalnızca UI + platform servisleri | Testler MAUI workload/SDK olmadan koşabilir |
+| Tek TFM `Directory.Build.props` MAUI csproj'da `<TargetFramework></TargetFramework>` ile sıfırlanır | Çoklu hedef `TargetFrameworks` ile çalışır |
+| `AuthHandler` 401'de refresh eder; refresh auth handler'sız ayrı `HttpClient` | Döngiye girmez; header sızdırmaz |
+| Eşzamanlı refresh `SemaphoreSlim` single-flight; başarısız refresh token'ları siler | Tek oturum olayı, eski token ile devam yok |
+| Otomatik retry yalnızca GET/HEAD/OPTIONS | `Idempotency-Key` yok → POST/PUT çift kayıt riski |
+| Token'lar `SecureStorage`'da; log/hata mesajı yok | Sızdırma yok; hatalar `ApiException` alanlarıyla eşleşir |
+| `IQueryProperty` yok → `IQueryAttributable.ApplyQueryAttributes` | .NET 10 MAUI API'si |
+| `MainPage` deprecated → `Application.CreateWindow` + `Windows[0].Page` | .NET 10 yaşam döngüsü |
+| Release XAML `x:DataType` + `DataTemplate x:DataType`; Picker `ItemDisplayBinding` yerine DTO `ToString()` | Release build 0 uyarı, derlenmiş binding |
+| v1 çevrimdışı yazma yok; okuma önbelleği de eklenmedi | Sunucu doğrulama otoritesi; kapsam dışı |
+
 ---
 
 ## 5. Uygulama notları ve tuzaklar
@@ -309,6 +339,18 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
   src/Host/FinTrack.Api`; tasarım zamanı fabrikası mevcut. Birden fazla DbContext
   olduğundan `--context CreditCardsDbContext` veya `--context CashInflowsDbContext`
   gibi açık seçim gerekir.
+- **MAUI çoklu hedef:** `Directory.Build.props` tek TFM verdiği için MAUI
+  csproj'da `<TargetFramework></TargetFramework>` gerekir; `-p:TargetFrameworks=...`
+  geçirmek core projenin `net10.0` varlıklarını bozar. `-f <tfm>` kullan.
+- **Android SDK/JDK:** Windows'ta yerel JDK yalnızca JRE 1.8 (`jar` yok) ve SDK
+  yok → `XA5300` + `Could not find required file 'jar'`. Android derlemesi CI
+  Ubuntu job'unda (Java 17 + workload restore) doğrulanır.
+- **.NET 10 MAUI API:** `IQueryProperty` yok (`IQueryAttributable` kullan);
+  `Application.MainPage` deprecated (`CreateWindow` kullan); `DisplayAlert` yerine
+  `DisplayAlertAsync`.
+- **Release XAML uyarıları:** `x:DataType` yoksa 135 `XC0022` uyarısı çıkar;
+  kök sayfa + `DataTemplate` için `x:DataType` şart. Picker
+  `ItemDisplayBinding` derlenemediğinden DTO `ToString()` kullanılır.
 
 ---
 
@@ -323,6 +365,10 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Rate limiting / kota | v1.1 |
 | Tam audit log | v1'de durum + iade/iptal kayıtları yeterli |
 | Banka API, kart numarası/CVV/SKT | Hiçbir zaman yok |
+| Mobil çevrimdışı yazma | v1 kapsam dışı (Slice 9) |
+| Mobil okuma önbelleği | Opsiyoneldi; eklenmedi |
+| Bildirimler, biyometrik giriş, çoklu cihaz oturum ekranı | v1 kapsam dışı (Slice 9) |
+| Android emülatör uçtan uca smoke | Emülatör/SDK kurulumuna bırakıldı |
 
 ---
 
@@ -535,6 +581,24 @@ oluşturulur/iptal edilir. 31 modül + 8 API entegrasyon testi eklendi; birim/mi
   dilimi `Europe/Istanbul`, kullanıcı tercihi `ICurrentUser.PreferredTimeZone`.
 - 10 modül + 7 entegrasyon testi; toplam 320/320, CI run `44156632893` yeşil.
 
+### 7.6 Slice 9 — MAUI istemci ✅ (2026-11-18)
+
+**Bağlayıcı kaynak:** `docs/07` §4 Slice 9, `docs/06` §2–§8.
+
+**Sonuç:** `maui-android` + `maui-windows` iş yükleri kuruldu. Üç yeni proje:
+`FinTrack.Mobile.Core` (net10.0), `FinTrack.Mobile` (Android + Windows),
+`FinTrack.Mobile.Tests` (15 xUnit). Shell + `CommunityToolkit.Mvvm`, typed
+`HttpClient`, `ApiJson` DTO eşlemesi, `SecureStorageTokenStore`, `AuthHandler` +
+`SessionRefresher` (401 refresh, single-flight, POST retry yok), 10 ViewModel
+ve v1 ekranları (giriş/kayıt, özet, harcamalar + ekleme, kartlar + detay, borçlar,
+raporlar, ayarlar) tamamlandı.
+
+**Doğrulama:** Windows hedefi Debug + Release 0 uyarı/0 hata (`x:DataType`
+uygulandı); 15 mobile testi dahil 263/263 birim/mimari Debug + Release; 72
+entegrasyon testi değişmedi. Android hedefi yerel SDK/JDK eksikliği nedeniyle CI
+Ubuntu job'ına bırakıldı; emülatör smoke'u yapılmadı. Token'lar loglanmaz, hata
+mesajlarına eklenmez.
+
 ---
 
 ## 8. Açık sorular
@@ -569,8 +633,10 @@ oluşturulur/iptal edilir. 31 modül + 8 API entegrasyon testi eklendi; birim/mi
   CI run `44150709461` yeşil.
 - Slice 8 kapandı; 10 modül + 7 entegrasyon testi eklendi; toplam 320/320,
   CI run `44156632893` yeşil. Reporting DbContext/migration içermez.
-- Yerel açık doğrulama kalmadı; sıradaki dilim Slice 9 — MAUI istemci
-  (`dotnet workload install maui` ön koşul).
+- Slice 9 kapandı; 15 mobile testi eklendi; birim/mimari 263/263, entegrasyon
+  72/72; beklenen toplam 335/335. MAUI iş yükleri kuruldu, Windows build 0/0.
+- Android yerel derlemesi ve emülatör smoke'u CI/SDK kurulumuna bırakıldı;
+  push sonrası CI run ID'si buraya ve `README.md`'e eklenecek.
 
 ---
 
@@ -592,3 +658,4 @@ oluşturulur/iptal edilir. 31 modül + 8 API entegrasyon testi eklendi; birim/mi
 | 2.1 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı: `cards.CashAdvances`, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
 | 2.2 | 2026-11-17 | Slice 7 tamamlandı: `debts` şeması, tam taksit planı, ödeme/iptal kuralları, kişisel borç ve geri ödemeler, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 2.3 | 2026-11-17 | Slice 8 tamamlandı: 3 salt okunur rapor uç noktası, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
+| 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI doğrulaması bekleniyor |

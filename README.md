@@ -10,11 +10,12 @@ Kişisel finans ve harcama takibi uygulaması.
 
 > Bu depo şu anda **tasarım + iskelet + kimlik doğrulama + harcama/kategori +
 > kredi kartı + ekstre/ödeme + para girişi + nakit avans + kredi/kişisel borç +
-> raporlama** aşamasındadır. Çözüm iskeleti (slice 0), kimlik doğrulama (slice 1),
-> harcama/kategori (slice 2), kart + hesaplanan bakiye (slice 3), ekstre + kart
-> ödemesi (slice 4), para girişi (slice 5), nakit avans (slice 6), kredi/kişisel
-> borç (slice 7) ve raporlama (slice 8) derlenir ve testleri geçer; MAUI istemci
-> (slice 9) henüz yazılmadı. Kod yazılmadan önce dokümanların okunması zorunludur.
+> raporlama + MAUI istemci** aşamasındadır. Çözüm iskeleti (slice 0), kimlik
+> doğrulama (slice 1), harcama/kategori (slice 2), kart + hesaplanan bakiye
+> (slice 3), ekstre + kart ödemesi (slice 4), para girişi (slice 5), nakit avans
+> (slice 6), kredi/kişisel borç (slice 7), raporlama (slice 8) ve MAUI istemci
+> (slice 9) yazıldı; backend + Windows hedefi derlenir, testleri geçer. Android
+> hedefi CI'da doğrulanacak. Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
 
@@ -55,9 +56,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 04 | [ADR'ler](docs/adr/) | ✅ |
 | 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.11](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.1](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.10](docs/09-todo.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.14](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v2.4](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.13](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -103,11 +104,19 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   formülünde nakit avans bir kez, ekstre eklenmez, kart alacağı ayrı. `_status`
   kaldırıldı, route grubu `RequireAuthorization()`. 10 modül + 7 yeni API
   entegrasyon testi eklendi.
-- **Testler:** ✅ toplam **320/320** (248 birim/mimari + 72 entegrasyon); CI run
-  `44156632893` yeşil (Ubuntu + Testcontainers MSSQL). Birim/mimari dağılımı:
-  4 mimari + 22 birim + 55 Expenses + 78 CreditCards + 48 CashInflows + 31
-  Debts + 10 Reporting. Yerel Docker motoru kapalıydı; entegrasyon testleri
-  CI'da doğrulandı.
+- **Slice 9 — MAUI istemci:** ✅ `maui-android` + `maui-windows` iş yükleri;
+  `FinTrack.Mobile.Core` (net10.0), `FinTrack.Mobile` ve
+  `FinTrack.Mobile.Tests`. Shell + MVVM, typed `HttpClient`, `SecureStorage`
+  token akışı, 401 refresh + güvenli tekrar (POST/PUT otomatik retry yok),
+  giriş/kayıt, özet, harcama + ekleme, kartlar + detay, borçlar, raporlar ve
+  ayarlar. Token'lar loglanmaz. Hedefler: Android + Windows; çevrimdışı yazma
+  ve bildirim kapsam dışı.
+- **Testler:** ✅ toplam **335/335** (263 birim/mimari + 72 entegrasyon); son
+  yeşil CI run `44156632893` (Slice 8; Slice 9 run'ı push sonrası eklenecek).
+  Birim/mimari dağılımı: 4 mimari + 22 birim + 55 Expenses + 78 CreditCards +
+  48 CashInflows + 31 Debts + 10 Reporting + 15 Mobile. Windows MAUI hedefi
+  Debug + Release 0 uyarı/0 hata; Android hedefi CI Ubuntu job'ında doğrulanacak.
+  Yerel Docker motoru kapalıydı; entegrasyon testleri CI'da doğrulandı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -122,9 +131,11 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
   GitHub Actions CI (`.github/workflows/ci.yml`) Slice 8 build + testlerini
   doğruladı: run `44156632893` yeşil (320/320; Slice 7 run `44150709461` idi).
-- **Sıradaki:** slice 9 — MAUI istemci (`docs/07` §4; `dotnet workload install
-  maui` ön koşul). Slice 8 uçtan uca tamamlandı; backend v1 için tüm dilimler
-  (0–8) yeşil.
+  Slice 9 job'u Java 17 + `dotnet workload restore` ile Android + Windows
+  hedeflerini derleyecek; push sonrası run ID'si eklenecek.
+- **Sıradaki:** Slice 9 push sonrası CI run'ını izle (Android derlemesi dahil),
+  run ID'sini dokümanlara ekle; Android emülatörü kurulduğunda manuel uçtan uca
+  smoke yap. v1 dilimleri (0–9) kod tarafında tamamlandı.
 
 ## Çözüm yapısı (özet)
 
@@ -138,7 +149,9 @@ src/
 ├─ Modules/CreditCards/…                  kart, işlem, ekstre, nakit avans
 ├─ Modules/Debts/…                        kredi + kişisel borç
 ├─ Modules/Reporting/…                    aylık özet + borç özeti + yaklaşan ödemeler (salt okunur)
-└─ Mobile/FinTrack.Mobile                 .NET MAUI
+└─ Mobile/
+   ├─ FinTrack.Mobile.Core                platform bağımsız istemci çekirdeği (net10.0)
+   └─ FinTrack.Mobile                     .NET MAUI (Android + Windows)
 ```
 
 Detay: [docs/03-mimari.md](docs/03-mimari.md)

@@ -509,13 +509,14 @@ ileride ekstre içe aktarma mükerrer tespiti bunun üzerine kurulacaktır.
 | Token | `SecureStorage`, 401'de otomatik refresh + tekrar deneme |
 | Yerel önbellek | v1: yalnızca okuma önbelleği (SQLite). **Çevrimdışı yazma yok** |
 | Bağlantı | Emülatör: `http://10.0.2.2:5xxx` · cihaz: LAN IP · prod: HTTPS |
-| DTO paylaşımı | `FinTrack.Contracts` (API DTO'ları) — ayrı paylaşılan proje, v1.1 |
+| DTO paylaşımı | v1'de istemci tarafında `FinTrack.Mobile.Core.Api` DTO'ları; `FinTrack.Contracts` ayrı projesi v1.1'e ertelendi |
 
 **Ekranlar (v1):** Giriş/Kayıt · Ana özet · Harcama listesi/ekleme · Kartlar · Kart detay
-(işlemler, borç, ekstre) · Borçlar · Kredi detay · Ayarlar.
+(işlemler, borç, ekstre) · Borçlar · Raporlar · Ayarlar.
 
-> MAUI derleme iş yükü gerekir: `dotnet workload install maui`.
-> Backend geliştirmesi MAUI olmadan da ilerler; MAUI en sona bırakılabilir.
+> MAUI iş yükleri kuruldu: `dotnet workload install maui-android maui-windows`.
+> Hedefler Android + Windows (Slice 9); okuma önbelleği v1'de eklenmedi.
+> Kod: `src/Mobile/FinTrack.Mobile.Core` + `src/Mobile/FinTrack.Mobile`.
 
 ---
 

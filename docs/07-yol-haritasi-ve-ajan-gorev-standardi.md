@@ -1,7 +1,7 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.13
-**Tarih:** 2026-11-17
+**Sürüm:** 1.14
+**Tarih:** 2026-11-18
 **Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
@@ -77,7 +77,7 @@
 | Test çalıştırma | `dotnet test FinTrack.slnx` |
 | EF aracı | `dotnet-ef` `10.0.15` (yerel tool manifest: `dotnet-tools.json`) |
 | Docker | CLI ✅ `29.7.2`; yerel daemon kapalı — Testcontainers MSSQL CI'da kullanılabilir |
-| MAUI iş yükü | ❌ kurulu değil; slice 9'da `dotnet workload install maui` |
+| MAUI iş yükü | ✅ `maui-android` + `maui-windows` `10.0.110/10.0.100` (SDK `10.0.400`) |
 | Sürüm kontrolü | ✅ git (`main`) + GitHub uzak depo + GitHub Actions CI (yeşil) |
 | NuGet sürümleri | Microsoft paketleri `10.0.15`; 11.x net11 hedefler, kullanılmaz |
 
@@ -117,7 +117,7 @@
 | 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ |
 | 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ✅ |
 | 8 | Raporlama | L | 2–7 | ✅ |
-| 9 | MAUI istemci | L | 1–8 | ⏳ |
+| 9 | MAUI istemci | L | 1–8 | ✅ |
 
 **Büyüklük:** S ≈ 1 oturum, M ≈ 2–3 oturum, L ≈ 4+ oturum. Takvim taahhüdü değildir.
 
@@ -561,32 +561,52 @@ CI'da Ubuntu + Testcontainers MSSQL ile doğrulandı.
 
 ---
 
-### Slice 9 — MAUI istemci
+### Slice 9 — MAUI istemci ✅ (2026-11-18)
 
 **Amaç:** v1 ekranlarını API'ye bağlamak.
 
-**Ön koşul:** `dotnet workload install maui`; backend slice 1–8 tamam.
+**Ön koşul:** ✅ `dotnet workload install maui-android maui-windows`; backend
+slice 1–8 tamam.
 
 **Kapsam:**
-- Shell + MVVM (`CommunityToolkit.Mvvm`), typed `HttpClient`.
-- `SecureStorage`'da access/refresh token; 401'de otomatik refresh + tekrar.
-- Ekranlar: giriş/kayıt, ana özet, harcama listesi/ekleme, kartlar, kart detayı
-  (harcamalar, borç, ekstre), borçlar, kredi detayı, ayarlar.
-- Ayarlar: saat dilimi (`GET/PUT /auth/me`), çıkış.
-- v1: çevrimdışı yazma yok; yalnızca okuma önbelleği (opsiyonel).
+- [x] Platform bağımsız `FinTrack.Mobile.Core` (net10.0) + MAUI uygulama projesi
+      + `FinTrack.Mobile.Tests` (xUnit).
+- [x] Shell + MVVM (`CommunityToolkit.Mvvm`), typed `HttpClient`/`ApiJson`
+      (`docs/06` DTO'larıyla eşleşir).
+- [x] `SecureStorage`'da access/refresh token; 401'de `AuthHandler` +
+      `SessionRefresher` ile refresh + tekrar. Refresh, auth handler'ı olmayan
+      ayrı `HttpClient` ile yapılır; eşzamanlı refresh `SemaphoreSlim` ile
+      single-flight. Token'lar loglanmaz/hata mesajlarına eklenmez.
+- [x] `Idempotency-Key` uygulanmadığı için otomatik retry yalnızca
+      GET/HEAD/OPTIONS; POST/PUT tekrar edilmez.
+- [x] Ekranlar: giriş/kayıt, ana özet, harcama listesi/ekleme, kartlar, kart
+      detayı (harcamalar, borç, ekstre), borçlar, raporlar, ayarlar.
+- [x] Ayarlar: saat dilimi (`GET/PUT /auth/me`), çıkış.
+- [x] v1: çevrimdışı yazma yok; okuma önbelleği eklenmedi (opsiyonel).
+- [x] `IQueryProperty` yerine .NET 10 `IQueryAttributable` /
+      `ApplyQueryAttributes` kullanıldı; `App.MainPage` yerine `CreateWindow`.
 
 **Kapsam dışı:** Çevrimdışı yazma, bildirimler, biyometrik giriş, çoklu cihaz
 oturum ekranı.
 
 **Testler:**
-- ViewModel testleri (xUnit): doğrulama, hata eşlemesi, token yenileme akışı.
-- Manuel: Android emülatöründe uçtan uca smoke.
+- [x] 15 xUnit testi: bearer ekleme, 401 sonrası refresh + GET tekrarı, refresh
+      isteğinde bearer olmaması, POST retry yapmama, başarısız refresh'te token
+      silme/oturum olayı, ViewModel doğrulama ve hata eşlemesi.
+- [x] Birim/mimari toplam **263/263** (248 backend + 15 mobile); entegrasyon
+      72/72 değişmedi; beklenen toplam **335/335**.
+- [x] Windows hedefi (`net10.0-windows10.0.19041.0`) 0 uyarı/0 hata.
+- [ ] Android hedefi yerel SDK/JDK olmadığı için CI Ubuntu job'ında
+      (`net10.0-android`) doğrulanacak; emülatör smoke'u daha sonra.
 
 **Kabul kriterleri:**
-- `docs/06` sözleşmeleriyle uyum; token'lar loglanmaz.
-- Cihazda giriş → harcama → kart → rapor akışı çalışır.
+- [x] `docs/06` sözleşmeleriyle uyum; token'lar loglanmaz.
+- [ ] Cihazda giriş → harcama → kart → rapor akışı: Windows build hazır;
+      Android emülatör smoke'u SDK kurulumuna bırakıldı.
 
-**Riskler:** MAUI iş yükü/emülatör kurulumu; platform farkları; SecureStorage.
+**Riskler:** ✅ İş yükü kuruldu. Android SDK/JDK yerel eksik → CI doğrulaması;
+platform farkları (`IQueryAttributable`, `CreateWindow`) çözüldü; SecureStorage
+token store test edildi.
 
 ---
 
@@ -862,3 +882,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
 | 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
+| 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI'da doğrulanacak |

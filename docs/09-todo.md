@@ -1,7 +1,7 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.12
-**Tarih:** 2026-11-17
+**Sürüm:** 1.13
+**Tarih:** 2026-11-18
 **Bağlı belgeler:** [Durum notu v2.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **8 — Raporlama** (planlama) |
-| Son doğrulama | Build 0/0 (Debug + Release) · 237/237 birim/mimari · 63/63 entegrasyon · toplam **300/300** · CI yeşil (`44150709461`) · migration senkron · 2026-11-17 |
-| Sıradaki komut | `docs/05` §9, `docs/06` §8 ve `docs/07` §4 Slice 8'i oku |
+| Aktif dilim | **9 — MAUI istemci** (tamamlandı; Android/CI doğrulaması bekleniyor) |
+| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon (CI) · toplam **335/335** · Android hedefi CI'da doğrulanacak · 2026-11-18 |
+| Sıradaki komut | Push sonrası CI run'ını izle; run ID'sini `docs/08` ve `README.md`'e ekle |
 
 ---
 
@@ -254,6 +254,35 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Dokümanlar:** `docs/05` §7 ve §9/13–16, `docs/07` v1.13, `docs/08`
       v2.3, `README.md`, bu dosya.
 
+### Slice 9 — MAUI istemci ✅ (2026-11-18)
+
+- [x] **İş yükü:** `dotnet workload install maui-android maui-windows` başarılı
+      (`10.0.110/10.0.100`); hedefler Android + Windows.
+- [x] **Projeler:** `FinTrack.Mobile.Core` (net10.0), `FinTrack.Mobile`
+      (Android + Windows), `FinTrack.Mobile.Tests` (xUnit); çözümde 33 proje.
+- [x] **İstemci çekirdeği:** typed `HttpClient`, `ApiJson`, `docs/06` DTO'ları,
+      `ApiException`, `AuthHandler` + `SessionRefresher` (401 refresh, ayrı
+      HttpClient, `SemaphoreSlim` single-flight), `SessionService`,
+      `ITokenStore`, `IAppNavigator`.
+- [x] **Güvenlik:** `SecureStorage` token store; token loglanmaz/hata mesajına
+      eklenmez; `Idempotency-Key` olmadığı için POST/PUT otomatik retry yok,
+      retry yalnızca GET/HEAD/OPTIONS.
+- [x] **UI:** Shell + MVVM (`CommunityToolkit.Mvvm`) ve 10 ekran: giriş/kayıt,
+      özet, harcamalar + ekleme, kartlar + kart detayı, borçlar, raporlar,
+      ayarlar (saat dilimi + çıkış).
+- [x] **.NET 10 uyumu:** `IQueryAttributable.ApplyQueryAttributes`,
+      `CreateWindow`, `DisplayAlertAsync`; Release `x:DataType` uyarıları
+      temizlendi (0/0).
+- [x] **Testler:** 15 mobile testi; toplam 263/263 birim/mimari (248 backend +
+      15 mobile) + 72 entegrasyon = **335/335** beklenen; Debug + Release yeşil.
+- [x] **Build:** Windows hedefi Debug + Release 0 uyarı/0 hata; backend Release
+      0/0.
+- [ ] **Android/CI:** yerel SDK/JDK eksik → Android derlemesi CI Ubuntu
+      job'ında doğrulanacak; run ID'si eklenecek.
+- [ ] **Emülatör smoke:** Android emülatörü kurulmadı; manuel uçtan uca akış
+      daha sonra.
+- [x] **Dokümanlar:** `docs/07` v1.14, `docs/08` v2.4, `README.md`, bu dosya.
+
 ### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
@@ -271,8 +300,9 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Slice 8 — Raporlama:** ✅ 2026-11-17. Aylık özet, kategori kırılımı,
       borç özeti, yaklaşan ödemeler; `Europe/Istanbul` dönem sınırları. Ayrıntı
       yukarıda ve `docs/08` §7.5.
-- [ ] **Slice 9 — MAUI istemci:** Shell + MVVM, typed `HttpClient`, auth akışı
-      (sıradaki dilim; `dotnet workload install maui` ön koşul).
+- [x] **Slice 9 — MAUI istemci:** ✅ 2026-11-18. Shell + MVVM, typed
+      `HttpClient`, SecureStorage + 401 refresh, v1 ekranları; Android CI
+      doğrulaması ve emülatör smoke'u kaldı. Ayrıntı yukarıda.
 
 ### Teknik borç / ertelenen
 
@@ -311,6 +341,9 @@ dotnet test FinTrack.slnx --nologo -v q
 | Raporlama modülü | `src/Modules/Reporting/…/Application/Reporting/`, `src/Modules/Reporting/…/Endpoints/`, `tests/FinTrack.Modules.Reporting.Tests/` |
 | Rapor okuma sözleşmeleri | `src/BuildingBlocks/FinTrack.ModuleContracts/ReportingReportContracts.cs` |
 | Rapor adapter'ları | `src/Modules/{Expenses,CashInflows,CreditCards,Debts}/…/Application/Reporting/` |
+| Mobil istemci | `src/Mobile/FinTrack.Mobile.Core/`, `src/Mobile/FinTrack.Mobile/`, `tests/FinTrack.Mobile.Tests/` |
+| Token refresh akışı | `src/Mobile/FinTrack.Mobile.Core/Api/AuthHandler.cs`, `SessionRefresher.cs` |
+| Shell / rotalar | `src/Mobile/FinTrack.Mobile/AppShell.xaml`, `MauiProgram.cs` |
 
 ---
 
@@ -331,3 +364,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı; 21 modül + 5 entegrasyon testi eklendi, toplam 261/261, CI run `44141605019` yeşil, migration senkron; aktif dilim Slice 7 |
 | 1.11 | 2026-11-17 | Slice 7 tamamlandı; 31 modül + 8 entegrasyon testi eklendi, toplam 300/300, CI run `44150709461` yeşil, migration senkron; aktif dilim Slice 8 |
 | 1.12 | 2026-11-17 | Slice 8 tamamlandı; 10 modül + 7 entegrasyon testi eklendi, toplam 320/320, CI run `44156632893` yeşil; Reporting salt okunur, DbContext/migration yok, `_status` kaldırıldı; aktif dilim Slice 9 |
+| 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI doğrulaması ve emülatör smoke'u kaldı |
