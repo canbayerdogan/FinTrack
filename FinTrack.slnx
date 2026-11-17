@@ -45,5 +45,6 @@
     <Project Path="tests/FinTrack.Modules.CreditCards.Tests/FinTrack.Modules.CreditCards.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.Debts.Tests/FinTrack.Modules.Debts.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.Expenses.Tests/FinTrack.Modules.Expenses.Tests.csproj" />
+    <Project Path="tests/FinTrack.Modules.Reporting.Tests/FinTrack.Modules.Reporting.Tests.csproj" />
   </Folder>
 </Solution>

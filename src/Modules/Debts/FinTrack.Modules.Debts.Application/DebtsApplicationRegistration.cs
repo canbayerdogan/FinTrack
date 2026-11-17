@@ -17,6 +17,7 @@ public static class DebtsApplicationRegistration
     public static IServiceCollection AddDebtsApplication(this IServiceCollection services)
     {
         services.AddScoped<ILoanDebtQuery, LoanDebtQuery>();
+        services.AddScoped<IDebtReportQuery, DebtReportQuery>();
 
         // Kredi.
         services.AddScoped<ICommandHandler<CreateLoanCommand, Result<LoanDto>>, CreateLoanHandler>();

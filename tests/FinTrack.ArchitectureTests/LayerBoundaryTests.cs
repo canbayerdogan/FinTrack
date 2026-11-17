@@ -92,6 +92,42 @@ public sealed class LayerBoundaryTests
         }
     }
 
+    [Fact]
+    public void Reporting_baska_modulun_tablosuna_dogrudan_erisemez()
+    {
+        var reportingApplication = ApplicationAssemblies
+            .Single(entry => entry.Name == "Reporting").Assembly;
+        var reportingEndpoints = typeof(ReportingModule).Assembly;
+
+        var forbidden = ModuleAssemblies
+            .Where(entry => entry.Name != "Reporting")
+            .SelectMany(entry => new[]
+            {
+                $"FinTrack.Modules.{entry.Name}.Domain",
+                $"FinTrack.Modules.{entry.Name}.Application",
+                $"FinTrack.Modules.{entry.Name}.Infrastructure",
+            })
+            .Append("Microsoft.EntityFrameworkCore")
+            .Append("System.Data")
+            .ToArray();
+
+        foreach (var assembly in new[] { reportingApplication, reportingEndpoints })
+        {
+            var result = Types.InAssembly(assembly)
+                .ShouldNot()
+                .HaveDependencyOnAny(forbidden)
+                .GetResult();
+
+            AssertSuccess(
+                result,
+                "Reporting başka modülün DbContext/entity/tablosuna doğrudan erişemez");
+        }
+
+        Assert.Contains(
+            reportingApplication.GetReferencedAssemblies(),
+            assembly => assembly.Name == "FinTrack.ModuleContracts");
+    }
+
     private static void AssertSuccess(TestResult result, string scenario)
     {
         if (result.IsSuccessful)

@@ -1,7 +1,9 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CreditCards.Application.Cards;
 using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Application.Common;
 using FinTrack.Modules.CreditCards.Application.Payments;
+using FinTrack.Modules.CreditCards.Application.Reporting;
 using FinTrack.Modules.CreditCards.Application.Statements;
 using FinTrack.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +21,7 @@ public static class CreditCardsApplicationRegistration
         // Ortak hesaplama servisleri.
         services.AddScoped<CardDebtService>();
         services.AddScoped<StatementDerivation>();
+        services.AddScoped<ICardReportQuery, CardReportQuery>();
 
         // Kart.
         services.AddScoped<ICommandHandler<CreateCardCommand, Result<CardDto>>, CreateCardHandler>();

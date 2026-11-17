@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
@@ -27,31 +26,18 @@ public sealed class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Theory]
-    [InlineData("/api/v1/reports/_status", "Reporting")]
-    public async Task Modul_status_uc_noktasi_calisir(string url, string expectedModule)
-    {
-        var response = await _client.GetAsync(url);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var payload = await response.Content.ReadFromJsonAsync<ModuleStatusDto>();
-        Assert.NotNull(payload);
-        Assert.Equal(expectedModule, payload!.Module);
-        Assert.Equal("ready", payload.Status);
-    }
-
-    [Theory]
     [InlineData("/api/v1/expenses")]
     [InlineData("/api/v1/categories")]
     [InlineData("/api/v1/cards")]
     [InlineData("/api/v1/loans")]
     [InlineData("/api/v1/personal-debts")]
-    public async Task Expenses_uc_noktalari_kimlik_dogrulama_ister(string url)
+    [InlineData("/api/v1/reports/monthly?year=2026&month=11")]
+    [InlineData("/api/v1/reports/debt-summary")]
+    [InlineData("/api/v1/reports/upcoming-payments")]
+    public async Task Modul_uc_noktalari_kimlik_dogrulama_ister(string url)
     {
         var response = await _client.GetAsync(url);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
-
-    private sealed record ModuleStatusDto(string Module, string Status);
 }

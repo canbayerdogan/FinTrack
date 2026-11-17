@@ -1,7 +1,9 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.Expenses.Application.Abstractions;
 using FinTrack.Modules.Expenses.Application.Categories;
 using FinTrack.Modules.Expenses.Application.Common;
 using FinTrack.Modules.Expenses.Application.Expenses;
+using FinTrack.Modules.Expenses.Application.Reporting;
 using FinTrack.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,6 +18,7 @@ public static class ExpensesApplicationRegistration
     public static IServiceCollection AddExpensesApplication(this IServiceCollection services)
     {
         services.AddScoped<ExpenseReferenceService>();
+        services.AddScoped<IExpenseReportQuery, ExpenseReportQuery>();
 
         services.AddScoped<ICommandHandler<CreateCategoryCommand, Result<CategoryDto>>, CreateCategoryHandler>();
         services.AddScoped<ICommandHandler<UpdateCategoryCommand, Result<CategoryDto>>, UpdateCategoryHandler>();

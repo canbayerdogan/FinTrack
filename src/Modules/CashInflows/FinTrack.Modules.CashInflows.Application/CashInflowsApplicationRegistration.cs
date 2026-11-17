@@ -1,6 +1,7 @@
 using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Application.CashInflows;
 using FinTrack.Modules.CashInflows.Application.Common;
+using FinTrack.Modules.CashInflows.Application.Reporting;
 using FinTrack.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +20,8 @@ public static class CashInflowsApplicationRegistration
         services.AddScoped<ICommandHandler<CancelCashInflowCommand, Result>, CancelCashInflowHandler>();
         services.AddScoped<IQueryHandler<ListCashInflowsQuery, Result<PagedResult<CashInflowDto>>>, ListCashInflowsHandler>();
         services.AddScoped<IQueryHandler<GetCashInflowQuery, Result<CashInflowDto>>, GetCashInflowHandler>();
+
+        services.AddScoped<ICashInflowReportQuery, CashInflowReportQuery>();
 
         // ADR-0009: borç sahibi modüllerin kullandığı yazma sözleşmesi.
         services.AddScoped<IDebtCashInflowWriter, DebtCashInflowWriter>();
