@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.CardsPage"
+             x:DataType="vm:CardsViewModel"
+             Title="Kartlar">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="4" RowSpacing="8">
+        <Label Grid.Row="0" Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+        <ActivityIndicator Grid.Row="0" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
+
+        <HorizontalStackLayout Grid.Row="1" Spacing="8">
+            <Label Text="{Binding Summary}" VerticalOptions="Center" />
+            <Button Text="Yenile" Command="{Binding LoadCommand}" />
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Items}" SelectionMode="Single"
+                        SelectionChanged="OnCardSelected">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CardListItem">
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,6">
+                        <VerticalStackLayout Grid.Column="0">
+                            <Label Text="{Binding DisplayName}" FontAttributes="Bold" />
+                            <Label Text="{Binding BankName}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
+                            <Label Text="{Binding Limit}" HorizontalTextAlignment="End" />
+                            <Label Text="{Binding Status}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="3" Text="Ana özet" Command="{Binding GoBackCommand}" />
+    </Grid>
+</ContentPage>

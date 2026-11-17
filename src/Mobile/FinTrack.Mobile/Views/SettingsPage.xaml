@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="Ayarlar">
+    <ScrollView>
+        <VerticalStackLayout Spacing="12" Padding="4">
+            <Label Text="E-posta" TextColor="{StaticResource FinTrackMuted}" />
+            <Label Text="{Binding Email}" FontAttributes="Bold" />
+
+            <Label Text="Saat dilimi (IANA)" TextColor="{StaticResource FinTrackMuted}" />
+            <Entry Text="{Binding PreferredTimeZone}" Placeholder="Europe/Istanbul" />
+
+            <Label Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
+
+            <Button Text="Kaydet" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Yenile" Command="{Binding LoadCommand}" />
+            <Button Text="Çıkış yap" Command="{Binding LogoutCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.AddExpensePage"
+             x:DataType="vm:AddExpenseViewModel"
+             Title="Harcama ekle">
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="4">
+            <Label Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
+
+            <Label Text="Tutar" />
+            <Entry Text="{Binding AmountText}" Placeholder="0,00" Keyboard="Decimal" />
+
+            <Label Text="Kategori" />
+            <Picker ItemsSource="{Binding Categories}"
+                    SelectedItem="{Binding SelectedCategory}" />
+
+            <Label Text="Tarih" />
+            <DatePicker Date="{Binding OccurredOn}" />
+
+            <Label Text="Ödeme yöntemi" />
+            <Picker ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding PaymentMethod}" />
+
+            <Label Text="Kart (kredi kartı seçilirse)" />
+            <Picker ItemsSource="{Binding Cards}"
+                    SelectedItem="{Binding SelectedCard}" />
+
+            <Label Text="Açıklama" />
+            <Editor Text="{Binding Description}" Placeholder="Opsiyonel" HeightRequest="70" />
+
+            <Button Text="Kaydet" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Geri" Command="{Binding GoBackCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.RegisterPage"
+             x:DataType="vm:RegisterViewModel"
+             Title="Kayıt ol">
+    <ScrollView>
+        <VerticalStackLayout Spacing="12" Padding="24">
+            <Label Text="Yeni hesap" FontSize="26" FontAttributes="Bold" />
+
+            <Entry Placeholder="E-posta" Keyboard="Email" Text="{Binding Email}" />
+            <Entry Placeholder="Parola (en az 8 karakter, harf + rakam)" IsPassword="True" Text="{Binding Password}" />
+            <Entry Placeholder="Parola tekrar" IsPassword="True" Text="{Binding ConfirmPassword}" />
+            <Entry Placeholder="Saat dilimi (IANA)" Text="{Binding PreferredTimeZone}" />
+
+            <Label Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" />
+
+            <Button Text="Kayıt ol" Command="{Binding RegisterCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Geri" Command="{Binding GoBackCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

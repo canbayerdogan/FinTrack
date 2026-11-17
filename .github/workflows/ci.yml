@@ -31,6 +31,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Java 17 (Android derlemesi)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: MAUI workload
+        run: dotnet workload restore FinTrack.slnx
+
       - name: Restore
         run: dotnet restore FinTrack.slnx
 

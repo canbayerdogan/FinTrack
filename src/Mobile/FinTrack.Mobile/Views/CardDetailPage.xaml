@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.CardDetailPage"
+             x:DataType="vm:CardDetailViewModel"
+             Title="Kart detayı">
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="4">
+            <Label Text="{Binding CardTitle}" FontSize="20" FontAttributes="Bold" />
+            <Label Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
+
+            <Label Text="Güncel borç" TextColor="{StaticResource FinTrackMuted}" />
+            <Label Text="{Binding DebtText}" FontSize="24" FontAttributes="Bold" />
+            <Label Text="{Binding BreakdownText}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+
+            <Button Text="Yenile" Command="{Binding LoadCommand}" />
+
+            <Label Text="Ekstreler" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding Statements}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StatementListItem">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Padding="0,4">
+                            <Label Grid.Row="0" Grid.Column="0" Text="{Binding Period}" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="{Binding Amount}" HorizontalTextAlignment="End" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="{Binding DueDate}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+                            <Label Grid.Row="1" Grid.Column="1" Text="{Binding Status}" FontSize="12" HorizontalTextAlignment="End" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Kart harcamaları" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding Expenses}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExpenseListItem">
+                        <Grid ColumnDefinitions="80,*,Auto" Padding="0,4">
+                            <Label Grid.Column="0" Text="{Binding Date}" FontSize="12" />
+                            <Label Grid.Column="1" Text="{Binding Category}" />
+                            <Label Grid.Column="2" Text="{Binding Amount}" HorizontalTextAlignment="End" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

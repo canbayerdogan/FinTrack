@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:FinTrack.Mobile.Core.ViewModels;assembly=FinTrack.Mobile.Core"
+             x:Class="FinTrack.Mobile.Views.ReportsPage"
+             x:DataType="vm:ReportsViewModel"
+             Title="Raporlar">
+    <ScrollView>
+        <VerticalStackLayout Spacing="10" Padding="4">
+            <Label Text="{Binding PeriodLabel}" FontSize="18" FontAttributes="Bold" />
+            <Label Text="{Binding ErrorMessage}" TextColor="#B71C1C" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
+
+            <Grid ColumnDefinitions="Auto,100,Auto,100,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                <Label Grid.Column="0" Text="Yıl" />
+                <Entry Grid.Column="1" Text="{Binding Year}" Keyboard="Numeric" />
+                <Label Grid.Column="2" Text="Ay" />
+                <Entry Grid.Column="3" Text="{Binding Month}" Keyboard="Numeric" />
+                <Button Grid.Column="4" Text="Uygula" Command="{Binding LoadCommand}" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+                <Label Grid.Row="0" Grid.Column="0" Text="Kazanılmış gelir" TextColor="{StaticResource FinTrackMuted}" />
+                <Label Grid.Row="0" Grid.Column="1" Text="{Binding EarnedIncome}" HorizontalTextAlignment="End" />
+                <Label Grid.Row="1" Grid.Column="0" Text="Net harcama" TextColor="{StaticResource FinTrackMuted}" />
+                <Label Grid.Row="1" Grid.Column="1" Text="{Binding ExpenseNet}" HorizontalTextAlignment="End" />
+                <Label Grid.Row="2" Grid.Column="0" Text="Toplam borç" TextColor="{StaticResource FinTrackMuted}" />
+                <Label Grid.Row="2" Grid.Column="1" Text="{Binding TotalDebt}" HorizontalTextAlignment="End" FontAttributes="Bold" />
+            </Grid>
+
+            <Label Text="Kategori kırılımı" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding Categories}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CategoryAmountItem">
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,4">
+                            <Label Grid.Column="0" Text="{Binding Name}" />
+                            <Label Grid.Column="1" Text="{Binding Amount}" HorizontalTextAlignment="End" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="Yaklaşan ödemeler" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding UpcomingPayments}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:UpcomingPaymentItem">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" Padding="0,4">
+                            <Label Grid.Row="0" Grid.Column="0" Text="{Binding Detail}" />
+                            <Label Grid.Row="0" Grid.Column="1" Text="{Binding Amount}" HorizontalTextAlignment="End" />
+                            <Label Grid.Row="1" Grid.Column="0" Text="{Binding DueDate}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Label Text="{Binding Disclaimer}" FontSize="12" TextColor="{StaticResource FinTrackMuted}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

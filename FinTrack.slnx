@@ -7,6 +7,10 @@
   <Folder Name="/src/Host/">
     <Project Path="src/Host/FinTrack.Api/FinTrack.Api.csproj" />
   </Folder>
+  <Folder Name="/src/Mobile/">
+    <Project Path="src/Mobile/FinTrack.Mobile.Core/FinTrack.Mobile.Core.csproj" />
+    <Project Path="src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/CashInflows/">
     <Project Path="src/Modules/CashInflows/FinTrack.Modules.CashInflows.Application/FinTrack.Modules.CashInflows.Application.csproj" />
@@ -46,5 +50,6 @@
     <Project Path="tests/FinTrack.Modules.Debts.Tests/FinTrack.Modules.Debts.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.Expenses.Tests/FinTrack.Modules.Expenses.Tests.csproj" />
     <Project Path="tests/FinTrack.Modules.Reporting.Tests/FinTrack.Modules.Reporting.Tests.csproj" />
+    <Project Path="tests/FinTrack.Mobile.Tests/FinTrack.Mobile.Tests.csproj" />
   </Folder>
 </Solution>

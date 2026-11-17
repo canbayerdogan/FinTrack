@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:views="clr-namespace:FinTrack.Mobile.Views"
+       x:Class="FinTrack.Mobile.AppShell"
+       Title="FinTrack"
+       FlyoutBehavior="Disabled">
+
+    <FlyoutItem Title="Ana özet">
+        <ShellContent Route="main" ContentTemplate="{DataTemplate views:DashboardPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Harcamalar">
+        <ShellContent Route="expenses" ContentTemplate="{DataTemplate views:ExpensesPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Kartlar">
+        <ShellContent Route="cards" ContentTemplate="{DataTemplate views:CardsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Borçlar">
+        <ShellContent Route="debts" ContentTemplate="{DataTemplate views:DebtsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Raporlar">
+        <ShellContent Route="reports" ContentTemplate="{DataTemplate views:ReportsPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Ayarlar">
+        <ShellContent Route="settings" ContentTemplate="{DataTemplate views:SettingsPage}" />
+    </FlyoutItem>
+
+</Shell>
