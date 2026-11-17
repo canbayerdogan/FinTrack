@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.9
-**Tarih:** 2026-11-16
-**Bağlı belgeler:** [Durum notu v2.0](08-durum-ve-devam-notu.md) · [Yol haritası v1.10](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Sürüm:** 1.10
+**Tarih:** 2026-11-17
+**Bağlı belgeler:** [Durum notu v2.1](08-durum-ve-devam-notu.md) · [Yol haritası v1.11](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **6 — Nakit avans** (planlama; ADR-0009 ön koşulu) |
-| Son doğrulama | Build 0/0 · 185/185 birim · 50/50 entegrasyon · toplam 235 · CI yeşil (`43933066950`) · 2026-11-16 |
-| Sıradaki komut | ADR-0009 seçeneklerini değerlendir; `docs/05` §5.5, `docs/06` §6.5 ve `docs/07` §4 Slice 6'yı oku |
+| Aktif dilim | **7 — Kredi + kişisel borç** (planlama; Slice 6 CI doğrulaması koşulu) |
+| Son doğrulama | Build 0/0 (Debug + Release) · 206/206 birim/mimari · migration senkron · 50/50 son entegrasyon + 5 yeni test derlendi (yerel daemon kapalı) · 2026-11-17 |
+| Sıradaki komut | Slice 6 entegrasyon testlerini CI'da doğrula; `docs/05` §6, `docs/06` §7 ve `docs/07` §4 Slice 7'yi oku |
 
 ---
 
@@ -191,7 +191,28 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ---
 
-## 6. Sonraki dilimler (yüksek seviye)
+## 6. Dilim durumu ve sonraki dilimler
+
+### Slice 6 — Nakit avans ✅ (2026-11-17)
+
+- [x] **ADR-0009 kabul edildi:** sync writer + paylaşılan `DbTransaction`;
+      ambient `TransactionScope` ve outbox reddedildi.
+- [x] **Domain:** `CashAdvance`, `CashAdvanceStatus`, domain hataları.
+- [x] **Application:** create/cancel handler'ları, repository/sorgu portları,
+      `CardDebtService` bakiye formülüne `+ cashAdvances`.
+- [x] **Infrastructure:** `cards.CashAdvances`, EF config, repository/sorgu,
+      migration `20261117174437_AddCashAdvances`.
+- [x] **Endpoints:** `GET/POST /cards/{id}/cash-advances` ve iptal;
+      `docs/06` §6.5 ile uyum.
+- [x] **Atomiklik:** avans + bağlı `CashInflow` aynı transaction; iptalde ikisi
+      birlikte kapanır; kart ödemeleri geri alınmaz.
+- [x] **Testler:** 21 yeni modül testi; birim/mimari 206/206, 5 yeni API
+      entegrasyon testi derlendi.
+- [x] **Dokümanlar:** `docs/07` v1.11, `docs/08` v2.1, `README.md`, ADR-0009.
+- [ ] **Bekleyen:** 5 yeni entegrasyon testinin CI'da Testcontainers MSSQL ile
+      yeşil olması (yerel Docker daemon kapalı).
+
+### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
       `Statement`, devreden borç, `computedDebtAtPeriodEnd`, mutabakat farkı;
@@ -199,9 +220,9 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Slice 5 — Para girişi:** ✅ 2026-11-16. `CashInflow`, kaynak türleri,
       `IsEarnedIncome` türetimi, `Unknown` grubu; borç doğuran girişlerin reddi.
       Ayrıntı §5.
-- [ ] **Slice 6 — Nakit avans:** sıradaki dilim; **ADR-0009** ön koşulu.
+- [x] **Slice 6 — Nakit avans:** ✅ 2026-11-17. ADR-0009 ile atomik
       `CashAdvance` + bağlı `CashInflow`, iptalde ikisinin birlikte iptali,
-      borç formülüne avans terimi.
+      borç formülüne avans terimi. Ayrıntı yukarıda ve `docs/08` §7.3.
 - [ ] **Slice 7 — Kredi + kişisel borç:** tam vade planı, taksit ödemesi,
       kalan borç; borç doğuran giriş zorunluluğu.
 - [ ] **Slice 8 — Raporlama:** aylık özet, kategori kırılımı, borç özeti,
@@ -215,10 +236,11 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
       Slice 5 commit'i sonrası yeşil (235/235, run `43933066950`, Ubuntu +
-      Testcontainers MSSQL)
+      Testcontainers MSSQL); Slice 6 commit'i sonrası CI bekleniyor
 - [x] `docs/01` ayrı dosya gerekli değil
 - [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
-      2026-11-16); Docker kapalıyken `DockerUnavailableException` beklenir
+      2026-11-16); Slice 6 sırasında daemon kapalıydı, 5 yeni test derlendi
+      ancak çalıştırılamadı; CI doğrulaması bekleniyor
 
 ---
 
@@ -238,6 +260,8 @@ dotnet test FinTrack.slnx --nologo -v q
 | Mimari sınırlar | `tests/FinTrack.ArchitectureTests/` |
 | Ortak tipler | `src/BuildingBlocks/FinTrack.SharedKernel/` |
 | Modüller arası sözleşmeler | `src/BuildingBlocks/FinTrack.ModuleContracts/` |
+| ADR-0009 atomik yazma | `src/BuildingBlocks/FinTrack.ModuleContracts/AtomicWrites.cs`, `src/Host/FinTrack.Api/WriteTransactions/` |
+| Nakit avans modülü | `src/Modules/CreditCards/…/CashAdvances/`, `CashAdvanceEndpoints.cs`, `docs/adr/0009-moduller-arasi-atomik-yazma.md` |
 
 ---
 
@@ -255,3 +279,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.7 | 2026-11-15 | Gelecek `asOf` `400` ve iptal UTC→yerel tarih kuralı işlendi; nihai kontrol ve açık kodlama onayı bekleniyor |
 | 1.8 | 2026-11-16 | Slice 4 tamamlandı ve kutular işaretlendi; 137 birim testi yeşil, 46 entegrasyon Docker kapalı olduğu için CI'ya bırakıldı; sıradaki dilim Slice 5 |
 | 1.9 | 2026-11-16 | Slice 5 tamamlandı ve kutular işaretlendi; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; aktif dilim Slice 6 (ADR-0009 ön koşulu) |
+| 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 kodu ve kutuları tamamlandı; 21 modül + 5 entegrasyon testi eklendi, birim 206/206, migration senkron; aktif dilim Slice 7 (CI entegrasyon doğrulaması koşulu) |

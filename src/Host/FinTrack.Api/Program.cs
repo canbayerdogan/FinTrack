@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json.Serialization;
 using FinTrack.Api.Identity;
+using FinTrack.Api.WriteTransactions;
 using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Endpoints;
 using FinTrack.Modules.CreditCards.Endpoints;
@@ -53,6 +54,10 @@ builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddScoped<AuthTokenService>();
+
+// ADR-0009: yazma yapan modüller aynı bağlantıyı ve açık transaction'ı paylaşır.
+builder.Services.AddScoped<IWriteConnectionProvider>(_ => new SqlWriteConnectionProvider(connectionString));
+builder.Services.AddScoped<IWriteTransactionScopeFactory, SqlWriteTransactionScopeFactory>();
 
 builder.Services.AddDbContext<FinTrackIdentityDbContext>(options =>
     IdentityDbContextOptions.UseFinTrackSqlServer(options, connectionString));

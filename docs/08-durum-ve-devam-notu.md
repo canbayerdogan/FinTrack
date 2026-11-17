@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.0
-**Tarih:** 2026-11-16
-**Bağlı belgeler:** [Yol haritası v1.10](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0001…0008
+**Sürüm:** 2.1
+**Tarih:** 2026-11-17
+**Bağlı belgeler:** [Yol haritası v1.11](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -33,51 +33,55 @@
 | 3 | Kart + hesaplanan bakiye | ✅ |
 | 4 | Ekstre + kart ödemesi | ✅ |
 | 5 | Para girişi | ✅ |
-| 6 | Nakit avans | ⏳ sıradaki (ADR-0009) |
-| 7 | Kredi + kişisel borç | ⏳ |
+| 6 | Nakit avans | ✅ kod/mimari (CI entegrasyonu bekliyor) |
+| 7 | Kredi + kişisel borç | ⏳ sıradaki (CI koşuluyla) |
 | 8 | Raporlama | ⏳ |
 | 9 | MAUI istemci | ⏳ |
 
 **Çözüm:** `FinTrack.slnx`, **28 proje**. Depo **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
 GitHub Actions CI (`.github/workflows/ci.yml`) Slice 5 commit'i sonrası
-**235/235** testle yeşil (run `43933066950`, Ubuntu, Testcontainers MSSQL).
+**235/235** testle yeşil (run `43933066950`, Ubuntu, Testcontainers MSSQL);
+Slice 6 commit'i sonrası CI doğrulaması bekliyor.
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
-migration, kart/ekstre/ödeme uç noktaları), CashInflows (`inflows` şeması,
-migration, para girişi uç noktaları). Debts ve Reporting yalnızca DI + route
-grubu + geçici `_status` uç noktası içerir.
+migration, kart/ekstre/ödeme/nakit avans uç noktaları), CashInflows (`inflows`
+şeması, migration, para girişi uç noktaları). Debts ve Reporting yalnızca DI +
+route grubu + geçici `_status` uç noktası içerir.
 
 ---
 
 ## 3. Son doğrulama
 
-**Tarih:** 2026-11-16 · **SDK:** `10.0.403` · **Microsoft paketleri:** `10.0.15`
+**Tarih:** 2026-11-17 · **SDK:** `10.0.404` · **Microsoft paketleri:** `10.0.15`
 
-> **2026-11-16 notu:** Slice 5 kodu tamamlandı. Docker Desktop motoru açık;
-> birim ve entegrasyon testleri yerelde çalıştırıldı ve **235/235** yeşil.
-> CI çalıştırması da yeşil: run `43933066950` (Ubuntu, Testcontainers MSSQL).
+> **2026-11-17 notu:** Slice 6 kodu tamamlandı. Debug/Release build 0/0,
+> birim/mimari testler **206/206** yeşil. Yeni 5 nakit avans API entegrasyon
+> testi derlendi; yerel Docker daemon'u kapalı olduğu için çalıştırılamadı
+> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı). Son çalıştırılan
+> entegrasyon sonucu Slice 5 sonrası **50/50**; CI çalıştırması run
+> `43933066950` ile yeşildi. Slice 6 commit'i sonrası CI bekleniyor.
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
-| Build (Debug) | `dotnet build FinTrack.slnx` | ✅ 0 uyarı, 0 hata |
-| Birim testleri (Debug) | `dotnet test tests/... --no-build` (5 proje) | ✅ 185/185 |
-| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 50/50 (Docker Desktop açık) |
-| Release build | `dotnet build FinTrack.slnx --configuration Release` | ✅ 0 uyarı, 0 hata |
-| CI | GitHub Actions `build-test` | ✅ 235/235 (run `43933066950`) |
-| Migration | `dotnet ef database update --context CashInflowsDbContext ...` | `InitialCashInflows` LocalDB'ye uygulandı; `has-pending-model-changes` → "No changes" |
+| Build (Debug) | `dotnet build --no-restore` | ✅ 0 uyarı, 0 hata |
+| Birim testleri (Debug) | `dotnet test FinTrack.slnx --no-build --filter "FullyQualifiedName!~FinTrack.Api.IntegrationTests"` | ✅ 206/206 |
+| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ⏳ 50/50 son sonuç; +5 yeni test derlendi, yerel daemon kapalı |
+| Release build | `dotnet build FinTrack.slnx --configuration Release --no-restore` | ✅ 0 uyarı, 0 hata |
+| CI | GitHub Actions `build-test` | ✅ 235/235 (run `43933066950`, Slice 5 sonrası); Slice 6 bekliyor |
+| Migration | `dotnet ef migrations has-pending-model-changes --context CreditCardsDbContext ...` | ✅ "No changes have been made to the model since the last migration." |
 
-**Test dağılımı (235):**
+**Test dağılımı (206 birim + 55 entegrasyon tanımlı):**
 
 | Proje | Adet | Kapsam |
 |---|---|---|
 | `FinTrack.ArchitectureTests` | 3 | Modül sınırı, katman bağımlılığı |
 | `FinTrack.Api.UnitTests` | 22 | Kimlik doğrulama, JWT |
 | `FinTrack.Modules.Expenses.Tests` | 55 | Domain + handler (SQLite in-memory) |
-| `FinTrack.Modules.CreditCards.Tests` | 57 | Domain + handler (SQLite in-memory) |
+| `FinTrack.Modules.CreditCards.Tests` | 78 | Domain + handler (SQLite in-memory; nakit avans dahil) |
 | `FinTrack.Modules.CashInflows.Tests` | 48 | Domain + handler (SQLite in-memory) |
-| `FinTrack.Api.IntegrationTests` | 50 | 6 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme + 5 para girişi (Testcontainers MSSQL) |
+| `FinTrack.Api.IntegrationTests` | 55 tanımlı / 50 çalıştırıldı | 6 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme + 5 para girişi + 5 nakit avans (Testcontainers MSSQL; yeni 5 CI bekliyor) |
 
 **Uygulanan migration'lar:**
 - `20261113215049_InitialExpenses` (`expenses.Categories`, `expenses.Expenses`,
@@ -88,6 +92,9 @@ grubu + geçici `_status` uç noktası içerir.
   `cards.Statements` ve kullanıcı/kart/dönem indeksleri).
 - `20261116182933_InitialCashInflows` (`inflows.CashInflows`,
   `inflows.__EFMigrationsHistory`; kullanıcı/tarih/kaynak/durum indeksleri).
+- `20261117174437_AddCashAdvances` (`cards.CashAdvances`, benzersiz
+  `LinkedCashInflowId`, kullanıcı/kart/durum/tarih indeksleri; SQLite testlerinde
+  8 baytlık `rowversion`).
 
 ---
 
@@ -102,6 +109,7 @@ grubu + geçici `_status` uç noktası içerir.
 | CQRS, MediatR yok; `ICommandHandler` / `IQueryHandler` işaret arayüzleri | ADR-0003 |
 | Kart alışverişi Expenses'a aittir; kart borcu hesaplanır, saklanmaz | ADR-0008, ADR-0004 |
 | Ödemeler sahibi modülde; aynı olay iki kez sayılmaz | ADR-0007 |
+| Modüller arası atomik yazma: sync writer + paylaşılan `DbTransaction` | ADR-0009 |
 
 ### 4.2 API sözleşmesi
 
@@ -192,7 +200,18 @@ grubu + geçici `_status` uç noktası içerir.
 | `recordedAtUtc` istemciden alınmaz; PUT'ta `400` | Sunucu zamanı |
 | `from`/`to` `occurredOn` üzerinde; varsayılan `Active`, `includeCancelled` ile iptaller | docs/06 §5.2 |
 
-### 4.9 Slice 7 — kredi sözleşmesi (2026-11-15)
+### 4.9 Slice 6 — nakit avans (2026-11-17)
+
+| Karar | Gerekçe |
+|---|---|
+| ADR-0009: handler paylaşılan `DbTransaction` açar, writer açmaz/commit etmez | Tek atomik sınır; transaction sahipliği net |
+| `System.Data.Common.DbTransaction` sözleşmesi; ambient `TransactionScope`/outbox yok | SQL Server + SQLite testleriyle uyumlu; ek altyapı yok |
+| `IUnitOfWork.Enlist(IWriteTransactionScope? scope)` nullable; `Enlist(null)` referansı temizler | Aynı DbContext test içinde scope sonrası yeniden kullanılabilsin |
+| `DebtInflowCreate/Cancel` `Kind` + `DebtLinkId` taşır | Writer yalnızca beklenen borç kaydına bağlı girişi yazar/iptal eder |
+| Avans iptali kart ödemelerini geri almaz | Borç yeniden hesaplanır; ödeme ayrı finansal olaydır |
+| Borç formülü `expenses − refunds + cashAdvances − payments` | Avans kart borcunda bir kez görünür; ödeme ikinci gider değildir |
+
+### 4.10 Slice 7 — kredi sözleşmesi (2026-11-15)
 
 | Karar | Gerekçe |
 |---|---|
@@ -242,6 +261,17 @@ grubu + geçici `_status` uç noktası içerir.
   `409 StateConflict` döner; iptal/güncelleme sahibi borç kaydından yapılır.
 - **İptal idempotent:** İkinci iptal gerekçe doğrulamasına takılmadan `204`
   döner; ilk iptalde gerekçe zorunludur.
+- **Paylaşılan transaction (ADR-0009):** Writer kendi transaction'ını açmaz;
+  handler açar, yazar modüller `Enlist(scope)` ile DbContext'ini bağlar ve
+  `finally` içinde `Enlist(null)` + dispose uygulanır. Aynı DbContext scope sonrası
+  yeniden kullanılacaksa `Enlist(null)` şarttır; aksi halde EF eski transaction
+  referansıyla "transaction object is not associated with the same connection"
+  hatası verir.
+- **Bağlı giriş doğrulaması:** `IDebtCashInflowWriter` `Kind` ve `DebtLinkId`
+  eşleşmezse yazmaz/iptal etmez; aksi halde yanlış borç kaydı para girişini
+  kapatabilir.
+- **Avans iptali:** Kart ödemeleri geri alınmaz; yalnızca avans ve bağlı giriş
+  kapanır, bakiye yeniden hesaplanır.
 - **Fixture yapılandırması:** `ApiFixture` bağlantı dizesi/JWT değerlerini
   `WithWebHostBuilder` + `ConfigureAppConfiguration` ile vermek **yetmez**;
   `Program.cs` bunları host kurulurken doğrudan okur ve
@@ -408,21 +438,42 @@ kaldırıldı.
 - Migration `20261116182933_InitialCashInflows`; LocalDB'de uygulandı,
   `has-pending-model-changes` → "No changes".
 
-### 7.3 Sıradaki dilim — Slice 6: Nakit avans
+### 7.3 Slice 6 — Nakit avans ✅ (2026-11-17)
 
-**Bağlayıcı kaynak:** `docs/07` §4 Slice 6, `docs/05` §5.5, `docs/06` §6.5.
+**Bağlayıcı kaynak:** `docs/07` §4 Slice 6, `docs/05` §5.5, `docs/06` §6.5,
+[ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md).
 
-**Ön koşul:** **ADR-0009 — modüller arası atomik yazma mekanizması** kabul
-edilmeden kod başlamaz. Adaylar: aynı DB transaction'ında orkestrasyon, sync
-writer sözleşmesi, outbox.
+**Sonuç:** Domain (`CashAdvance`, `CashAdvanceStatus`, domain hataları),
+Application (create/cancel handler'ları, `ICashAdvanceRepository`,
+`ICashAdvanceQueries`, `CardDebtService` avans terimi), Infrastructure
+(`cards.CashAdvances`, EF config, repository/sorgu, migration) ve Endpoints
+(`GET/POST /cards/{id}/cash-advances`, iptal) tamamlandı. ADR-0009 ile avans ve
+bağlı `CashInflow` aynı `DbTransaction` içinde oluşturulur/iptal edilir; hata
+halinde iki kayıt da rollback olur. 21 yeni modül testi eklendi; birim/mimari
+**206/206** yeşil.
 
-**Kapsam:** `CashAdvance` aggregate; kart borcuna tek kez dahil; aynı kullanıcı
-işleminde `CashInflow` (`source = CashAdvance`, `isEarnedIncome = false`)
-oluşturma; iptalde bağlı para girişinin de iptali; kart ödemeleri geri alınmaz,
-borç yeniden hesaplanır.
+**Kapsam özeti:**
+- Bakiye: `expenses − refunds + cashAdvances − payments`; avans bir kez sayılır.
+- Bağlı giriş: `source = CashAdvance`, `isEarnedIncome = false`,
+  `DebtLinkId = cashAdvance.Id`; normal `POST /cash-inflows` bu kaynağı reddeder.
+- İptal gerekçeli; avans ve bağlı giriş birlikte kapanır; kart ödemeleri geri
+  alınmaz.
+- Liste: `status`, `includeCancelled`, sayfalama; arşivli kartta yeni avans `400`.
 
-**Başlamadan önce:** ADR-0009 kararı verilir; `docs/05` §5.5, `docs/06` §6.5 ve
-`docs/07` §4 Slice 6 yeniden okunur; açık soru varsa kod yazılmadan sorulur.
+**Doğrulama:**
+- Debug + Release build 0 hata/0 uyarı; birim/mimari 206/206.
+- Migration `20261117174437_AddCashAdvances`; `has-pending-model-changes` →
+  "No changes".
+- 5 yeni API entegrasyon testi derlendi; yerel Docker daemon kapalı olduğu için
+  CI doğrulaması bekliyor.
+
+### 7.4 Sıradaki dilim — Slice 7: Kredi + kişisel borç
+
+**Bağlayıcı kaynak:** `docs/07` §4 Slice 7, `docs/05` §6, `docs/06` §7.
+
+**Ön koşul:** Slice 6 entegrasyon testlerinin CI'da yeşil olması; ADR-0009
+mekanizması hazır. Başlamadan önce `docs/07` §4 Slice 7 yeniden okunur; açık
+soru varsa kod yazılmadan sorulur.
 
 ---
 
@@ -452,8 +503,9 @@ borç yeniden hesaplanır.
 
 - Slice 4 kapandı; 21 senaryo uygulandı ve dokümanlarla eşleşiyor.
 - Slice 5 kapandı; 48 modül + 5 entegrasyon testi yeşil, dokümanlarla uyumlu.
-- Slice 6 için **ADR-0009** (modüller arası atomik yazma) açık karardır; kabul
-  edilmeden kod başlamaz.
+- Slice 6 kodu kapandı; ADR-0009 kabul edilip uygulandı, 21 modül testi yeşil.
+- Açık kalan tek doğrulama: 5 yeni nakit avans entegrasyon testinin CI'da
+  Testcontainers MSSQL ile yeşil olması (yerel daemon kapalı).
 
 ---
 
@@ -472,3 +524,4 @@ borç yeniden hesaplanır.
 | 1.8 | 2026-11-15 | Gelecek `asOf` `400` kesinleşti; iptal UTC→yerel tarih kuralı ve aynı gün iptali senaryo 10/13/17'ye işlendi; 21 senaryo korundu |
 | 1.9 | 2026-11-16 | Slice 4 tamamlandı: ekstre/ödeme domain-API-testleri, migration, 137 birim + 46 entegrasyon testi; Docker kapalı olduğundan entegrasyon CI'ya bırakıldı; sıradaki dilim Slice 5 |
 | 2.0 | 2026-11-16 | Slice 5 tamamlandı: `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi, iptal/bağlantı kuralları; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; `_status` yalnızca Debts ve Reporting'de; sıradaki dilim Slice 6 (ADR-0009) |
+| 2.1 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 kod/mimari tamamlandı: `cards.CashAdvances`, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; birim 206/206, migration senkron; entegrasyon CI doğrulaması bekliyor |

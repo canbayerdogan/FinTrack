@@ -25,6 +25,8 @@ public sealed class CreditCardsDbContext : DbContext
 
     public DbSet<CardPayment> CardPayments => Set<CardPayment>();
 
+    public DbSet<CashAdvance> CashAdvances => Set<CashAdvance>();
+
     public DbSet<Statement> Statements => Set<Statement>();
 
     private Guid CurrentUserId => _currentUser.UserId ?? Guid.Empty;
@@ -42,6 +44,7 @@ public sealed class CreditCardsDbContext : DbContext
 
         modelBuilder.Entity<CreditCard>().HasQueryFilter(card => card.UserId == CurrentUserId);
         modelBuilder.Entity<CardPayment>().HasQueryFilter(payment => payment.UserId == CurrentUserId);
+        modelBuilder.Entity<CashAdvance>().HasQueryFilter(advance => advance.UserId == CurrentUserId);
         modelBuilder.Entity<Statement>().HasQueryFilter(statement => statement.UserId == CurrentUserId);
 
         // SQLite rowversion üretmez; yalnızca testlerde kullanılan bu sağlayıcıda
@@ -53,6 +56,10 @@ public sealed class CreditCardsDbContext : DbContext
                 .ValueGeneratedNever();
 
             modelBuilder.Entity<CardPayment>().Property(payment => payment.RowVersion)
+                .IsConcurrencyToken()
+                .ValueGeneratedNever();
+
+            modelBuilder.Entity<CashAdvance>().Property(advance => advance.RowVersion)
                 .IsConcurrencyToken()
                 .ValueGeneratedNever();
 

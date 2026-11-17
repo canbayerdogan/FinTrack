@@ -32,6 +32,7 @@ public static class CreditCardsModule
             .RequireAuthorization();
         CardEndpoints.Map(group);
         CardPaymentEndpoints.Map(group);
+        CashAdvanceEndpoints.Map(group);
         StatementEndpoints.Map(group);
 
         return app;

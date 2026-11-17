@@ -1,4 +1,5 @@
 using System.Data;
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CreditCards.Application.Abstractions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,8 @@ namespace FinTrack.Modules.CreditCards.Infrastructure.Persistence;
 
 internal sealed class UnitOfWork(CreditCardsDbContext db) : IUnitOfWork
 {
+    public void Enlist(IWriteTransactionScope? scope) => db.Database.UseTransaction(scope?.Transaction);
+
     public async Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

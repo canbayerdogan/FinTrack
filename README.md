@@ -9,11 +9,12 @@ Kişisel finans ve harcama takibi uygulaması.
 **Mimari:** modüler monolit · modül içi Clean Architecture · CQRS (mediator'süz)
 
 > Bu depo şu anda **tasarım + iskelet + kimlik doğrulama + harcama/kategori +
-> kredi kartı + ekstre/ödeme + para girişi** aşamasındadır. Çözüm iskeleti
-> (slice 0), kimlik doğrulama (slice 1), harcama/kategori (slice 2), kart +
-> hesaplanan bakiye (slice 3), ekstre + kart ödemesi (slice 4) ve para girişi
-> (slice 5) derlenir ve testleri geçer; borç ve raporlama modülleri (slice 6+)
-> henüz yazılmadı. Kod yazılmadan önce dokümanların okunması zorunludur.
+> kredi kartı + ekstre/ödeme + para girişi + nakit avans** aşamasındadır. Çözüm
+> iskeleti (slice 0), kimlik doğrulama (slice 1), harcama/kategori (slice 2),
+> kart + hesaplanan bakiye (slice 3), ekstre + kart ödemesi (slice 4), para
+> girişi (slice 5) ve nakit avans (slice 6) derlenir ve birim/mimari testleri
+> geçer; kredi/kişisel borç ve raporlama modülleri (slice 7+) henüz yazılmadı.
+> Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
 
@@ -54,9 +55,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 04 | [ADR'ler](docs/adr/) | ✅ |
 | 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.10](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.0](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.9](docs/09-todo.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.11](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v2.1](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.10](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -85,25 +86,32 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   oluşturulamaz (`400 DebtSourceRequiresOwnerEndpoint`). Borç bağlantılı kayıt
   `debtLink` döner; doğrudan güncelleme/iptal `409`. 48 modül + 5 entegrasyon
   testi; `_status` yalnızca Debts ve Reporting'de kaldı.
-- **Testler:** ✅ 185 birim testi yeşil (3 mimari + 22 birim + 55 Expenses +
-  57 CreditCards + 48 CashInflows) ve 50 entegrasyon testi; toplam **235/235**.
-  Entegrasyon testleri Docker Desktop açıkken veya CI'da (Ubuntu +
-  Testcontainers MSSQL) çalışır.
+- **Slice 6 — Nakit avans:** ✅ Kod/mimari tamam. `cards.CashAdvances` migration'ı,
+  `GET/POST /cards/{id}/cash-advances` ve iptal uç noktası; borç formülünde
+  `+ cashAdvances`. ADR-0009 ile avans ve bağlı `CashInflow` aynı DB
+  transaction'ında yazılır/iptal edilir; yarı kayıt kalmaz. 21 yeni modül + 5
+  yeni API entegrasyon testi eklendi.
+- **Testler:** ✅ 206/206 birim testi yeşil (3 mimari + 22 birim + 55 Expenses +
+  78 CreditCards + 48 CashInflows). Son çalıştırılan entegrasyon sonucu 50/50;
+  Slice 6'nın 5 yeni entegrasyon testi derlendi ancak yerel Docker motoru kapalı
+  olduğu için çalıştırılamadı. Entegrasyon testleri Docker Desktop açıkken veya
+  CI'da (Ubuntu + Testcontainers MSSQL) çalışır.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
-  sahipliği (ADR-0008) kapandı. `Idempotency-Key` uygulaması ayrı göreve ertelendi
-  (`docs/06` §1.4, `docs/07` slice 2). Güncel durum: `docs/08`; sıradaki adımlar:
-  `docs/09`.
+  sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
+  edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
+  `docs/07` slice 2). Güncel durum: `docs/08`; sıradaki adımlar: `docs/09`.
 - **Migration:** `dotnet run --project src/Host/FinTrack.Api -- --migrate`
   (üretimde otomatik migration yok). Testlerde `Database:MigrateOnStartup=true`.
   Slice 4: `20261116180727_AddCardPaymentsAndStatements`. Slice 5:
-  `20261116182933_InitialCashInflows`.
+  `20261116182933_InitialCashInflows`. Slice 6:
+  `20261117174437_AddCashAdvances` (`CreditCardsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
   GitHub Actions CI (`.github/workflows/ci.yml`) Slice 5 commit'i sonrası
   build + **235/235** testle yeşil (run `43933066950`, Ubuntu,
-  Testcontainers MSSQL).
-- **Sıradaki:** slice 6 — nakit avans (`docs/07` §4). **ADR-0009** (modüller
-  arası atomik yazma) kabul edilmeden kod başlamaz; kapsam `docs/08` §7.3'te.
+  Testcontainers MSSQL); Slice 6 commit'i sonrası CI doğrulaması bekliyor.
+- **Sıradaki:** slice 7 — kredi + kişisel borç (`docs/07` §4). Slice 6'nın 5
+  yeni entegrasyon testinin CI'da yeşil olması geçiş ön koşuludur.
 
 ## Çözüm yapısı (özet)
 

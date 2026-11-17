@@ -23,6 +23,12 @@ internal static class ApplicationErrors
     public static Error CardPaymentNotFound() =>
         Error.NotFound("NotFound", "Kart ödemesi bulunamadı.");
 
+    public static Error CashAdvanceNotFound() =>
+        Error.NotFound("NotFound", "Nakit avans bulunamadı.");
+
+    public static Error CashAdvanceInflowMissing() =>
+        Error.Conflict("StateConflict", "Nakit avansın bağlı para girişi yok.");
+
     public static Error StatementNotFound() =>
         Error.NotFound("NotFound", "Ekstre bulunamadı.");
 

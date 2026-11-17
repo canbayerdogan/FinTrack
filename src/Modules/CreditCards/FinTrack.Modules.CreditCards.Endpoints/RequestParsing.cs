@@ -15,6 +15,9 @@ internal static class RequestParsing
     public static bool TryParsePaymentStatus(string? value, out PaymentStatus? parsed) =>
         TryParseEnum(value, out parsed);
 
+    public static bool TryParseCashAdvanceStatus(string? value, out CashAdvanceStatus? parsed) =>
+        TryParseEnum(value, out parsed);
+
     public static bool TryParseStatementStatus(string? value, out StatementStatus? parsed) =>
         TryParseEnum(value, out parsed);
 

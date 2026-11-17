@@ -1,4 +1,6 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CreditCards.Application.Cards;
+using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Application.Common;
 using FinTrack.Modules.CreditCards.Application.Payments;
 using FinTrack.Modules.CreditCards.Application.Statements;
@@ -53,6 +55,40 @@ public interface ICardPaymentQueries
         Guid userId,
         Guid cardId,
         DateOnly? paidAfterExclusive,
+        DateOnly asOfDate,
+        string timeZoneId,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>Nakit avans yazma tarafı. Bağlı para girişi aynı transaction'da yazılır (ADR-0009).</summary>
+public interface ICashAdvanceRepository
+{
+    Task<CashAdvance?> FindAsync(
+        Guid userId,
+        Guid cardId,
+        Guid cashAdvanceId,
+        CancellationToken cancellationToken);
+
+    Task AddAsync(CashAdvance advance, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Nakit avans okuma tarafı. <see cref="SumActiveAdvancesAsync"/> kesit ve iptal
+/// semantiğini <see cref="ICardPaymentQueries.SumActivePaymentsAsync"/> ile aynı
+/// uygular: <c>TakenOn ∈ (takenAfterExclusive, asOfDate]</c> ve kesitte aktif.
+/// </summary>
+public interface ICashAdvanceQueries
+{
+    Task<PagedResult<CashAdvanceDto>> ListAsync(
+        Guid userId,
+        Guid cardId,
+        CashAdvanceFilter filter,
+        CancellationToken cancellationToken);
+
+    Task<decimal> SumActiveAdvancesAsync(
+        Guid userId,
+        Guid cardId,
+        DateOnly? takenAfterExclusive,
         DateOnly asOfDate,
         string timeZoneId,
         CancellationToken cancellationToken);
@@ -120,6 +156,13 @@ public enum SaveChangesOutcome
 public interface IUnitOfWork
 {
     Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// ADR-0009: bu modülün DbContext'ini paylaşılan transaction'a bağlar.
+    /// <c>null</c> çağrısı bağlantıyı temizler; scope kapandıktan sonra aynı
+    /// DbContext'in yeniden kullanılabilmesi için zorunludur.
+    /// </summary>
+    void Enlist(IWriteTransactionScope? scope);
 }
 
 /// <summary>Yazma işlemini atomik tutan altyapı bağımsız işlem sınırı.</summary>

@@ -13,6 +13,7 @@ Ajanlar açık kararları kendi varsayımlarıyla kapatamaz.
 | [0006](0006-v1-kapsam-kararlari.md) | v1 kapsamı: abonelik ve varlık kazancı yok | ✅ Kabul |
 | [0007](0007-odemeler-sahibi-modulde.md) | Ödemeler yükümlülüğün sahibi modülde yaşar | ✅ Kabul |
 | [0008](0008-kart-alisverisi-expenses-sahibi.md) | Kart alışverişi Expenses modülünün sahibidir | ✅ Kabul |
+| [0009](0009-moduller-arasi-atomik-yazma.md) | Modüller arası atomik yazma: sync writer + paylaşılan transaction | ✅ Kabul |
 
 ## Şablon
 

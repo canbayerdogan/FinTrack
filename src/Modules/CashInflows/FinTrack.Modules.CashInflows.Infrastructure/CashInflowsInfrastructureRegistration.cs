@@ -13,8 +13,10 @@ public static class CashInflowsInfrastructureRegistration
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddDbContext<CashInflowsDbContext>(options =>
-            CashInflowsDbContextOptions.UseFinTrackSqlServer(options, connectionString));
+        services.AddDbContext<CashInflowsDbContext>((sp, options) =>
+            CashInflowsDbContextOptions.UseFinTrackSqlServer(
+                options,
+                sp.GetRequiredService<IWriteConnectionProvider>().Connection));
 
         services.AddScoped<ICashInflowRepository, CashInflowRepository>();
         services.AddScoped<ICashInflowQueries, CashInflowQueries>();

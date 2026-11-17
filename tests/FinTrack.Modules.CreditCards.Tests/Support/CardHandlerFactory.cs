@@ -1,5 +1,8 @@
 using FinTrack.ModuleContracts;
+using FinTrack.Modules.CashInflows.Application.CashInflows;
+using FinTrack.Modules.CreditCards.Application.Abstractions;
 using FinTrack.Modules.CreditCards.Application.Cards;
+using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Application.Payments;
 using FinTrack.Modules.CreditCards.Application.Statements;
 using FinTrack.Modules.CreditCards.Infrastructure;
@@ -7,6 +10,7 @@ using FinTrack.Modules.CreditCards.Infrastructure.Persistence;
 using FinTrack.Modules.CreditCards.Infrastructure.Queries;
 using FinTrack.Modules.CreditCards.Infrastructure.Repositories;
 using FinTrack.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinTrack.Modules.CreditCards.Tests.Support;
 
@@ -24,7 +28,8 @@ public sealed class CardHandlerFactory
         CreditCardsDbContext db,
         Guid userId,
         DateTime nowUtc,
-        string preferredTimeZone = UserTime.DefaultTimeZoneId)
+        string preferredTimeZone = UserTime.DefaultTimeZoneId,
+        IDebtCashInflowWriter? inflowWriter = null)
     {
         _currentUser = new TestCurrentUser(userId, preferredTimeZone);
         _clock = new TestClock(nowUtc);
@@ -32,12 +37,17 @@ public sealed class CardHandlerFactory
         CardQueries = new CardQueries(db);
         Payments = new CardPaymentRepository(db);
         PaymentQueries = new CardPaymentQueries(db);
+        Advances = new CashAdvanceRepository(db);
+        AdvanceQueries = new CashAdvanceQueries(db);
         Statements = new StatementRepository(db);
         StatementQueries = new StatementQueries(db);
         UnitOfWork = new UnitOfWork(db);
         Transactions = new TransactionScopeFactory(db);
+        WriteTransactions = new SqliteWriteTransactionScopeFactory(db.Database.GetDbConnection());
+        InflowWriter = new FakeDebtCashInflowWriter();
+        RealInflowWriter = inflowWriter;
         ExpenseQuery = new FakeCardExpenseQuery();
-        DebtService = new CardDebtService(ExpenseQuery, PaymentQueries);
+        DebtService = new CardDebtService(ExpenseQuery, PaymentQueries, AdvanceQueries);
         Derivation = new StatementDerivation(DebtService, PaymentQueries, StatementQueries);
     }
 
@@ -49,6 +59,10 @@ public sealed class CardHandlerFactory
 
     internal CardPaymentQueries PaymentQueries { get; }
 
+    internal CashAdvanceRepository Advances { get; }
+
+    internal CashAdvanceQueries AdvanceQueries { get; }
+
     internal StatementRepository Statements { get; }
 
     internal StatementQueries StatementQueries { get; }
@@ -56,6 +70,14 @@ public sealed class CardHandlerFactory
     internal UnitOfWork UnitOfWork { get; }
 
     internal TransactionScopeFactory Transactions { get; }
+
+    internal SqliteWriteTransactionScopeFactory WriteTransactions { get; }
+
+    public FakeDebtCashInflowWriter InflowWriter { get; }
+
+    private IDebtCashInflowWriter? RealInflowWriter { get; }
+
+    private IDebtCashInflowWriter Writer => RealInflowWriter ?? InflowWriter;
 
     internal CardDebtService DebtService { get; }
 
@@ -89,6 +111,15 @@ public sealed class CardHandlerFactory
 
     public ListCardPaymentsHandler ListPayments() =>
         new(_currentUser, CardQueries, PaymentQueries);
+
+    public CreateCashAdvanceHandler CreateCashAdvance(CountingUnitOfWork? unitOfWork = null) =>
+        new(_currentUser, Cards, Advances, (IUnitOfWork?)unitOfWork ?? UnitOfWork, WriteTransactions, Writer, _clock);
+
+    public CancelCashAdvanceHandler CancelCashAdvance(CountingUnitOfWork? unitOfWork = null) =>
+        new(_currentUser, Advances, (IUnitOfWork?)unitOfWork ?? UnitOfWork, WriteTransactions, Writer, _clock);
+
+    public ListCashAdvancesHandler ListCashAdvances() =>
+        new(_currentUser, CardQueries, AdvanceQueries);
 
     public CreateStatementHandler CreateStatement() =>
         new(_currentUser, Cards, Statements, Derivation, Transactions, UnitOfWork, _clock);

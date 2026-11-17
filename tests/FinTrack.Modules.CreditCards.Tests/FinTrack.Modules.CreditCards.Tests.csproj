@@ -9,6 +9,9 @@
     <ProjectReference Include="..\..\src\Modules\CreditCards\FinTrack.Modules.CreditCards.Application\FinTrack.Modules.CreditCards.Application.csproj" />
     <ProjectReference Include="..\..\src\Modules\CreditCards\FinTrack.Modules.CreditCards.Domain\FinTrack.Modules.CreditCards.Domain.csproj" />
     <ProjectReference Include="..\..\src\Modules\CreditCards\FinTrack.Modules.CreditCards.Infrastructure\FinTrack.Modules.CreditCards.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Application\FinTrack.Modules.CashInflows.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Domain\FinTrack.Modules.CashInflows.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Infrastructure\FinTrack.Modules.CashInflows.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

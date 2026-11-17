@@ -13,13 +13,17 @@ public static class CreditCardsInfrastructureRegistration
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddDbContext<CreditCardsDbContext>(options =>
-            CreditCardsDbContextOptions.UseFinTrackSqlServer(options, connectionString));
+        services.AddDbContext<CreditCardsDbContext>((sp, options) =>
+            CreditCardsDbContextOptions.UseFinTrackSqlServer(
+                options,
+                sp.GetRequiredService<IWriteConnectionProvider>().Connection));
 
         services.AddScoped<ICardRepository, CardRepository>();
         services.AddScoped<ICardQueries, CardQueries>();
         services.AddScoped<ICardPaymentRepository, CardPaymentRepository>();
         services.AddScoped<ICardPaymentQueries, CardPaymentQueries>();
+        services.AddScoped<ICashAdvanceRepository, CashAdvanceRepository>();
+        services.AddScoped<ICashAdvanceQueries, CashAdvanceQueries>();
         services.AddScoped<IStatementRepository, StatementRepository>();
         services.AddScoped<IStatementQueries, StatementQueries>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();

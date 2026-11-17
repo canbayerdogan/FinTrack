@@ -1,8 +1,8 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.10
-**Tarih:** 2026-11-16
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0008
+**Sürüm:** 1.11
+**Tarih:** 2026-11-17
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu belge iki şeyi tanımlar:
@@ -41,13 +41,14 @@
 | Alan | Durum |
 |---|---|
 | Dokümanlar 01–07 | ✅ |
-| ADR-0001…0008 | ✅ |
+| ADR-0001…0009 | ✅ |
 | Slice 0 — iskelet | ✅ 28 proje (slice 5 sonrası), 0 hata/0 uyarı |
 | Slice 1 — kimlik doğrulama | ✅ Identity + JWT, `identity` migration, 22 birim + 17 entegrasyon testi |
 | Slice 2 — harcama + kategori | ✅ `expenses` şeması, harcama/iade/kategori, 52 modül testi |
 | Slice 3 — kart + hesaplanan bakiye | ✅ `cards` şeması, kart CRUD/arşiv/bakiye, 22 modül + 6 entegrasyon testi |
 | Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf` |
 | Slice 5 — para girişi | ✅ `inflows` şeması, `CashInflow` CRUD/iptal, kaynaktan türetilen `isEarnedIncome`, borç kaynaklarının reddi, 48 modül + 5 entegrasyon testi |
+| Slice 6 — nakit avans | ✅ Kod/mimari tamam; `cards.CashAdvances`, ADR-0009 atomik yazma, avans + bağlı giriş, bakiye formülü, 21 modül + 5 entegrasyon testi (CI bekliyor) |
 | Mimari testler | ✅ 3 test |
 | Entegrasyon smoke testleri | ✅ 6 test (health + 2 modül `_status` + harcama/kategori/kart 401) |
 | Entegrasyon kimlik testleri | ✅ 17 test (Testcontainers MSSQL) |
@@ -55,9 +56,10 @@
 | Entegrasyon kart testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon ekstre/ödeme testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon para girişi testleri | ✅ 5 test (Testcontainers MSSQL) |
+| Entegrasyon nakit avans testleri | ✅ 5 test yazıldı/derlendi; yerel Docker motoru kapalı, CI doğrulaması bekliyor |
 | Birim testleri (kimlik) | ✅ 22 test (doğrulama + JWT) |
 | Modül testleri (Expenses) | ✅ 55 test (domain + handler, SQLite in-memory) |
-| Modül testleri (CreditCards) | ✅ 57 test (domain + handler, SQLite in-memory) |
+| Modül testleri (CreditCards) | ✅ 78 test (domain + handler, SQLite in-memory; nakit avans dahil) |
 | Modül testleri (CashInflows) | ✅ 48 test (domain + handler, SQLite in-memory) |
 
 ### 2.2 Ortam
@@ -68,7 +70,7 @@
 | Çözüm dosyası | `FinTrack.slnx` (`.sln` değil) |
 | Test çalıştırma | `dotnet test FinTrack.slnx` |
 | EF aracı | `dotnet-ef` `10.0.15` (yerel tool manifest: `dotnet-tools.json`) |
-| Docker | ✅ `29.7.2` — Testcontainers MSSQL kullanılabilir |
+| Docker | CLI ✅ `29.7.2`; yerel daemon kapalı — Testcontainers MSSQL CI'da kullanılabilir |
 | MAUI iş yükü | ❌ kurulu değil; slice 9'da `dotnet workload install maui` |
 | Sürüm kontrolü | ✅ git (`main`) + GitHub uzak depo + GitHub Actions CI (yeşil) |
 | NuGet sürümleri | Microsoft paketleri `10.0.15`; 11.x net11 hedefler, kullanılmaz |
@@ -80,7 +82,7 @@
   `_status` uç noktası kaldırıldı; yalnızca `Debts` ve `Reporting` kaldı
   (slice 7–8'de kaldırılacaktır).
 - `ExpensesModule` harcama/kategori uç noktalarını, `expenses` DbContext'ini ve
-  migration'ını içerir. `CreditCardsModule` kart/ekstre/ödeme uç noktalarını,
+  migration'ını içerir. `CreditCardsModule` kart/ekstre/ödeme/nakit avans uç
   `cards` DbContext'ini ve migration'ını içerir. `CashInflowsModule` para girişi
   uç noktalarını, `inflows` DbContext'ini ve migration'ını içerir. `DebtsModule`
   ve `ReportingModule` yalnızca DI ve route grubu kaydeder.
@@ -103,8 +105,8 @@
 | 3 | Kart + hesaplanan bakiye | L | 2 | ✅ |
 | 4 | Ekstre + kart ödemesi | L | 3 | ✅ |
 | 5 | Para girişi | M | 1 | ✅ |
-| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ⏳ sıradaki |
-| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ |
+| 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ kod/mimari (CI entegrasyonu bekliyor) |
+| 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ⏳ sıradaki (CI koşuluyla) |
 | 8 | Raporlama | L | 2–7 | ⏳ |
 | 9 | MAUI istemci | L | 1–8 | ⏳ |
 
@@ -394,37 +396,57 @@ test. Migration: `20261116182933_InitialCashInflows`.
 
 ---
 
-### Slice 6 — Nakit avans
+### Slice 6 — Nakit avans ✅
+
+**Durum:** ✅ Kod/mimari tamamlandı (2026-11-17). 21 yeni modül testi ve 5 yeni
+API entegrasyon testi eklendi; birim/mimari **206/206** yeşil. Migration:
+`20261117174437_AddCashAdvances`. Entegrasyon testleri derlendi; yerel Docker
+motoru kapalı olduğu için son CI doğrulaması bekliyor.
 
 **Amaç:** Nakit avansı kart borcuna bağlamak ve para girişiyle atomik oluşturmak.
 
-**Ön koşul:** **ADR-0009 — modüller arası atomik yazma mekanizması** kabul
-edilmeden kod başlamaz. Adaylar: aynı DB transaction'ında orkestrasyon, sync
-writer sözleşmesi, outbox. Seçim ADR'de gerekçelenir.
+**Ön koşul:** ✅ **ADR-0009 — modüller arası atomik yazma** kabul edildi
+([ADR metni](adr/0009-moduller-arasi-atomik-yazma.md)). Sync writer + paylaşılan
+`DbTransaction` seçildi; ambient `TransactionScope` ve outbox reddedildi.
 
 **Kapsam:**
-- `CashAdvance` aggregate; kart borcu bileşeni.
-- Aynı kullanıcı işleminde `CashInflow` (`source = CashAdvance`,
-  `isEarnedIncome = false`) oluşturma.
-- İptal: bağlı para girişi de iptal; kart ödemeleri geri alınmaz, borç yeniden
-  hesaplanır.
-- Endpoint'ler: `docs/06` §6.5.
+- [x] `CashAdvance` aggregate; kart borcu bileşeni (`cards.CashAdvances`).
+- [x] Aynı kullanıcı işleminde `CashInflow` (`source = CashAdvance`,
+      `isEarnedIncome = false`) oluşturma.
+- [x] İptal: bağlı para girişi de iptal; kart ödemeleri geri alınmaz, borç yeniden
+      hesaplanır.
+- [x] Endpoint'ler: `GET/POST /cards/{id}/cash-advances`,
+      `POST /cards/{id}/cash-advances/{cashAdvanceId}/cancel` (`docs/06` §6.5).
+- [x] `CardDebtService`: `debt = expenses − refunds + cashAdvances − payments`.
 
 **Kapsam dışı:** Nakit avans için ayrı geri ödeme kaydı (kart ödemesi kullanılır).
 
+**Uygulama notları:**
+- Transaction'ı sahibi modül handler'ı açar; writer transaction başlatmaz/commit
+  etmez. Commit yalnızca scope üzerinden yapılır.
+- Her yazan modül `IUnitOfWork.Enlist(scope)` ile DbContext'ini paylaşılan
+  transaction'a bağlar; `Enlist(null)` testlerde referansı temizler.
+- `IDebtCashInflowWriter` yalnızca beklenen `Kind`/`DebtLinkId` değerlerine bağlı
+  girişi iptal eder; yanlış bağlantı `DebtInflowLinkMismatch` üretir.
+- Avans iptali kart ödemelerini geri almaz; borç yeniden hesaplanır.
+
 **Testler:**
-- Nakit avans toplam borçta **bir kez** (kart borcu içinde).
-- Bağlı para girişi kazanılmış gelir değil.
-- Yarım kayıt oluşmaz (hata senaryosu).
-- İptal cascade; bakiye yeniden hesaplanır.
-- Kart ödemesi nakit avans borcunu azaltır; ikinci borç kalemi yok.
+- [x] Nakit avans toplam borçta **bir kez** (kart borcu içinde).
+- [x] Bağlı para girişi kazanılmış gelir değil.
+- [x] Yarım kayıt oluşmaz (gerçek SQLite `DbTransaction` rollback testleri).
+- [x] İptal cascade; bakiye yeniden hesaplanır.
+- [x] Kart ödemesi nakit avans borcunu azaltır; ikinci borç kalemi yok.
+- [x] API sözleşmesi: oluşturma/liste/iptal, gerekçesiz iptal `400`,
+      başka kullanıcının kartı `404`.
 
 **Kabul kriterleri:**
-- `docs/05` §5.5, §9/2 ve `docs/06` §6.5 ile uyum.
-- ADR-0009 sonucu uygulanmış ve test edilmiş.
+- [x] `docs/05` §5.5, §9/2 ve `docs/06` §6.5 ile uyum.
+- [x] ADR-0009 sonucu uygulanmış ve birim/mimari düzeyde test edilmiş.
+- [ ] 5 yeni entegrasyon testi CI'da yeşil (yerel daemon kapalı).
 
 **Riskler:** Atomiklik; iki modülün aynı DB'de farklı DbContext kullanması;
-hata durumunda rollback.
+hata durumunda rollback. Bunlar ADR-0009 ve SQLite rollback testleriyle
+doğrulandı; SQL Server tarafı CI'da doğrulanacak.
 
 ---
 
@@ -776,7 +798,7 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 
 | Risk | Etki | Önlem |
 |---|---|---|
-| Modüller arası atomik yazma | Nakit avans/kredi ile para girişi yarım kalabilir | Slice 6 öncesi ADR-0009; aynı DB transaction'ı veya outbox |
+| Modüller arası atomik yazma | Nakit avans/kredi ile para girişi yarım kalabilir | ✅ ADR-0009: sync writer + paylaşılan `DbTransaction`; SQLite rollback testleri, SQL Server CI'da |
 | Test DB altyapısı | Integration testleri yavaş/kırılgan | Testcontainers MSSQL; test başına temiz şema |
 | Hesaplanan kart borcu | Sorgu maliyeti | Önce doğruluk; gerekirse snapshot (kaynak doğruluk korunur) |
 | Tarih/yuvarlama | Taksit ve rapor farkları | Domain testleri; gösterimde `AwayFromZero`; eşit taksit, son taksit düzeltmesi yok |
@@ -802,3 +824,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.8 | 2026-11-15 | Gelecek `asOf` reddi ve aynı yerel gün iptal kuralı kabul kriterlerine eklendi; iptal kuralı harcama/iade/ödeme için birleştirildi; 21 senaryo referansı korundu |
 | 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |
 | 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |
+| 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) kod/mimari tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; birim 206/206; entegrasyon CI doğrulaması bekliyor |

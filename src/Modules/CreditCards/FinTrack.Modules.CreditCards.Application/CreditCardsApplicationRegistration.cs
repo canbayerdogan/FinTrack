@@ -1,4 +1,5 @@
 using FinTrack.Modules.CreditCards.Application.Cards;
+using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Application.Common;
 using FinTrack.Modules.CreditCards.Application.Payments;
 using FinTrack.Modules.CreditCards.Application.Statements;
@@ -31,6 +32,11 @@ public static class CreditCardsApplicationRegistration
         services.AddScoped<ICommandHandler<CreateCardPaymentCommand, Result<CardPaymentDto>>, CreateCardPaymentHandler>();
         services.AddScoped<ICommandHandler<CancelCardPaymentCommand, Result>, CancelCardPaymentHandler>();
         services.AddScoped<IQueryHandler<ListCardPaymentsQuery, Result<PagedResult<CardPaymentDto>>>, ListCardPaymentsHandler>();
+
+        // Nakit avans (ADR-0009).
+        services.AddScoped<ICommandHandler<CreateCashAdvanceCommand, Result<CashAdvanceDto>>, CreateCashAdvanceHandler>();
+        services.AddScoped<ICommandHandler<CancelCashAdvanceCommand, Result>, CancelCashAdvanceHandler>();
+        services.AddScoped<IQueryHandler<ListCashAdvancesQuery, Result<PagedResult<CashAdvanceDto>>>, ListCashAdvancesHandler>();
 
         // Ekstre.
         services.AddScoped<ICommandHandler<CreateStatementCommand, Result<StatementDto>>, CreateStatementHandler>();

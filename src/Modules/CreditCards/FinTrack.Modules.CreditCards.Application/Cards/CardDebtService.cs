@@ -4,8 +4,8 @@ using FinTrack.Modules.CreditCards.Application.Abstractions;
 namespace FinTrack.Modules.CreditCards.Application.Cards;
 
 /// <summary>
-/// Bir kesitte kart borcunun bileşenleri (docs/06 §6.3). Nakit avans slice 6'da
-/// dolar; slice 4'te sıfırdır.
+/// Bir kesitte kart borcunun bileşenleri (docs/06 §6.3). Nakit avans, kart
+/// borcunun içinde bir kez sayılır (docs/05 §5.5).
 /// </summary>
 public sealed record CardBalanceComponents(
     decimal Expenses,
@@ -26,7 +26,8 @@ public sealed record CardBalanceComponents(
 /// </summary>
 public sealed class CardDebtService(
     ICardExpenseQuery expenseQuery,
-    ICardPaymentQueries paymentQueries)
+    ICardPaymentQueries paymentQueries,
+    ICashAdvanceQueries cashAdvanceQueries)
 {
     public async Task<CardBalanceComponents> ComputeAsync(
         Guid userId,
@@ -50,7 +51,13 @@ public sealed class CardDebtService(
             timeZoneId,
             cancellationToken);
 
-        const decimal cashAdvances = 0m;
+        var cashAdvances = await cashAdvanceQueries.SumActiveAdvancesAsync(
+            userId,
+            cardId,
+            takenAfterExclusive: null,
+            asOfDate,
+            timeZoneId,
+            cancellationToken);
 
         return new CardBalanceComponents(totals.Expenses, totals.Refunds, cashAdvances, payments);
     }

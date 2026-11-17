@@ -2,7 +2,7 @@
 
 **Sürüm:** 1.2
 **Tarih:** 2026-11-15
-**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0008
+**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu doküman v1 iş kurallarını tanımlar. `docs/02` §5'teki 7 açık karar ile

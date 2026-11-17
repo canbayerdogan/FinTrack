@@ -33,6 +33,12 @@ public sealed record CreateCardPaymentRequest(
     DateOnly? PaidOn,
     string? Note);
 
+public sealed record CreateCashAdvanceRequest(
+    decimal Amount,
+    string? Currency,
+    DateOnly? TakenOn,
+    string? Description);
+
 // Ekstre türetilen alanları (carriedOverAmount, computedDebtAtPeriodEnd,
 // reconciliationDifference) istemci gönderemez; bilinmeyen alan 400 döner
 // (docs/06 §6.6).

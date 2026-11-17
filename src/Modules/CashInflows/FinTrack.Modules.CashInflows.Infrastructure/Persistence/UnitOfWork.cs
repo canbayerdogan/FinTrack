@@ -1,3 +1,4 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Application.Abstractions;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -6,6 +7,8 @@ namespace FinTrack.Modules.CashInflows.Infrastructure.Persistence;
 
 internal sealed class UnitOfWork(CashInflowsDbContext db) : IUnitOfWork
 {
+    public void Enlist(IWriteTransactionScope? scope) => db.Database.UseTransaction(scope?.Transaction);
+
     public async Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try

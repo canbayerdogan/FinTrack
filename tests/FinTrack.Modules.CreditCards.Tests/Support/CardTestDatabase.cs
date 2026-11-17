@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using FinTrack.Modules.CashInflows.Infrastructure;
 using FinTrack.Modules.CreditCards.Infrastructure;
 using FinTrack.SharedKernel;
 using Microsoft.Data.Sqlite;
@@ -41,10 +42,38 @@ public sealed class CardTestDatabase : IAsyncDisposable
         return database;
     }
 
+    /// <summary>ADR-0009 testlerinde iki DbContext'in paylaştığı fiziksel bağlantı.</summary>
+    internal SqliteConnection Connection => _connection;
+
     public CreditCardsDbContext CreateContext(
         Guid userId,
         string preferredTimeZone = UserTime.DefaultTimeZoneId) =>
         new(_options, new TestCurrentUser(userId, preferredTimeZone));
+
+    public CashInflowsDbContext CreateInflowContext(
+        Guid userId,
+        string preferredTimeZone = UserTime.DefaultTimeZoneId)
+    {
+        var options = new DbContextOptionsBuilder<CashInflowsDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(new SqliteRowVersionInterceptor())
+            .Options;
+
+        return new CashInflowsDbContext(options, new TestCurrentUser(userId, preferredTimeZone));
+    }
+
+    /// <summary>
+    /// Aynı bağlantıdahem <c>cards</c> hem <c>inflows</c> tablolarını kurar.
+    /// İkinci şema, <c>EnsureCreated</c> mevcut tabloları görüp atladığı için
+    /// üretilen CREATE script'iyle oluşturulur.
+    /// </summary>
+    public static async Task<CardTestDatabase> CreateWithCashInflowsAsync()
+    {
+        var database = await CreateAsync();
+        await using var inflows = database.CreateInflowContext(Guid.NewGuid());
+        await inflows.Database.ExecuteSqlRawAsync(inflows.Database.GenerateCreateScript());
+        return database;
+    }
 
     public ValueTask DisposeAsync() => _connection.DisposeAsync();
 }

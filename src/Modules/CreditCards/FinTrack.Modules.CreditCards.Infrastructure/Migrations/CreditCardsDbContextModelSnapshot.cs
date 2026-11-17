@@ -74,6 +74,64 @@ namespace FinTrack.Modules.CreditCards.Infrastructure.Migrations
                     b.ToTable("CardPayments", "cards");
                 });
 
+            modelBuilder.Entity("FinTrack.Modules.CreditCards.Domain.CashAdvance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(19, 4)
+                        .HasColumnType("decimal(19,4)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CardId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("LinkedCashInflowId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("RecordedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateOnly>("TakenOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinkedCashInflowId")
+                        .IsUnique()
+                        .HasFilter("[LinkedCashInflowId] IS NOT NULL");
+
+                    b.HasIndex("UserId", "CardId", "TakenOn");
+
+                    b.ToTable("CashAdvances", "cards");
+                });
+
             modelBuilder.Entity("FinTrack.Modules.CreditCards.Domain.CreditCard", b =>
                 {
                     b.Property<Guid>("Id")

@@ -1,3 +1,4 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Application.CashInflows;
 using FinTrack.Modules.CashInflows.Application.Common;
 using FinTrack.Modules.CashInflows.Domain;
@@ -36,4 +37,11 @@ public enum SaveChangesOutcome
 public interface IUnitOfWork
 {
     Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// ADR-0009: bu modülün DbContext'ini paylaşılan transaction'a bağlar.
+    /// <c>null</c> çağrısı bağlantıyı temizler; scope kapandıktan sonra aynı
+    /// DbContext'in yeniden kullanılabilmesi için zorunludur.
+    /// </summary>
+    void Enlist(IWriteTransactionScope? scope);
 }

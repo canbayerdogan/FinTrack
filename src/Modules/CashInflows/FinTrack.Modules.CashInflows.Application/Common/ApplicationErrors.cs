@@ -22,4 +22,13 @@ internal static class ApplicationErrors
 
     public static Error DuplicateKey() =>
         Error.Conflict("StateConflict", "Aynı kayıt zaten mevcut.");
+
+    public static Error DebtInflowKindInvalid() =>
+        Error.Validation("DebtInflowKindInvalid", "Geçerli bir borç kaynağı seçilmelidir.");
+
+    public static Error DebtInflowLinkMissing() =>
+        Error.Conflict("StateConflict", "Para girişi borç bağlantılı değil.");
+
+    public static Error DebtInflowLinkMismatch() =>
+        Error.Conflict("StateConflict", "Para girişi beklenen borç kaydına bağlı değil.");
 }

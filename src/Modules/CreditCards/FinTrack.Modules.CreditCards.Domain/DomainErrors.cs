@@ -75,6 +75,37 @@ internal static class DomainErrors
             "CardPaymentNoteTooLong",
             $"Not en fazla {CardPayment.NoteMaxLength} karakter olabilir.");
 
+    // Nakit avans (docs/05 §5.5).
+
+    public static Error CashAdvanceAmountInvalid() =>
+        Error.Validation("CashAdvanceAmountInvalid", "Avans tutarı 0'dan büyük olmalıdır.");
+
+    public static Error CashAdvanceAmountScale() =>
+        Error.Validation("CashAdvanceAmountScale", "Avans tutarı en fazla 4 ondalık basamak içerebilir.");
+
+    public static Error CashAdvanceAmountTooLarge() =>
+        Error.Validation("CashAdvanceAmountTooLarge", "Avans tutarı izin verilen üst sınırı aşıyor.");
+
+    public static Error CashAdvanceCurrencyUnsupported() =>
+        Error.Validation("CashAdvanceCurrencyUnsupported", "v1'de yalnızca TRY desteklenir.");
+
+    public static Error CashAdvanceDateRequired() =>
+        Error.Validation("CashAdvanceDateRequired", "Avans tarihi zorunludur.");
+
+    public static Error CashAdvanceDateInFuture() =>
+        Error.Validation("CashAdvanceDateInFuture", "Avans tarihi bugünden ileri olamaz.");
+
+    public static Error CashAdvanceDescriptionTooLong() =>
+        Error.Validation(
+            "CashAdvanceDescriptionTooLong",
+            $"Açıklama en fazla {CashAdvance.DescriptionMaxLength} karakter olabilir.");
+
+    public static Error CashAdvanceInflowRequired() =>
+        Error.Validation("CashAdvanceInflowRequired", "Bağlı para girişi kimliği zorunludur.");
+
+    public static Error CashAdvanceInflowAlreadyLinked() =>
+        Error.Conflict("StateConflict", "Nakit avans zaten bir para girişine bağlı.");
+
     // Ekstre (docs/05 §5.6).
 
     public static Error StatementPeriodStartRequired() =>

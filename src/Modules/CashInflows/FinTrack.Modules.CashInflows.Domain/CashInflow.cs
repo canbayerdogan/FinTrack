@@ -212,6 +212,29 @@ public sealed class CashInflow : AggregateRoot
     }
 
     /// <summary>
+    /// Sahibi olan borç/kart modülü, bağlı para girişini kendi iptal işlemiyle
+    /// birlikte iptal eder (ADR-0009, docs/05 §5.5). Normal iptal yolu borç
+    /// bağlantılı kaydı reddeder; bu yol yalnızca sözleşmeyle çağrılır.
+    /// </summary>
+    public Result CancelFromDebtOwner(string? reason, DateTime nowUtc)
+    {
+        if (CancelledAtUtc is not null)
+        {
+            return Result.Success();
+        }
+
+        var reasonError = DomainErrors.ValidateReason(reason);
+        if (reasonError is not null)
+        {
+            return Result.Failure(reasonError);
+        }
+
+        CancelledAtUtc = nowUtc;
+        CancellationReason = reason!.Trim();
+        return Result.Success();
+    }
+
+    /// <summary>
     /// Borç doğuran kaynağı sahibi olan kayda bağlar. Sahibi modül aynı işlemde
     /// çağırır (docs/05 §4.3); normal <c>POST /cash-inflows</c> bu yolu kullanamaz.
     /// </summary>

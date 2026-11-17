@@ -13,5 +13,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="FinTrack.Modules.CashInflows.Tests" />
+    <InternalsVisibleTo Include="FinTrack.Modules.CreditCards.Tests" />
   </ItemGroup>
 </Project>

@@ -20,3 +20,10 @@ public enum StatementStatus
     Active = 0,
     Cancelled = 1,
 }
+
+/// <summary>Nakit avans durumu saklanmaz; <c>CancelledAtUtc</c> alanından türetilir.</summary>
+public enum CashAdvanceStatus
+{
+    Active = 0,
+    Cancelled = 1,
+}
