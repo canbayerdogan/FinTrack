@@ -1,8 +1,8 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.12
+**Sürüm:** 1.13
 **Tarih:** 2026-11-17
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu belge iki şeyi tanımlar:
@@ -48,25 +48,31 @@
 | Slice 3 — kart + hesaplanan bakiye | ✅ `cards` şeması, kart CRUD/arşiv/bakiye, 22 modül + 6 entegrasyon testi |
 | Slice 4 — ekstre + kart ödemesi | ✅ `cards.CardPayments`/`cards.Statements`, ekstre türetimi, ödeme CRUD/iptal, `balance?asOf` |
 | Slice 5 — para girişi | ✅ `inflows` şeması, `CashInflow` CRUD/iptal, kaynaktan türetilen `isEarnedIncome`, borç kaynaklarının reddi, 48 modül + 5 entegrasyon testi |
-| Slice 6 — nakit avans | ✅ `cards.CashAdvances`, ADR-0009 atomik yazma, avans + bağlı giriş, bakiye formülü, 21 modül + 5 entegrasyon testi; CI yeşil |
-| Mimari testler | ✅ 3 test |
-| Entegrasyon smoke testleri | ✅ 6 test (health + 2 modül `_status` + harcama/kategori/kart 401) |
+| Slice 6 — nakit avans | ✅ `cards.CashAdvances`, ADR-0009 atomik yazma, avans + bağlı giriş, bakiye formülü, 21 modül + 4 entegrasyon testi; CI yeşil |
+| Slice 7 — kredi + kişisel borç | ✅ `debts` şeması, tam taksit planı, sıralı ödeme, ADR-0009 atomiklik, 31 modül + 8 entegrasyon testi; CI run `44150709461` yeşil |
+| Slice 8 — raporlama | ✅ Salt okunur 3 uç nokta, yalnızca `ModuleContracts`, 10 modül + 7 entegrasyon testi; CI run `44156632893` yeşil |
+| Mimari testler | ✅ 4 test (Reporting modül sınırı dahil) |
+| Entegrasyon smoke testleri | ✅ 9 test (health + 8 modül 401; `_status` yok) |
 | Entegrasyon kimlik testleri | ✅ 17 test (Testcontainers MSSQL) |
 | Entegrasyon harcama testleri | ✅ 10 test (Testcontainers MSSQL, gerçek `ICardQuery`) |
 | Entegrasyon kart testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon ekstre/ödeme testleri | ✅ 6 test (Testcontainers MSSQL) |
 | Entegrasyon para girişi testleri | ✅ 5 test (Testcontainers MSSQL) |
-| Entegrasyon nakit avans testleri | ✅ 5 test; CI run `44141605019` ile yeşil (Testcontainers MSSQL) |
+| Entegrasyon nakit avans testleri | ✅ 4 test; CI run `44141605019` ile yeşil (Testcontainers MSSQL) |
+| Entegrasyon kredi/borç testleri | ✅ 8 test; CI run `44150709461` ile yeşil (Testcontainers MSSQL) |
+| Entegrasyon raporlama testleri | ✅ 7 test; CI run `44156632893` ile yeşil (Testcontainers MSSQL) |
 | Birim testleri (kimlik) | ✅ 22 test (doğrulama + JWT) |
 | Modül testleri (Expenses) | ✅ 55 test (domain + handler, SQLite in-memory) |
 | Modül testleri (CreditCards) | ✅ 78 test (domain + handler, SQLite in-memory; nakit avans dahil) |
 | Modül testleri (CashInflows) | ✅ 48 test (domain + handler, SQLite in-memory) |
+| Modül testleri (Debts) | ✅ 31 test (domain + handler + atomiklik, SQLite in-memory) |
+| Modül testleri (Reporting) | ✅ 10 test (handler, fake `ModuleContracts`) |
 
 ### 2.2 Ortam
 
 | Konu | Değer |
 |---|---|
-| .NET SDK | `10.0.403` |
+| .NET SDK | `10.0.404` |
 | Çözüm dosyası | `FinTrack.slnx` (`.sln` değil) |
 | Test çalıştırma | `dotnet test FinTrack.slnx` |
 | EF aracı | `dotnet-ef` `10.0.15` (yerel tool manifest: `dotnet-tools.json`) |
@@ -77,21 +83,24 @@
 
 ### 2.3 Mevcut iskelet sınırları
 
-- Modül `_status` uç noktaları **geçicidir**; ilgili dilim bitince kaldırılır.
+- Modül `_status` uç noktaları **geçiciydi**; ilgili dilim bitince kaldırıldı.
   Slice 2 ile `Expenses`, slice 3 ile `CreditCards`, slice 5 ile `CashInflows`,
-  slice 7 ile `Debts` `_status` uç noktası kaldırıldı; yalnızca `Reporting` kaldı
-  (slice 8'de kaldırılacaktır).
+  slice 7 ile `Debts`, slice 8 ile `Reporting` kaldırıldı; artık hiçbir modülde
+  `_status` yok. Tüm modül yolları `RequireAuthorization()` kullanır.
 - `ExpensesModule` harcama/kategori uç noktalarını, `expenses` DbContext'ini ve
   migration'ını içerir. `CreditCardsModule` kart/ekstre/ödeme/nakit avans uç
   `cards` DbContext'ini ve migration'ını içerir. `CashInflowsModule` para girişi
   uç noktalarını, `inflows` DbContext'ini ve migration'ını içerir. `DebtsModule`
-  ve `ReportingModule` yalnızca DI ve route grubu kaydeder.
+  `debts` DbContext'ini ve migration'ını içerir. `ReportingModule` salt okunur
+  olduğu için DbContext/migration içermez; yalnızca DI, route grubu ve
+  `ModuleContracts` okuma sözleşmelerini tüketen handler'ları kaydeder.
 - Identity katmanı hazırdır: `FinTrack.Api/Identity`, `identity` şeması,
   `ApplicationUser`, `RefreshToken`, migration ve auth uç noktaları.
-- Debts ve Reporting modüllerinde henüz DbContext, migration veya handler yoktur.
-- `FinTrack.Modules.Expenses.Tests`, `FinTrack.Modules.CreditCards.Tests` ve
-  `FinTrack.Modules.CashInflows.Tests` mevcuttur; Debts ve Reporting test
-  projeleri ilgili dilimde oluşturulur.
+- Reporting modülünde DbContext/migration yoktur; veri yalnızca
+  `ModuleContracts` üzerinden okunur (docs/05 §7.6).
+- Beş modül test projesi mevcuttur: `FinTrack.Modules.Expenses.Tests`,
+  `FinTrack.Modules.CreditCards.Tests`, `FinTrack.Modules.CashInflows.Tests`,
+  `FinTrack.Modules.Debts.Tests` ve `FinTrack.Modules.Reporting.Tests`.
 
 ---
 
@@ -107,7 +116,7 @@
 | 5 | Para girişi | M | 1 | ✅ |
 | 6 | Nakit avans | M | 3, 4, 5 + ADR-0009 | ✅ |
 | 7 | Kredi + kişisel borç | L | 5 + ADR-0009 | ✅ |
-| 8 | Raporlama | L | 2–7 | ⏳ sıradaki |
+| 8 | Raporlama | L | 2–7 | ✅ |
 | 9 | MAUI istemci | L | 1–8 | ⏳ |
 
 **Büyüklük:** S ≈ 1 oturum, M ≈ 2–3 oturum, L ≈ 4+ oturum. Takvim taahhüdü değildir.
@@ -537,11 +546,18 @@ iptal kuralları.
 - Reporting başka modülün tablosuna doğrudan erişmez (mimari test).
 
 **Kabul kriterleri:**
-- `docs/05` §7, §9/11–12 ve `docs/06` §8 ile uyum.
-- `_status` uç noktası kaldırılır.
+- [x] `docs/05` §7, §9/11–16 ve `docs/06` §8 ile uyum.
+- [x] 3 GET uç noktası; `year`/`month`/`days` doğrulaması ProblemDetails döner.
+- [x] Reporting salt okunur; `ModuleContracts` dışında veriye erişmez (mimari
+      test); DbContext/migration yok.
+- [x] `_status` uç noktası kaldırıldı; route grubu `RequireAuthorization()`.
+- [x] Varsayılan `Europe/Istanbul`; kullanıcı tercihi `ICurrentUser.PreferredTimeZone`.
+- [x] 10 yeni modül + 7 yeni entegrasyon testi; toplam **320/320** (248 birim/
+      mimari + 72 entegrasyon), CI run `44156632893` ile yeşil.
 
 **Riskler:** Modüller arası sorgu sayısı/performans; dönem sınırları; tutarların
-gösterim yuvarlaması.
+gösterim yuvarlaması. Entegrasyon testleri yerel Docker daemon kapalı olduğu için
+CI'da Ubuntu + Testcontainers MSSQL ile doğrulandı.
 
 ---
 
@@ -845,3 +861,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |
 | 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
 | 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
+| 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |

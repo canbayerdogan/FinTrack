@@ -1,6 +1,6 @@
 # FinTrack — İş Kuralları (Business Rules)
 
-**Sürüm:** 1.3
+**Sürüm:** 1.4
 **Tarih:** 2026-11-17
 **Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
@@ -598,6 +598,14 @@ Aşağıdaki testler CI'da zorunludur; biri kırmızıysa sürüm çıkmaz.
 10. Kredi ve kişisel borç oluşturma, bağlı para girişi olmadan tamamlanmaz.
 11. `Unknown` kaynaklı para girişi kazanılmış gelire dahil edilmez.
 12. Rapor dönemi saat dilimi sınırında doğru hesaplanır.
+13. Aylık özette kazanılmış gelir, diğer girişler ve `Unknown` birbirine
+    karışmaz; `isBankBalance: false` ve açıklama alanı her zaman döner.
+14. İade, `RefundedOn` döneminde orijinal harcamanın kategorisinde negatif
+    gider olarak görünür; orijinal dönem geriye dönük değişmez.
+15. Borç özeti yalnızca `Σ(max(0, kartBorc)) + kalan kredi + kalan kişisel borç`
+    formülünü uygular; ekstre tutarı eklenmez, kart alacağı düşülmez.
+16. Yaklaşan ödemeler bilgi amaçlıdır, yeni kayıt oluşturmaz; Reporting salt
+    okunur ve `ModuleContracts` dışında veriye erişmez (mimari test).
 
 ---
 

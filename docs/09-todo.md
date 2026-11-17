@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.11
+**Sürüm:** 1.12
 **Tarih:** 2026-11-17
-**Bağlı belgeler:** [Durum notu v2.2](08-durum-ve-devam-notu.md) · [Yol haritası v1.12](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -231,6 +231,29 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Dokümanlar:** `docs/05` §6, `docs/06` §7, `docs/07` v1.12, `docs/08`
       v2.2, `README.md`, bu dosya.
 
+### Slice 8 — Raporlama ✅ (2026-11-17)
+
+- [x] **ModuleContracts:** `ExpenseReportTotals`, `CashInflowReportTotals`,
+      `CardDebtReport`/`CardStatementDue`, `LoanDebtEntry`, `PersonalDebtEntry`,
+      `LoanInstallmentDue` ve 4 okuma sözleşmesi; mevcut 4 sözleşme korundu.
+- [x] **Owner adapter'ları:** Expenses, CashInflows, CreditCards ve Debts
+      **Application** katmanında; Infrastructure/DbContext değişmedi.
+- [x] **Reporting.Application:** DTO/query/handler'lar + açık DI kayıtları;
+      Reporting.Infrastructure boş (bilinçli: DbContext/migration yok).
+- [x] **Endpoints:** `GET /reports/monthly`, `/debt-summary`,
+      `/upcoming-payments`; `ReportingProblems` ile ProblemDetails; `_status`
+      kaldırıldı, grup `RequireAuthorization()`.
+- [x] **Kurallar:** takvim ayı, `Europe/Istanbul` varsayılan, kullanıcı saat
+      dilimi; iade `RefundedOn` döneminde negatif gider; borç formülünde nakit
+      avans bir kez, ekstre eklenmez, kart alacağı ayrı; yaklaşan ödemeler
+      yeni kayıt oluşturmaz.
+- [x] **Testler:** 10 yeni modül + 7 yeni API entegrasyon testi; toplam
+      320/320 (248 birim/mimari + 72 entegrasyon), CI run `44156632893` yeşil.
+- [x] **Mimari test:** Reporting başka modül katmanlarına/EF'e doğrudan
+      bağımlı olamaz; `FinTrack.ModuleContracts` referansı zorunlu.
+- [x] **Dokümanlar:** `docs/05` §7 ve §9/13–16, `docs/07` v1.13, `docs/08`
+      v2.3, `README.md`, bu dosya.
+
 ### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
@@ -245,9 +268,11 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Slice 7 — Kredi + kişisel borç:** ✅ 2026-11-17. Tam vade planı, taksit
       ödemesi/iptali, kalan borç, geri ödeme ve ADR-0009 atomikliği. Ayrıntı
       yukarıda ve `docs/08` §7.4.
-- [ ] **Slice 8 — Raporlama:** aylık özet, kategori kırılımı, borç özeti,
-      yaklaşan ödemeler; `Europe/Istanbul` dönem sınırları (sıradaki dilim).
-- [ ] **Slice 9 — MAUI istemci:** Shell + MVVM, typed `HttpClient`, auth akışı.
+- [x] **Slice 8 — Raporlama:** ✅ 2026-11-17. Aylık özet, kategori kırılımı,
+      borç özeti, yaklaşan ödemeler; `Europe/Istanbul` dönem sınırları. Ayrıntı
+      yukarıda ve `docs/08` §7.5.
+- [ ] **Slice 9 — MAUI istemci:** Shell + MVVM, typed `HttpClient`, auth akışı
+      (sıradaki dilim; `dotnet workload install maui` ön koşul).
 
 ### Teknik borç / ertelenen
 
@@ -255,7 +280,7 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
-      Slice 7 commit'i sonrası yeşil (300/300, run `44150709461`, Ubuntu +
+      Slice 8 commit'i sonrası yeşil (320/320, run `44156632893`, Ubuntu +
       Testcontainers MSSQL)
 - [x] `docs/01` ayrı dosya gerekli değil
 - [x] Yerel entegrasyon testleri Docker Desktop açıkken çalıştırıldı (50/50,
@@ -282,6 +307,10 @@ dotnet test FinTrack.slnx --nologo -v q
 | Modüller arası sözleşmeler | `src/BuildingBlocks/FinTrack.ModuleContracts/` |
 | ADR-0009 atomik yazma | `src/BuildingBlocks/FinTrack.ModuleContracts/AtomicWrites.cs`, `src/Host/FinTrack.Api/WriteTransactions/` |
 | Nakit avans modülü | `src/Modules/CreditCards/…/CashAdvances/`, `CashAdvanceEndpoints.cs`, `docs/adr/0009-moduller-arasi-atomik-yazma.md` |
+| Borç modülü | `src/Modules/Debts/`, `tests/FinTrack.Modules.Debts.Tests/` |
+| Raporlama modülü | `src/Modules/Reporting/…/Application/Reporting/`, `src/Modules/Reporting/…/Endpoints/`, `tests/FinTrack.Modules.Reporting.Tests/` |
+| Rapor okuma sözleşmeleri | `src/BuildingBlocks/FinTrack.ModuleContracts/ReportingReportContracts.cs` |
+| Rapor adapter'ları | `src/Modules/{Expenses,CashInflows,CreditCards,Debts}/…/Application/Reporting/` |
 
 ---
 
@@ -301,3 +330,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.9 | 2026-11-16 | Slice 5 tamamlandı ve kutular işaretlendi; 185 birim + 50 entegrasyon = 235 test yerelde yeşil; aktif dilim Slice 6 (ADR-0009 ön koşulu) |
 | 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı; 21 modül + 5 entegrasyon testi eklendi, toplam 261/261, CI run `44141605019` yeşil, migration senkron; aktif dilim Slice 7 |
 | 1.11 | 2026-11-17 | Slice 7 tamamlandı; 31 modül + 8 entegrasyon testi eklendi, toplam 300/300, CI run `44150709461` yeşil, migration senkron; aktif dilim Slice 8 |
+| 1.12 | 2026-11-17 | Slice 8 tamamlandı; 10 modül + 7 entegrasyon testi eklendi, toplam 320/320, CI run `44156632893` yeşil; Reporting salt okunur, DbContext/migration yok, `_status` kaldırıldı; aktif dilim Slice 9 |

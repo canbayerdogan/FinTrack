@@ -9,11 +9,11 @@ Kişisel finans ve harcama takibi uygulaması.
 **Mimari:** modüler monolit · modül içi Clean Architecture · CQRS (mediator'süz)
 
 > Bu depo şu anda **tasarım + iskelet + kimlik doğrulama + harcama/kategori +
-> kredi kartı + ekstre/ödeme + para girişi + nakit avans + kredi/kişisel borç**
-> aşamasındadır. Çözüm iskeleti (slice 0), kimlik doğrulama (slice 1),
+> kredi kartı + ekstre/ödeme + para girişi + nakit avans + kredi/kişisel borç +
+> raporlama** aşamasındadır. Çözüm iskeleti (slice 0), kimlik doğrulama (slice 1),
 > harcama/kategori (slice 2), kart + hesaplanan bakiye (slice 3), ekstre + kart
-> ödemesi (slice 4), para girişi (slice 5), nakit avans (slice 6) ve kredi/kişisel
-> borç (slice 7) derlenir ve testleri geçer; raporlama (slice 8) ve MAUI istemci
+> ödemesi (slice 4), para girişi (slice 5), nakit avans (slice 6), kredi/kişisel
+> borç (slice 7) ve raporlama (slice 8) derlenir ve testleri geçer; MAUI istemci
 > (slice 9) henüz yazılmadı. Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
@@ -96,10 +96,18 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   ve ADR-0009 ile atomik para girişi. `GET/POST /loans` ve
   `GET/POST /personal-debts` uç noktaları; Debts `_status` kaldırıldı.
   31 modül + 8 yeni API entegrasyon testi eklendi.
-- **Testler:** ✅ toplam **300/300** (237 birim/mimari + 63 entegrasyon); CI run
-  `44150709461` yeşil (Ubuntu + Testcontainers MSSQL). Birim/mimari dağılımı:
-  3 mimari + 22 birim + 55 Expenses + 78 CreditCards + 48 CashInflows + 31
-  Debts. Yerel Docker motoru kapalıydı; entegrasyon testleri CI'da doğrulandı.
+- **Slice 8 — Raporlama:** ✅ Salt okunur 3 uç nokta: `GET /reports/monthly`,
+  `/reports/debt-summary`, `/reports/upcoming-payments`. Veri yalnızca
+  `ModuleContracts` üzerinden okunur; Reporting'in DbContext'i/migration'ı yok.
+  Takvim ayı, `Europe/Istanbul` varsayılan, kullanıcı tercihi saat dilimi; borç
+  formülünde nakit avans bir kez, ekstre eklenmez, kart alacağı ayrı. `_status`
+  kaldırıldı, route grubu `RequireAuthorization()`. 10 modül + 7 yeni API
+  entegrasyon testi eklendi.
+- **Testler:** ✅ toplam **320/320** (248 birim/mimari + 72 entegrasyon); CI run
+  `44156632893` yeşil (Ubuntu + Testcontainers MSSQL). Birim/mimari dağılımı:
+  4 mimari + 22 birim + 55 Expenses + 78 CreditCards + 48 CashInflows + 31
+  Debts + 10 Reporting. Yerel Docker motoru kapalıydı; entegrasyon testleri
+  CI'da doğrulandı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -112,10 +120,11 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Slice 7: `20261117180809_InitialDebts` (`DebtsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 build + testlerini
-  doğruladı: run `44150709461` yeşil (300/300; Slice 6 run `44141605019` idi).
-- **Sıradaki:** slice 8 — raporlama (`docs/07` §4). Slice 7 uçtan uca tamamlandı;
-  borç ve para girişi verileri raporlama için hazır.
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 8 build + testlerini
+  doğruladı: run `44156632893` yeşil (320/320; Slice 7 run `44150709461` idi).
+- **Sıradaki:** slice 9 — MAUI istemci (`docs/07` §4; `dotnet workload install
+  maui` ön koşul). Slice 8 uçtan uca tamamlandı; backend v1 için tüm dilimler
+  (0–8) yeşil.
 
 ## Çözüm yapısı (özet)
 
@@ -128,7 +137,7 @@ src/
 ├─ Modules/CashInflows/…                  para girişi
 ├─ Modules/CreditCards/…                  kart, işlem, ekstre, nakit avans
 ├─ Modules/Debts/…                        kredi + kişisel borç
-├─ Modules/Reporting/…                    aylık özet (salt okunur)
+├─ Modules/Reporting/…                    aylık özet + borç özeti + yaklaşan ödemeler (salt okunur)
 └─ Mobile/FinTrack.Mobile                 .NET MAUI
 ```
 
