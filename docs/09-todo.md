@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **9 — MAUI istemci** (tamamlandı; Android/CI doğrulaması bekleniyor) |
-| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon (CI) · toplam **335/335** · Android hedefi CI'da doğrulanacak · 2026-11-18 |
-| Sıradaki komut | Push sonrası CI run'ını izle; run ID'sini `docs/08` ve `README.md`'e ekle |
+| Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil) |
+| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon · toplam **335/335** · CI run `44189257561` yeşil (Android + Windows) · 2026-11-18 |
+| Sıradaki komut | Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke (giriş → harcama → kart → rapor) |
 
 ---
 
@@ -277,8 +277,9 @@ dotnet test FinTrack.slnx --nologo -v q
       15 mobile) + 72 entegrasyon = **335/335** beklenen; Debug + Release yeşil.
 - [x] **Build:** Windows hedefi Debug + Release 0 uyarı/0 hata; backend Release
       0/0.
-- [ ] **Android/CI:** yerel SDK/JDK eksik → Android derlemesi CI Ubuntu
-      job'ında doğrulanacak; run ID'si eklenecek.
+- [x] **Android/CI:** yerel SDK/JDK eksik → Android derlemesi CI Ubuntu
+      job'ında (Java 17 + `dotnet workload restore`) derlendi; run
+      `44189257561` yeşil (335/335).
 - [ ] **Emülatör smoke:** Android emülatörü kurulmadı; manuel uçtan uca akış
       daha sonra.
 - [x] **Dokümanlar:** `docs/07` v1.14, `docs/08` v2.4, `README.md`, bu dosya.
@@ -364,4 +365,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.10 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı; 21 modül + 5 entegrasyon testi eklendi, toplam 261/261, CI run `44141605019` yeşil, migration senkron; aktif dilim Slice 7 |
 | 1.11 | 2026-11-17 | Slice 7 tamamlandı; 31 modül + 8 entegrasyon testi eklendi, toplam 300/300, CI run `44150709461` yeşil, migration senkron; aktif dilim Slice 8 |
 | 1.12 | 2026-11-17 | Slice 8 tamamlandı; 10 modül + 7 entegrasyon testi eklendi, toplam 320/320, CI run `44156632893` yeşil; Reporting salt okunur, DbContext/migration yok, `_status` kaldırıldı; aktif dilim Slice 9 |
-| 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI doğrulaması ve emülatör smoke'u kaldı |
+| 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil; emülatör smoke'u kaldı |

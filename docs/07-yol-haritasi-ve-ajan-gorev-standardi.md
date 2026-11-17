@@ -594,10 +594,11 @@ oturum ekranı.
       isteğinde bearer olmaması, POST retry yapmama, başarısız refresh'te token
       silme/oturum olayı, ViewModel doğrulama ve hata eşlemesi.
 - [x] Birim/mimari toplam **263/263** (248 backend + 15 mobile); entegrasyon
-      72/72 değişmedi; beklenen toplam **335/335**.
+      72/72; toplam **335/335**; CI run `44189257561` yeşil.
 - [x] Windows hedefi (`net10.0-windows10.0.19041.0`) 0 uyarı/0 hata.
-- [ ] Android hedefi yerel SDK/JDK olmadığı için CI Ubuntu job'ında
-      (`net10.0-android`) doğrulanacak; emülatör smoke'u daha sonra.
+- [x] Android hedefi (`net10.0-android`) yerel SDK/JDK olmadığı için CI Ubuntu
+      job'ında (Java 17 + `dotnet workload restore`) derlendi; run `44189257561`
+      yeşil. Emülatör smoke'u SDK kurulumuna bırakıldı.
 
 **Kabul kriterleri:**
 - [x] `docs/06` sözleşmeleriyle uyum; token'lar loglanmaz.
@@ -882,4 +883,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
 | 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
-| 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI'da doğrulanacak |
+| 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI run `44189257561` yeşil |

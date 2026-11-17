@@ -42,9 +42,9 @@
 `FinTrack.Mobile.Core`, `FinTrack.Mobile`, `FinTrack.Mobile.Tests` eklendi). Depo
 **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
-GitHub Actions CI (`.github/workflows/ci.yml`) Slice 8 build + testlerini
-doğruladı: run `44156632893` yeşil (320/320; Slice 7 run `44150709461` idi).
-Slice 9 push sonrası CI doğrulaması bekleniyor (Android hedefi dahil).
+GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
+doğruladı: run `44189257561` yeşil (335/335; Android + Windows hedefleri;
+Slice 8 run `44156632893`, Slice 7 run `44150709461` idi).
 
 **Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
 typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
@@ -70,8 +70,8 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 > **2026-11-18 notu:** Slice 9 tamamlandı. Backend Debug/Release build 0/0;
 > Windows MAUI build (Debug + Release) 0/0; birim/mimari **263/263** (248
 > backend + 15 mobile). Android SDK/JDK yerel eksik → `net10.0-android` CI
-> Ubuntu job'ında doğrulanacak. Entegrasyon 72/72 (CI run `44156632893`),
-> beklenen toplam **335/335**. Yerel Docker daemon'u kapalıydı
+> Ubuntu job'unda derlendi; run `44189257561` yeşil. Entegrasyon 72/72, toplam
+> **335/335** CI'da doğrulandı. Yerel Docker daemon'u kapalıydı
 > (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı).
 
 | Kontrol | Komut | Sonuç |
@@ -83,8 +83,8 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Birim testleri (Debug) | 8 birim/mimari projesi ayrı ayrı | ✅ 263/263 |
 | Release testleri | 8 birim/mimari projesi `-c Release` | ✅ 263/263 |
 | Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (CI run `44156632893`; yerel daemon kapalı) |
-| Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` | ⏳ Yerel SDK/JDK yok; CI Ubuntu job'ında |
-| CI | GitHub Actions `build-test` | ✅ Son yeşil: run `44156632893` (320/320); Slice 9 run'ı push sonrası |
+| Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` (CI Ubuntu, Java 17) | ✅ Yerel SDK/JDK yok; CI run `44189257561` ile derlendi |
+| CI | GitHub Actions `build-test` | ✅ run `44189257561` yeşil (335/335; Android + Windows); önceki: `44156632893` (320/320) |
 | Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 9'da DbContext/entity/migration yok) |
 
 **Test dağılımı (335 = 263 birim + 72 entegrasyon):**
@@ -596,8 +596,8 @@ raporlar, ayarlar) tamamlandı.
 **Doğrulama:** Windows hedefi Debug + Release 0 uyarı/0 hata (`x:DataType`
 uygulandı); 15 mobile testi dahil 263/263 birim/mimari Debug + Release; 72
 entegrasyon testi değişmedi. Android hedefi yerel SDK/JDK eksikliği nedeniyle CI
-Ubuntu job'ına bırakıldı; emülatör smoke'u yapılmadı. Token'lar loglanmaz, hata
-mesajlarına eklenmez.
+Ubuntu job'ında derlendi (run `44189257561` yeşil); emülatör smoke'u yapılmadı.
+Token'lar loglanmaz, hata mesajlarına eklenmez.
 
 ---
 
@@ -634,9 +634,10 @@ mesajlarına eklenmez.
 - Slice 8 kapandı; 10 modül + 7 entegrasyon testi eklendi; toplam 320/320,
   CI run `44156632893` yeşil. Reporting DbContext/migration içermez.
 - Slice 9 kapandı; 15 mobile testi eklendi; birim/mimari 263/263, entegrasyon
-  72/72; beklenen toplam 335/335. MAUI iş yükleri kuruldu, Windows build 0/0.
-- Android yerel derlemesi ve emülatör smoke'u CI/SDK kurulumuna bırakıldı;
-  push sonrası CI run ID'si buraya ve `README.md`'e eklenecek.
+  72/72; toplam 335/335. MAUI iş yükleri kuruldu, Windows build 0/0; Android
+  CI run `44189257561` ile yeşil.
+- Yerel Android SDK/JDK ve emülatör kurulmadı; manuel uçtan uca smoke emülatör
+  kurulumuna bırakıldı.
 
 ---
 
@@ -658,4 +659,4 @@ mesajlarına eklenmez.
 | 2.1 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 tamamlandı: `cards.CashAdvances`, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
 | 2.2 | 2026-11-17 | Slice 7 tamamlandı: `debts` şeması, tam taksit planı, ödeme/iptal kuralları, kişisel borç ve geri ödemeler, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 2.3 | 2026-11-17 | Slice 8 tamamlandı: 3 salt okunur rapor uç noktası, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
-| 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI doğrulaması bekleniyor |
+| 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil |

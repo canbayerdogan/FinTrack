@@ -14,8 +14,9 @@ Kişisel finans ve harcama takibi uygulaması.
 > doğrulama (slice 1), harcama/kategori (slice 2), kart + hesaplanan bakiye
 > (slice 3), ekstre + kart ödemesi (slice 4), para girişi (slice 5), nakit avans
 > (slice 6), kredi/kişisel borç (slice 7), raporlama (slice 8) ve MAUI istemci
-> (slice 9) yazıldı; backend + Windows hedefi derlenir, testleri geçer. Android
-> hedefi CI'da doğrulanacak. Kod yazılmadan önce dokümanların okunması zorunludur.
+> (slice 9) yazıldı; backend + Android + Windows hedefleri derlenir, testleri
+> geçer ve CI run `44189257561` ile doğrulandı. Kod yazılmadan önce dokümanların
+> okunması zorunludur.
 
 ---
 
@@ -112,11 +113,12 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   ayarlar. Token'lar loglanmaz. Hedefler: Android + Windows; çevrimdışı yazma
   ve bildirim kapsam dışı.
 - **Testler:** ✅ toplam **335/335** (263 birim/mimari + 72 entegrasyon); son
-  yeşil CI run `44156632893` (Slice 8; Slice 9 run'ı push sonrası eklenecek).
+  yeşil CI run `44189257561` (Slice 9; Slice 8 run `44156632893` idi).
   Birim/mimari dağılımı: 4 mimari + 22 birim + 55 Expenses + 78 CreditCards +
   48 CashInflows + 31 Debts + 10 Reporting + 15 Mobile. Windows MAUI hedefi
-  Debug + Release 0 uyarı/0 hata; Android hedefi CI Ubuntu job'ında doğrulanacak.
-  Yerel Docker motoru kapalıydı; entegrasyon testleri CI'da doğrulandı.
+  Debug + Release 0 uyarı/0 hata; Android hedefi CI Ubuntu job'unda
+  (`net10.0-android`, Java 17 + workload restore) doğrulandı. Yerel Docker
+  motoru kapalıydı; entegrasyon testleri CI'da doğrulandı.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -129,13 +131,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Slice 7: `20261117180809_InitialDebts` (`DebtsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 8 build + testlerini
-  doğruladı: run `44156632893` yeşil (320/320; Slice 7 run `44150709461` idi).
-  Slice 9 job'u Java 17 + `dotnet workload restore` ile Android + Windows
-  hedeflerini derleyecek; push sonrası run ID'si eklenecek.
-- **Sıradaki:** Slice 9 push sonrası CI run'ını izle (Android derlemesi dahil),
-  run ID'sini dokümanlara ekle; Android emülatörü kurulduğunda manuel uçtan uca
-  smoke yap. v1 dilimleri (0–9) kod tarafında tamamlandı.
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
+  doğruladı: run `44189257561` yeşil (Android + Windows hedefleri, Java 17 +
+  `dotnet workload restore`; 335/335; Slice 8 run `44156632893`, Slice 7 run
+  `44150709461` idi).
+- **Sıradaki:** Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke yap
+  (giriş → harcama → kart → rapor). v1 dilimleri (0–9) kod tarafında tamamlandı
+  ve CI'da yeşil.
 
 ## Çözüm yapısı (özet)
 
