@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsTestProject>true</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Debts\FinTrack.Modules.Debts.Application\FinTrack.Modules.Debts.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Debts\FinTrack.Modules.Debts.Domain\FinTrack.Modules.Debts.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Debts\FinTrack.Modules.Debts.Infrastructure\FinTrack.Modules.Debts.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Application\FinTrack.Modules.CashInflows.Application.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Domain\FinTrack.Modules.CashInflows.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Modules\CashInflows\FinTrack.Modules.CashInflows.Infrastructure\FinTrack.Modules.CashInflows.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
+  </ItemGroup>
+
+</Project>

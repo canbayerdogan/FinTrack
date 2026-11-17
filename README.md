@@ -85,16 +85,22 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   gönderirse `400`. `BankLoan`, `CashAdvance`, `PersonalBorrowing` doğrudan
   oluşturulamaz (`400 DebtSourceRequiresOwnerEndpoint`). Borç bağlantılı kayıt
   `debtLink` döner; doğrudan güncelleme/iptal `409`. 48 modül + 5 entegrasyon
-  testi; `_status` yalnızca Debts ve Reporting'de kaldı.
+  testi; `_status` yalnızca Reporting'de kaldı.
 - **Slice 6 — Nakit avans:** ✅ Tamamlandı ve CI'da doğrulandı. `cards.CashAdvances` migration'ı,
   `GET/POST /cards/{id}/cash-advances` ve iptal uç noktası; borç formülünde
   `+ cashAdvances`. ADR-0009 ile avans ve bağlı `CashInflow` aynı DB
   transaction'ında yazılır/iptal edilir; yarı kayıt kalmaz. 21 yeni modül + 5
   yeni API entegrasyon testi eklendi.
-- **Testler:** ✅ **261/261** yeşil: 206 birim testi (3 mimari + 22 birim +
-  55 Expenses + 78 CreditCards + 48 CashInflows) + 55 entegrasyon testi
-  (Slice 6'nın 5 yeni testi dahil). Yerel Docker motoru kapalıydı; entegrasyon
-  testleri CI'da Ubuntu + Testcontainers MSSQL ile çalıştırıldı.
+- **Slice 7 — Kredi + kişisel borç:** ✅ `debts` şeması/migration, tam taksit
+  planı, sıralı ödeme ve iptal, kişisel borç/geri ödeme, kalan borç formülleri
+  ve ADR-0009 ile atomik para girişi. `GET/POST /loans` ve
+  `GET/POST /personal-debts` uç noktaları; Debts `_status` kaldırıldı.
+  31 modül + 8 yeni API entegrasyon testi eklendi.
+- **Testler:** ✅ yerelde **237/237** birim/mimari (3 mimari + 22 birim +
+  55 Expenses + 78 CreditCards + 48 CashInflows + 31 Debts). Slice 7'nin 8
+  entegrasyon testi dahil toplam **300/300** CI doğrulaması bekleniyor. Yerel
+  Docker motoru kapalıydı; entegrasyon testleri CI'da Ubuntu + Testcontainers
+  MSSQL ile çalıştırılacak.
 - **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
   sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
   edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
@@ -104,13 +110,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Slice 4: `20261116180727_AddCardPaymentsAndStatements`. Slice 5:
   `20261116182933_InitialCashInflows`. Slice 6:
   `20261117174437_AddCashAdvances` (`CreditCardsDbContext` modeliyle senkron).
+  Slice 7: `20261117180809_InitialDebts` (`DebtsDbContext` modeliyle senkron).
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
-  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 6 commit'i sonrası
-  build + **261/261** testle yeşil (run `44141605019`, Ubuntu,
-  Testcontainers MSSQL).
-- **Sıradaki:** slice 7 — kredi + kişisel borç (`docs/07` §4). Slice 6 CI
-  doğrulaması tamamlandı; geçiş ön koşulu karşılandı.
+  GitHub Actions CI (`.github/workflows/ci.yml`) Slice 7 sonrası build + testleri
+  doğrulayacak (run numarası kapanışta eklenecek; Slice 6 run `44141605019` idi).
+- **Sıradaki:** slice 8 — raporlama (`docs/07` §4). Slice 7 uçtan uca tamamlandı;
+  borç ve para girişi verileri raporlama için hazır.
 
 ## Çözüm yapısı (özet)
 

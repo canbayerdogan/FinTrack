@@ -1,7 +1,7 @@
 # FinTrack — İş Kuralları (Business Rules)
 
-**Sürüm:** 1.2
-**Tarih:** 2026-11-15
+**Sürüm:** 1.3
+**Tarih:** 2026-11-17
 **Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
@@ -443,6 +443,10 @@ Kart **alışverişi ve iadesi** bu listede yoktur; Expenses'a aittir (ADR-0008)
 - `PaidOn <= bugün`.
 - Bir taksit için tek aktif ödeme olabilir.
 - Ödeme iptal edilirse taksit tekrar `Planned` olur; borç geri yükselir.
+- Sıra kuralı ödeme anında uygulanır; iptalde son ödenmiş taksit kısıtı yoktur.
+  Birden fazla taksit ödenmiş olsa da herhangi bir ödenmiş taksit ödemesi
+  iptal edilebilir (2026-11-17 onayı). İptal yalnızca ilgili taksiti `Planned`
+  yapar; yeniden ödeme için sıra kontrolü tekrar uygulanır.
 - Taksit ödemesi **gider değildir**; borcu azaltır.
 
 ### 6.4 Kalan kredi borcu
@@ -636,3 +640,4 @@ Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 | 1.0 | 2026-11-13 | İlk sürüm; doküman 02 §5 açık kararları ve kart alışverişi sahipliği kapatıldı |
 | 1.1 | 2026-11-15 | Slice 4 tarih kesiti/iptal/devreden borç kuralları netleştirildi; kredi sözleşmesi `MonthlyPayment` girdisine geçti, taksitler eşitlendi |
 | 1.2 | 2026-11-15 | Gelecek `asOf` reddi ve iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
+| 1.3 | 2026-11-17 | Taksit ödeme iptalinde son ödenmiş taksit kısıtı kaldırıldı; sıra kuralı yalnızca ödeme anında uygulanıyor (2026-11-17 onayı) |

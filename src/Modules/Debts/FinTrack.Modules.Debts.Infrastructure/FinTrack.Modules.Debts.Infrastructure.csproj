@@ -3,11 +3,16 @@
   <ItemGroup>
     <ProjectReference Include="..\FinTrack.Modules.Debts.Application\FinTrack.Modules.Debts.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\FinTrack.SharedKernel\FinTrack.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\FinTrack.ModuleContracts\FinTrack.ModuleContracts.csproj" />
   </ItemGroup>
 
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.15" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="FinTrack.Modules.Debts.Tests" />
   </ItemGroup>
 </Project>

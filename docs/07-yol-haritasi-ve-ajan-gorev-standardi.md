@@ -1,6 +1,6 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.11
+**Sürüm:** 1.12
 **Tarih:** 2026-11-17
 **Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
@@ -450,43 +450,61 @@ entegrasyon testleriyle doğrulandı.
 
 ---
 
-### Slice 7 — Kredi + kişisel borç
+### Slice 7 — Kredi + kişisel borç ✅
+
+**Durum:** ✅ Bitti (2026-11-17). 31 yeni modül testi ve 8 yeni API entegrasyon
+testi eklendi; birim/mimari **237/237** yerelde yeşil, toplam **300/300** CI
+doğrulaması bekleniyor. Migration: `20261117180809_InitialDebts`.
 
 **Amaç:** Taksitli kredi ve kişisel borç yaşam döngüsünü kurmak.
 
-**Ön koşul:** Slice 6'daki ADR-0009 mekanizması.
+**Ön koşul:** ✅ Slice 6'daki ADR-0009 mekanizması hazırdı.
 
 **Kapsam:**
-- `Loan`, `Installment` (tüm vade planı), `PersonalDebt`, `PersonalDebtRepayment`.
-- Kredi girdisi: `Principal`, `MonthlyPayment`, `InstallmentCount`, `FirstDueDate`;
-  banka ve açıklama opsiyonel.
-- `TotalRepayment = MonthlyPayment × InstallmentCount` türetilir; kullanıcı
-  girdisi değildir. `TotalRepayment >= Principal` doğrulanır.
-- Taksitler eşittir (`InstallmentAmount = MonthlyPayment`); son taksite otomatik
-  yuvarlama farkı eklenmez. Ay sonu gün sabitleme uygulanır.
-- Sıralı taksit ödeme; kısmi ödeme yok; ödeme iptali.
-- Kredi/kişisel borç oluştururken bağlı `CashInflow` atomik oluşur.
-- Kredi iptali (ödenmiş taksit varsa `409`), kişisel borç iptali (aktif geri
-  ödeme varsa `409`).
-- Endpoint'ler: `docs/06` §7.
+- [x] `Loan`, `Installment` (tüm vade planı), `PersonalDebt`,
+      `PersonalDebtRepayment`.
+- [x] Kredi girdisi: `Principal`, `MonthlyPayment`, `InstallmentCount`,
+      `FirstDueDate`; banka ve açıklama opsiyonel.
+- [x] `TotalRepayment = MonthlyPayment × InstallmentCount` türetilir; kullanıcı
+      girdisi değildir. `TotalRepayment >= Principal` doğrulanır.
+- [x] Taksitler eşittir (`InstallmentAmount = MonthlyPayment`); son taksite
+      otomatik yuvarlama farkı eklenmez. Ay sonu gün sabitleme uygulanır.
+- [x] Sıralı taksit ödeme; kısmi ödeme yok; ödeme iptali.
+- [x] Kredi/kişisel borç oluştururken bağlı `CashInflow` atomik oluşur.
+- [x] Kredi iptali (ödenmiş taksit varsa `409`), kişisel borç iptali (aktif geri
+      ödeme varsa `409`).
+- [x] Endpoint'ler: `docs/06` §7.
 
 **Kapsam dışı:** Faiz/KKDF/BSMV kırılımı, erken kapama, yeniden yapılandırma.
 
+**Uygulama notları:**
+- Handler paylaşılan `DbTransaction`'ı açar; writer transaction açmaz/commit
+  etmez; her yazan modül `Enlist(scope)` yapar ve `finally` içinde `Enlist(null)`
+  çağırır (ADR-0009).
+- Yeni ödeme/geri ödeme kayıtları repository üzerinden açıkça `Added` olarak
+  izlenir; domain kimliği üretse de EF değişiklik algılama bunu `Modified`
+  sanmaz.
+- `rowVersion` kredi/borç için aggregate'e, ödeme iptali için alt kayda aittir.
+- Kredi para girişi `OccurredOn = today`; kişisel borç para girişi
+  `OccurredOn = BorrowedOn`.
+
 **Testler:**
-- `monthlyPayment × installmentCount = totalRepayment`; taksitler eşit.
-- `totalRepayment < principal` reddi; istemci `totalRepayment` gönderirse `400`.
-- Ayın 31'i → şubat son günü.
-- Planlanan taksit ödenmiş sayılmaz; kalan borç = planlanan toplam.
-- Sırasız ödeme reddi; ödeme iptali taksiti `Planned`'a döndürür.
-- Kredi/kişisel borç para girişi kazanılmış gelir değil.
-- Atomik oluşturma/iptal; yarım kayıt yok.
-- Kişisel borç kalan tutar; aşırı geri ödeme reddi.
+- [x] `monthlyPayment × installmentCount = totalRepayment`; taksitler eşit.
+- [x] `totalRepayment < principal` reddi; istemci `totalRepayment` gönderirse `400`.
+- [x] Ayın 31'i → şubat son günü.
+- [x] Planlanan taksit ödenmiş sayılmaz; kalan borç = planlanan toplam.
+- [x] Sırasız ödeme reddi; ödeme iptali taksiti `Planned`'a döndürür.
+- [x] Sıra kuralı ödeme anında uygulanır; ödenmiş herhangi bir taksit iptal
+      edilebilir (son ödenmiş taksit kısıtı yok, 2026-11-17 onayı).
+- [x] Kredi/kişisel borç para girişi kazanılmış gelir değil.
+- [x] Atomik oluşturma/iptal; yarım kayıt yok.
+- [x] Kişisel borç kalan tutar; aşırı geri ödeme reddi.
 
 **Kabul kriterleri:**
-- `docs/05` §6, §9/3–4, 10 ve `docs/06` §7 ile uyum.
-- `LoanDto` `monthlyPayment` ve türetilmiş `totalRepayment` içerir; ayrı
-  `installmentAmount` alanı yoktur.
-- `_status` uç noktası kaldırılır.
+- [x] `docs/05` §6, §9/3–4, 10 ve `docs/06` §7 ile uyum.
+- [x] `LoanDto` `monthlyPayment` ve türetilmiş `totalRepayment` içerir; ayrı
+      `installmentAmount` alanı yoktur.
+- [x] `_status` uç noktası kaldırılır.
 
 **Riskler:** Tarih aritmetiği; `monthlyPayment` ondalık hassasiyeti; atomiklik;
 iptal kuralları.
@@ -825,3 +843,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.9 | 2026-11-16 | Slice 4 (ekstre + kart ödemesi) tamamlandı; toplam 183 test, yeni migration ve kabul kriterleri işaretlendi; sıradaki dilim Slice 5 |
 | 1.10 | 2026-11-16 | Slice 5 (para girişi) tamamlandı; `inflows` şeması/migration, türetilmiş gelir niteliği, borç kaynağı reddi ve iptal kuralları; 48 modül + 5 entegrasyon testi, toplam 235 test; `_status` yalnızca Debts ve Reporting'de kaldı; sıradaki dilim Slice 6 (ADR-0009 ön koşulu) |
 | 1.11 | 2026-11-17 | ADR-0009 kabul edildi; Slice 6 (nakit avans) tamamlandı: `cards.CashAdvances` migration'ı, atomik avans + para girişi, iptal cascade, bakiye formülü, 21 modül + 5 entegrasyon testi; toplam 261/261, CI run `44141605019` yeşil |
+| 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, yerelde 237/237 |

@@ -27,7 +27,6 @@ public sealed class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Theory]
-    [InlineData("/api/v1/debts/_status", "Debts")]
     [InlineData("/api/v1/reports/_status", "Reporting")]
     public async Task Modul_status_uc_noktasi_calisir(string url, string expectedModule)
     {
@@ -45,6 +44,8 @@ public sealed class SmokeTests : IClassFixture<WebApplicationFactory<Program>>
     [InlineData("/api/v1/expenses")]
     [InlineData("/api/v1/categories")]
     [InlineData("/api/v1/cards")]
+    [InlineData("/api/v1/loans")]
+    [InlineData("/api/v1/personal-debts")]
     public async Task Expenses_uc_noktalari_kimlik_dogrulama_ister(string url)
     {
         var response = await _client.GetAsync(url);

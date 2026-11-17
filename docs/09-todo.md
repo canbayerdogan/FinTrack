@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.10
+**Sürüm:** 1.11
 **Tarih:** 2026-11-17
-**Bağlı belgeler:** [Durum notu v2.1](08-durum-ve-devam-notu.md) · [Yol haritası v1.11](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.2](08-durum-ve-devam-notu.md) · [Yol haritası v1.12](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -211,6 +211,25 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **CI:** run `44141605019` başarılı (Ubuntu + Testcontainers MSSQL).
 - [x] **Dokümanlar:** `docs/07` v1.11, `docs/08` v2.1, `README.md`, ADR-0009.
 
+### Slice 7 — Kredi + kişisel borç ✅ (2026-11-17)
+
+- [x] **Domain:** `Loan`, `Installment` (tam vade planı), `InstallmentPayment`,
+      `PersonalDebt`, `PersonalDebtRepayment`, durumlar ve domain hataları.
+- [x] **Application:** create/get/list/cancel handler'ları, taksit ödeme/iptal,
+      geri ödeme ekleme/iptal, repository/sorgu portları.
+- [x] **Infrastructure:** `debts` şeması, EF config, repository/sorgu, global
+      query filter, migration `20261117180809_InitialDebts`.
+- [x] **Endpoints:** `GET/POST /loans`, `GET/POST /personal-debts`, taksit ve
+      geri ödeme alt kaynakları; `docs/06` §7 ile uyum; Debts `_status` kaldırıldı.
+- [x] **Atomiklik:** ADR-0009 ile kredi/borç ve bağlı `CashInflow` aynı
+      transaction'da oluşturulur/iptal edilir; rollback testleri yeşil.
+- [x] **Kurallar:** 31'e ay sonu, eşit taksit, sıralı ödeme, her ödenmiş taksitin
+      iptali, kalan borç formülleri, türetilmiş alan reddi, kullanıcı izolasyonu.
+- [x] **Testler:** 31 yeni modül + 8 yeni API entegrasyon testi; yerelde
+      237/237 birim/mimari, toplam 300/300 CI doğrulaması bekleniyor.
+- [x] **Dokümanlar:** `docs/05` §6, `docs/06` §7, `docs/07` v1.12, `docs/08`
+      v2.2, `README.md`, bu dosya.
+
 ### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
@@ -222,10 +241,11 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Slice 6 — Nakit avans:** ✅ 2026-11-17. ADR-0009 ile atomik
       `CashAdvance` + bağlı `CashInflow`, iptalde ikisinin birlikte iptali,
       borç formülüne avans terimi. Ayrıntı yukarıda ve `docs/08` §7.3.
-- [ ] **Slice 7 — Kredi + kişisel borç:** tam vade planı, taksit ödemesi,
-      kalan borç; borç doğuran giriş zorunluluğu.
+- [x] **Slice 7 — Kredi + kişisel borç:** ✅ 2026-11-17. Tam vade planı, taksit
+      ödemesi/iptali, kalan borç, geri ödeme ve ADR-0009 atomikliği. Ayrıntı
+      yukarıda ve `docs/08` §7.4.
 - [ ] **Slice 8 — Raporlama:** aylık özet, kategori kırılımı, borç özeti,
-      yaklaşan ödemeler; `Europe/Istanbul` dönem sınırları.
+      yaklaşan ödemeler; `Europe/Istanbul` dönem sınırları (sıradaki dilim).
 - [ ] **Slice 9 — MAUI istemci:** Shell + MVVM, typed `HttpClient`, auth akışı.
 
 ### Teknik borç / ertelenen

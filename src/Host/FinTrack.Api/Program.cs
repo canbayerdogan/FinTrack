@@ -125,7 +125,7 @@ builder.Services
     .AddExpensesModule(connectionString)
     .AddCashInflowsModule(connectionString)
     .AddCreditCardsModule(connectionString)
-    .AddDebtsModule()
+    .AddDebtsModule(connectionString)
     .AddReportingModule();
 
 var app = builder.Build();
