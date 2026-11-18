@@ -1,6 +1,6 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.18
+**Sürüm:** 1.19
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Durum notu v2.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
@@ -313,7 +313,8 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ### Teknik borç / ertelenen
 
-- [ ] `Idempotency-Key` (tüm POST) — ayrı görev
+- [ ] `Idempotency-Key` (tüm POST) — ayrı görev; karar talebi:
+      [docs/10-karar-bekleyen-konular.md](10-karar-bekleyen-konular.md)
 - [x] CI bakımı — action'lar Node 24 major sürümlerine yükseltildi
       (`checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6`,
       `upload-artifact@v7`); runner `ubuntu-24.04` sabitlendi; `actionlint` 0 hata
@@ -380,3 +381,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.16 | 2026-11-18 | Android emülatör smoke'u (giriş → harcama → kart → rapor), `MainApplication`/global `login`/klavye/root geri dönüş düzeltmeleri ve docs-only run `44366617692` işlendi; v1 kod tarafında kalan iş yok |
 | 1.17 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
 | 1.18 | 2026-11-18 | Yerel oturum yanıtları (`docs/answer*.txt`) ignore edildi; izlenen `docs/answers-1.txt` çalışma ağacından çıkarıldı ve referans `docs/08` §8.1'e bağlandı |
+| 1.19 | 2026-11-18 | Açık kararlar `docs/10-karar-bekleyen-konular.md` dosyasına taşındı; `Idempotency-Key` maddesine karar talebi bağlantısı eklendi |

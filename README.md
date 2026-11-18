@@ -61,7 +61,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.15](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
 | 08 | [Durum ve devam notu v2.9](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.18](docs/09-todo.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.19](docs/09-todo.md) | ✅ |
+| 10 | [Karar bekleyen konular v1.0](docs/10-karar-bekleyen-konular.md) | ⏳ yanıt bekliyor |
 
 ## Mevcut durum
 
@@ -147,8 +148,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Node 24 action sürümleri ve sabit
   `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** v1 dilimleri (0–9) kod tarafında tamamlandı; Android emülatör
-  smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Yeni iş yok;
-  `Idempotency-Key` v1.1'de ayrı görev olarak ele alınacak.
+  smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Sıradaki adım
+  kararların verilmesi: [docs/10](docs/10-karar-bekleyen-konular.md). Açık karar
+  kapanmadan `Idempotency-Key` koduna başlanmayacak.
 
 ## Çözüm yapısı (özet)
 
