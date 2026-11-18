@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.14
+**Sürüm:** 1.15
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Durum notu v2.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.7](08-durum-ve-devam-notu.md) · [Yol haritası v1.14](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -35,7 +35,7 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil) |
-| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon · toplam **335/335** · CI run `44189257561` yeşil (Android + Windows) · 2026-11-18 |
+| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` yeşil (CI bakımı sonrası, `ubuntu-24.04`; Slice 9 run `44189257561`) · 2026-11-18 |
 | Sıradaki komut | Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke (giriş → harcama → kart → rapor) |
 
 ---
@@ -370,3 +370,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.12 | 2026-11-17 | Slice 8 tamamlandı; 10 modül + 7 entegrasyon testi eklendi, toplam 320/320, CI run `44156632893` yeşil; Reporting salt okunur, DbContext/migration yok, `_status` kaldırıldı; aktif dilim Slice 9 |
 | 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil; emülatör smoke'u kaldı |
 | 1.14 | 2026-11-18 | CI bakımı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` ile workflow doğrulandı |
+| 1.15 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) son doğrulama olarak işlendi |

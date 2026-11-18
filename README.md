@@ -15,8 +15,8 @@ Kişisel finans ve harcama takibi uygulaması.
 > (slice 3), ekstre + kart ödemesi (slice 4), para girişi (slice 5), nakit avans
 > (slice 6), kredi/kişisel borç (slice 7), raporlama (slice 8) ve MAUI istemci
 > (slice 9) yazıldı; backend + Android + Windows hedefleri derlenir, testleri
-> geçer ve CI run `44189257561` ile doğrulandı. Kod yazılmadan önce dokümanların
-> okunması zorunludur.
+> geçer; en son CI run `44365407221` (Node 24 action'ları, `ubuntu-24.04`) yeşil.
+> Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
 
@@ -58,8 +58,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.14](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.6](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.14](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v2.7](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.15](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -113,7 +113,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   ayarlar. Token'lar loglanmaz. Hedefler: Android + Windows; çevrimdışı yazma
   ve bildirim kapsam dışı.
 - **Testler:** ✅ toplam **335/335** (263 birim/mimari + 72 entegrasyon); son
-  yeşil CI run `44189257561` (Slice 9; Slice 8 run `44156632893` idi).
+  yeşil CI run `44365407221` (CI bakımı sonrası; Slice 9 run `44189257561`,
+  Slice 8 run `44156632893` idi).
   Birim/mimari dağılımı: 4 mimari + 22 birim + 55 Expenses + 78 CreditCards +
   48 CashInflows + 31 Debts + 10 Reporting + 15 Mobile. Windows MAUI hedefi
   Debug + Release 0 uyarı/0 hata; Android hedefi CI Ubuntu job'unda
@@ -132,10 +133,11 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
   GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
-  doğruladı: run `44189257561` yeşil (Android + Windows hedefleri, Java 17 +
-  `dotnet workload restore`; 335/335; Slice 8 run `44156632893`, Slice 7 run
-  `44150709461` idi). CI workflow'ü Node 24 action sürümleri ve sabit
-  `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
+  doğruladı: run `44365407221` yeşil (CI bakımı sonrası; Android + Windows
+  hedefleri, Java 17 + `dotnet workload restore`; 335/335; Slice 9 run
+  `44189257561`, Slice 8 run `44156632893`, Slice 7 run `44150709461` idi).
+  CI workflow'ü Node 24 action sürümleri ve sabit `ubuntu-24.04` görüntüsü
+  kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke yap
   (giriş → harcama → kart → rapor). v1 dilimleri (0–9) kod tarafında tamamlandı
   ve CI'da yeşil.

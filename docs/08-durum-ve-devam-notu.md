@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.6
+**Sürüm:** 2.7
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
+**Bağlı belgeler:** [Yol haritası v1.14](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -72,7 +72,8 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 > backend + 15 mobile). Android SDK/JDK yerel eksik → `net10.0-android` CI
 > Ubuntu job'unda derlendi; run `44189257561` yeşil. Entegrasyon 72/72, toplam
 > **335/335** CI'da doğrulandı. Yerel Docker daemon'u kapalıydı
-> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı).
+> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı). CI bakımı sonrası
+> run `44365407221` de yeşil (335/335, `ubuntu-24.04`).
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
@@ -84,7 +85,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Release testleri | 8 birim/mimari projesi `-c Release` | ✅ 263/263 |
 | Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (CI run `44156632893`; yerel daemon kapalı) |
 | Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` (CI Ubuntu, Java 17) | ✅ Yerel SDK/JDK yok; CI run `44189257561` ile derlendi |
-| CI | GitHub Actions `build-test` | ✅ run `44189257561` yeşil (335/335; Android + Windows); önceki: `44156632893` (320/320) |
+| CI | GitHub Actions `build-test` | ✅ run `44365407221` yeşil (CI bakımı sonrası; 335/335; `ubuntu-24.04`); önceki: `44189257561` (335/335; Android + Windows), `44156632893` (320/320) |
 | CI workflow lint | `actionlint` v1.7.12 — `.github/workflows/ci.yml` | ✅ 0 hata (Node 24 action'ları + `ubuntu-24.04`) |
 | Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 9'da DbContext/entity/migration yok) |
 
@@ -643,10 +644,11 @@ Token'lar loglanmaz, hata mesajlarına eklenmez.
 ### 8.3 Oturum devri notu (2026-11-18)
 
 **Depo durumu:** Slice 9 kodu `7b4e00a`, yeşil CI run ID'sinin dokümanlara
-eklenmesi `7455546` commit'inde. Bu devir notundan sonra yalnızca docs
-commit'leri eklenebilir → güncel HEAD ve çalışma ağacı için `git log -1` /
-`git status` ile kontrol et. CI: run `44189257561` (kod, 335/335) ve
-`44190582258` (dokümanlar) `success`; `main` rozeti yeşil.
+eklenmesi `7455546` commit'inde. Bu devir notundan sonra kod değişmeden CI
+bakım commit'i `a0286ad` eklendi; güncel HEAD ve çalışma ağacı için
+`git log -1` / `git status` ile kontrol et. CI: run `44189257561` (kod,
+335/335), `44190582258` (dokümanlar) ve `44365407221` (CI bakımı, 335/335)
+`success`; `main` rozeti yeşil.
 
 **Tamamlanan:** Slice 0–9 kod + test + doküman + CI. Çözümde 33 proje; 263
 birim/mimari + 72 entegrasyon = **335/335**. Backend ve Windows MAUI Debug/Release
@@ -664,8 +666,8 @@ restore`) yeşil. Release XAML `XC0022` uyarıları `x:DataType` ile temizlendi.
 3. **CI bakımı ✅ (2026-11-18):** Run `44190582258` annotasyonları giderildi —
    `checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6` ve
    `upload-artifact@v7` (hepsi Node 24); runner `ubuntu-latest` yerine
-   `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası yeni
-   CI run'ı doğrulanacak.
+   `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası
+   CI run `44365407221` yeşil (335/335, `ubuntu-24.04`).
 4. **Ertelenen kapsam:** `Idempotency-Key` (`docs/06` §1.4 / `docs/07` Slice 2);
    okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
@@ -704,3 +706,4 @@ Android doğrulaması CI run'ında (yerel SDK yok).
 | 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil |
 | 2.5 | 2026-11-18 | Oturum devri notu eklendi (§8.3): depo/CI durumu, kalan manuel smoke, CI bakım uyarıları ve yeniden doğrulama komutları |
 | 2.6 | 2026-11-18 | CI bakımı tamamlandı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` doğrulaması eklendi |
+| 2.7 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) dokümanlara işlendi; güncel HEAD `a0286ad` |
