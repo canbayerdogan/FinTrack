@@ -1,7 +1,7 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.17
-**Tarih:** 2026-11-18
+**Sürüm:** 1.18
+**Tarih:** 2026-11-19
 **Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · [API Sözleşmeleri v1.6](06-api-sozlesmeleri.md) · ADR-0001…0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
@@ -711,7 +711,8 @@ CreditCards/Debts altyapıları (`Enlist`/no-op wrapper; iş mantığı değişm
 - [x] LocalDB smoke verileri silindi (karar 2.2-A) ✅.
 - [ ] Windows manuel UI smoke (karar 2.1-A) yapıldı — operatör.
 - [ ] CI yeşil; doküman sürümleri ve değişiklik geçmişleri güncellendi —
-      değişiklikler henüz commit/push edilmedi; CI doğrulaması bekliyor.
+      V11-T01 kodu `5e614c7` ile commit/push edildi; push sonrası CI sonucu
+      kontrol edilecek (`docs/08` §8.5).
 
 **Testler:**
 - Unit: scope/hash/canonicalizer (RFC vektörleri), header doğrulama, pending store
@@ -994,4 +995,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221`, `44366617692` ve `44379256250` yeşil |
 | 1.16 | 2026-11-18 | `docs/10` kararları işlendi; `docs/11` teknik tasarımı ve V11-T01 görev kartı eklendi; 1.6/1.10 tasarım onayı ve ayrı kodlama onayı bekliyor, kod yazılmadı |
 | 1.17 | 2026-11-18 | Altı koşullu tasarım onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
-| 1.18 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency middleware/store/migration, ADR-0010 modül uyumları, durum sorgusu, mobil pending operations; kabul kriterleri ve doküman sürümleri güncellendi, 435/435 test yeşil. Windows UI smoke ve MAUI head build operatörde; değişiklikler henüz commit edilmedi |
+| 1.18 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency middleware/store/migration, ADR-0010 modül uyumları, durum sorgusu, mobil pending operations; kabul kriterleri ve doküman sürümleri güncellendi, 435/435 test yeşil. Windows UI smoke ve MAUI head build operatörde; `5e614c7` push edildi |

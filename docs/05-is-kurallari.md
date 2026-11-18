@@ -1,7 +1,7 @@
 # FinTrack — İş Kuralları (Business Rules)
 
-**Sürüm:** 1.5
-**Tarih:** 2026-11-18
+**Sürüm:** 1.6
+**Tarih:** 2026-11-19
 **Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.3 · ADR-0001…0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 

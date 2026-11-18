@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.11
-**Tarih:** 2026-11-18
-**Bağlı belgeler:** [Yol haritası v1.17](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.6](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md) · ADR-0001…0010
+**Sürüm:** 2.13
+**Tarih:** 2026-11-19
+**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -56,7 +56,8 @@ Kullanıcı açık kodlama onayını verdi; **V11-T01 uygulandı ve 435/435 test
 yeşil** (`docs/11` §9.5). Dört kritik konunun çözümü `docs/11` §9.2'de; kalan
 riskler §9.4'te. Karar dokümanı push'u `decd69d`, docs-only CI run'ı
 `44385538919`; kod doğrulaması için `44379256250` referans alınır (karar 2.4
-gereği son docs run'ı eklenmez).
+gereği son docs run'ı eklenmez). **Kod commit'i `5e614c7` push edildi**
+(2026-11-19); push sonrası CI sonucu ve operasyonel maddeler §8.5'te.
 **Operasyonel:** LocalDB smoke verileri temizlendi (0 satır doğrulandı); Windows
 manuel UI smoke operatör tarafından tamamlanacak (§8.4, §8.3 madde 2).
 
@@ -150,7 +151,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Kart alışverişi Expenses'a aittir; kart borcu hesaplanır, saklanmaz | ADR-0008, ADR-0004 |
 | Ödemeler sahibi modülde; aynı olay iki kez sayılmaz | ADR-0007 |
 | Modüller arası atomik yazma: sync writer + paylaşılan `DbTransaction` | ADR-0009 |
-| Idempotent mutasyon POST: host sahipliğinde tek `DbConnection`/`DbTransaction`, tek commit, benzersiz key | ADR-0010, `docs/11` §4 (koşullu onay alındı, kod onayı bekliyor) |
+| Idempotent mutasyon POST: host sahipliğinde tek `DbConnection`/`DbTransaction`, tek commit, benzersiz key | ADR-0010, `docs/11` §4 (koşullu onay + açık kod onayı alındı; `5e614c7` ile uygulandı) |
 
 ### 4.2 API sözleşmesi
 
@@ -757,6 +758,38 @@ sorgusu ✅. Dört kritik konunun çözümü `docs/11` §9.2'de, kalan riskler �
 > vereceğim."** Koşullu tasarım onayı ve açık kodlama onayı alındı; V11-T01
 > uygulandı ve doğrulandı (`docs/11` §9.5). Kalan maddeler operasyoneldir.
 
+### 8.5 Oturum devri notu (2026-11-19) — V11-T01 push sonrası
+
+**Depo durumu:** V11-T01 kodu `5e614c7`
+(`feat: implement V11-T01 host-owned idempotency and mobile pending operations`)
+`origin/main`'e push edildi; öncüsü `5abb6af`, geçmiş yeniden yazılmadı. Bu
+devir notu ve sürüm başlığı düzeltmeleri ayrı bir commit'dir; dönünce
+`git status -sb` / `git log -3 --oneline` ile güncel HEAD'i doğrula.
+
+**Tamamlanan:** Host idempotency middleware/store/`shared` migration/DI, tek
+`DbConnection`/`DbTransaction` (ADR-0010 + dört modül), durum sorgusu ve
+`409 IdempotencyExpired`, mobil AES-256-GCM pending store/kurtarma, S1–S29;
+435/435 yerel test, host build 0/0. `docs/05`–`docs/11`, ADR-0010 ve README
+tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
+`docs/answer*.txt` commit edilmedi.
+
+**Kalan (öncelik sırası):**
+
+1. Push sonrası GitHub Actions `build-test` sonucunu kontrol et (run
+   `44413433056`, kontrol anında `in_progress`):
+   `https://github.com/canbayerdogan/FinTrack/actions/runs/44413433056`.
+   Kırmızıysa logları incele. Son bilinen yeşil run `44379256250` (335/335,
+   V11-T01 öncesi kod).
+2. Windows manuel UI smoke: `giriş → harcama → kart → rapor` (karar 2.1-A);
+   henüz çalıştırılmadı, operatör tarafından yapılacak.
+3. MAUI head build: yerel varsayılan `JAVA_HOME` JRE 1.8
+   (`C:\Program Files\Java\jre1.8.0_451`) nedeniyle `XA5300` veriyor; JDK 17
+   ile tekrar dene (`docs/08` §5'teki Android SDK/JDK notu).
+4. Yeni kod işi yok; v1.1 sonrası öncelik parola sıfırlama + e-posta doğrulama.
+
+**Geri dönüşte okunacaklar:** `docs/09` §2 → bu bölüm → `docs/11` §9.5 →
+`docs/07` §5.1.
+
 ---
 
 ## 9. Değişiklik geçmişi
@@ -785,4 +818,5 @@ sorgusu ✅. Dört kritik konunun çözümü `docs/11` §9.2'de, kalan riskler �
 | 2.9 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
 | 2.10 | 2026-11-18 | `docs/10` cevapları işlendi; `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 görev kartı ve §8.4 karar özeti eklendi; "tüm POST" / "auth hariç" çelişkisi giderildi; kod yazılmadı, tasarım+kod onayı bekleniyor |
 | 2.11 | 2026-11-18 | `docs/11-kararlar.txt` altı koşullu onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, dört kritik konunun çözümü ve K1–K7 riskleri; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
-| 2.12 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency (middleware/store/migration/DI, tek `DbTransaction`, ADR-0010 modül uyumları), durum sorgusu, mobil AES-256-GCM pending store ve kurtarma; 435/435 test. §4/§6/§8 durum notları güncellendi; Windows UI smoke ve MAUI head build operatörde, değişiklikler henüz commit edilmedi |
+| 2.12 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency (middleware/store/migration/DI, tek `DbTransaction`, ADR-0010 modül uyumları), durum sorgusu, mobil AES-256-GCM pending store ve kurtarma; 435/435 test. §4/§6/§8 durum notları güncellendi; Windows UI smoke ve MAUI head build operatörde |
+| 2.13 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; "henüz commit edilmedi" notları ve sürüm başlıkları güncellendi, oturum devri kaydı §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |

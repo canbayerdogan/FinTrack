@@ -125,8 +125,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   birim + 10 mimari + 31 mobil + 95 entegrasyon (72 mevcut + 23 idempotency);
   host build 0 uyarı/0 hata. Ayrıntı: `docs/11` §9.5. Önceki yeşil CI run'ları
   `44365407221` (CI bakımı), `44366617692` (dokümanlar), `44379256250`
-  (Android düzeltmeleri; Slice 9 run `44189257561`); V11-T01 değişiklikleri
-  henüz commit/push edilmedi.
+  (Android düzeltmeleri; Slice 9 run `44189257561`); V11-T01 kodu `5e614c7`
+  ile commit edilip `origin/main`'e push edildi (2026-11-19). Push sonrası CI
+  doğrulaması kontrol edilecek; kaldığımız yer `docs/08` §8.5'te.
   Windows MAUI head hedefi bu oturumda yerel Java SDK yapılandırması nedeniyle
   derlenemedi; `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip
   test edildi. Windows manuel UI smoke operatör görevidir.
@@ -162,8 +163,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   kodlama onayı alındı; uygulama ve 435/435 doğrulama `docs/11` §9.5'te. Dört
   kritik konunun çözümü `docs/11` §9.2'de; kalan riskler §9.4. LocalDB smoke
   temizliği ✅ tamamlandı; **Windows manuel UI smoke ve MAUI head build operatör
-  görevleri bekliyor.** Idempotency sonrası v1.1 önceliği: parola sıfırlama +
-  e-posta doğrulama.
+  görevleri bekliyor.** Oturum devri kaydı `docs/08` §8.5'te; geri dönünce önce
+  `docs/09` §2 ve `docs/08` §8.5 okunur. Idempotency sonrası v1.1 önceliği:
+  parola sıfırlama + e-posta doğrulama.
 
 ## Çözüm yapısı (özet)
 

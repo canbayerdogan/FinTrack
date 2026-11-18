@@ -1,7 +1,7 @@
 # FinTrack — API Sözleşmeleri (v1)
 
-**Sürüm:** 1.6
-**Tarih:** 2026-11-18
+**Sürüm:** 1.7
+**Tarih:** 2026-11-19
 **Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009, ADR-0010 · [Idempotency teknik tasarımı v1.2](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları, mobil istemci geliştiricisi
 

@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.21
-**Tarih:** 2026-11-18
-**Bağlı belgeler:** [Durum notu v2.11](08-durum-ve-devam-notu.md) · [Yol haritası v1.17](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
+**Sürüm:** 1.23
+**Tarih:** 2026-11-19
+**Bağlı belgeler:** [Durum notu v2.13](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -35,8 +35,8 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 görev kartı **V11-T01 — Idempotency-Key**: kararlar + altı koşullu tasarım onayı + açık kodlama onayı tamam; **uygulandı** (`docs/11` v1.3, ADR-0010; `docs/07` §5.1) |
-| Son doğrulama | **435/435** yerel: 222 modül + 77 API birim + 10 mimari + 31 mobil + 95 entegrasyon; host build 0/0 (`docs/11` §9.5) · 2026-11-19 · önceki CI run `44379256250` (335/335, 2026-11-18); yeni değişiklikler henüz commit edilmedi |
-| Sıradaki komut | V11-T01 kodu tamam; son diff incelemesi ve commit kullanıcı onayına bağlı. LocalDB temizliği (2.2-A) ✅ tamamlandı; **Windows manuel UI smoke (2.1-A) ve MAUI head build operatörü bekliyor** (`docs/11` §9.3/§9.5) |
+| Son doğrulama | **435/435** yerel: 222 modül + 77 API birim + 10 mimari + 31 mobil + 95 entegrasyon; host build 0/0 (`docs/11` §9.5) · 2026-11-19 · V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; push sonrası CI sonucu kontrol edilecek (`docs/08` §8.5) |
+| Sıradaki adım | Kod tarafında bekleyen iş yok: CI sonucunu kontrol et, **Windows manuel UI smoke (2.1-A) ve MAUI head build** operatör tarafından tamamlanacak (`docs/08` §8.5, `docs/11` §9.3/§9.5). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
 
@@ -322,7 +322,8 @@ dotnet test FinTrack.slnx --nologo -v q
       Uygulanan kapsam: RFC 8785 kapısı (S26/S27) → host middleware + `shared`
       migration + host-owned transaction (ADR-0010, dört modül) +
       `409 IdempotencyExpired` + durum sorgusu + **S1–S29** testleri +
-      mobil pending store (`Uncertain`). Sıradaki operasyonel maddeler: Windows
+      mobil pending store (`Uncertain`). `5e614c7` push edildi; sıradaki operasyonel
+      maddeler: CI sonucu, Windows
       smoke (2.1) ve MAUI head build.
 - [ ] Windows manuel UI smoke — karar 2.1-A: `giriş → harcama → kart → rapor` akışı
       Windows hedefinde de yapılacak (henüz çalıştırılmadı; operatör tamamlayacak)
@@ -398,4 +399,5 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.19 | 2026-11-18 | Açık kararlar `docs/10-karar-bekleyen-konular.md` dosyasına taşındı; `Idempotency-Key` maddesine karar talebi bağlantısı eklendi |
 | 1.20 | 2026-11-18 | Kullanıcı cevapları işlendi: `docs/10` v1.1, `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 kartı, `docs/08` §8.4; "tüm POST" çelişkisi giderildi; Windows smoke ve LocalDB temizliği onaylı görevler olarak eklendi; kod yazılmadı |
 | 1.21 | 2026-11-18 | Altı koşullu onay işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, LocalDB temizliği ✅ tamamlandı; Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
-| 1.22 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency + ADR-0010 modül uyumları + durum sorgusu + mobil pending operations; 435/435 test, son doğrulama ve teknik borç maddesi güncellendi. S19 gerçek SQL 1205 enjeksiyonu hook tabanlı arbit ile örtüldü (`docs/11` §4.7); Windows smoke/MAUI head build operatörde; değişiklikler henüz commit edilmedi |
+| 1.22 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency + ADR-0010 modül uyumları + durum sorgusu + mobil pending operations; 435/435 test, son doğrulama ve teknik borç maddesi güncellendi. S19 gerçek SQL 1205 enjeksiyonu hook tabanlı arbit ile örtüldü (`docs/11` §4.7); Windows smoke/MAUI head build operatörde |
+| 1.23 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; sürüm başlıkları ve "henüz commit edilmedi" notları güncellendi, oturum devri kaydı `docs/08` §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |

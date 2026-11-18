@@ -1,6 +1,6 @@
 # FinTrack — Idempotency Teknik Tasarımı
 
-**Sürüm:** 1.2
+**Sürüm:** 1.3
 **Tarih:** 2026-11-19
 **Durum:** ✅ V11-T01 uygulandı; çalıştırılabilir testler **435/435** yeşil — Windows manuel UI smoke ve MAUI head build operatör görevleri
 **Bağlı belgeler:** [Kararlar v1.2](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5.1
