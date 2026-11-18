@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.16
+**Sürüm:** 1.17
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Durum notu v2.8](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -35,7 +35,7 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil, Android smoke tamamlandı) |
-| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · Android yerel build 0/0 + emülatör smoke · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` (CI bakımı) ve `44366617692` (docs-only) yeşil, `ubuntu-24.04`; Slice 9 run `44189257561` · 2026-11-18 |
+| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · Android yerel build 0/0 + emülatör smoke · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` (CI bakımı), `44366617692` (docs-only) ve `44379256250` (Android düzeltmeleri) yeşil, `ubuntu-24.04`; Slice 9 run `44189257561` · 2026-11-18 |
 | Sıradaki komut | Yeni iş yok; `Idempotency-Key` v1.1'de ayrı görev. İstersen Windows manuel UI smoke (opsiyonel) |
 
 ---
@@ -279,8 +279,8 @@ dotnet test FinTrack.slnx --nologo -v q
       0/0.
 - [x] **Android/CI:** yerel JDK 17 + SDK 36 kuruldu; `net10.0-android` 0 uyarı/
       0 hata derlendi. CI Ubuntu job'unda da (Java 17 + `dotnet workload
-      restore`) run `44189257561`, `44365407221` ve `44366617692` yeşil
-      (335/335).
+      restore`) run `44189257561`, `44365407221`, `44366617692` ve
+      `44379256250` yeşil (335/335).
 - [x] **Android platform düzeltmeleri:** eksik `Platforms/Android/MainApplication.cs`
       eklendi; global `//login` rotası `login` yapıldı; `Keyboard="Decimal"`
       yerine `Keyboard="Numeric"`; `MauiNavigator.GoBackAsync` root sayfalarda
@@ -288,7 +288,7 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Emülatör smoke:** `fintrack_smoke` AVD (Pixel 7 / Android 16) ile giriş
       → harcama (125,00 TRY / `Market`) → kartlar (`0 aktif kart`) → raporlar
       (`Kategori kırılımı: Market`) doğrulandı.
-- [x] **Dokümanlar:** `docs/07` v1.15, `docs/08` v2.8, `README.md`, bu dosya.
+- [x] **Dokümanlar:** `docs/07` v1.15, `docs/08` v2.9, `README.md`, bu dosya.
 
 ### Yüksek seviye
 
@@ -378,3 +378,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.14 | 2026-11-18 | CI bakımı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` ile workflow doğrulandı |
 | 1.15 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) son doğrulama olarak işlendi |
 | 1.16 | 2026-11-18 | Android emülatör smoke'u (giriş → harcama → kart → rapor), `MainApplication`/global `login`/klavye/root geri dönüş düzeltmeleri ve docs-only run `44366617692` işlendi; v1 kod tarafında kalan iş yok |
+| 1.17 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |

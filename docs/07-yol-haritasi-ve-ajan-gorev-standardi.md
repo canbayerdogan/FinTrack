@@ -604,7 +604,8 @@ oturum ekranı.
 - [x] Windows hedefi (`net10.0-windows10.0.19041.0`) 0 uyarı/0 hata.
 - [x] Android hedefi (`net10.0-android`) yerel JDK 17 + SDK 36 ile 0 uyarı/0
       hata derlendi; CI Ubuntu job'unda da (Java 17 + `dotnet workload restore`)
-      run `44189257561`, `44365407221` ve `44366617692` ile doğrulandı.
+      run `44189257561`, `44365407221`, `44366617692` ve `44379256250` ile
+      doğrulandı.
 
 **Kabul kriterleri:**
 - [x] `docs/06` sözleşmeleriyle uyum; token'lar loglanmaz.
@@ -894,4 +895,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
 | 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI run `44189257561` yeşil |
-| 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221` ve `44366617692` yeşil |
+| 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221`, `44366617692` ve `44379256250` yeşil |

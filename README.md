@@ -16,9 +16,9 @@ Kişisel finans ve harcama takibi uygulaması.
 > (slice 6), kredi/kişisel borç (slice 7), raporlama (slice 8) ve MAUI istemci
 > (slice 9) yazıldı; backend + Android + Windows hedefleri derlenir, testleri
 > geçer. Android emülatöründe giriş → harcama → kart → rapor uçtan uca smoke
-> tamamlandı. Son doğrulanan CI run'ları `44365407221` (CI bakımı) ve
-> `44366617692` (dokümanlar) yeşil. Kod yazılmadan önce dokümanların okunması
-> zorunludur.
+> tamamlandı. Son doğrulanan CI run'ları `44365407221` (CI bakımı),
+> `44366617692` (dokümanlar) ve `44379256250` (Android düzeltmeleri) yeşil.
+> Kod yazılmadan önce dokümanların okunması zorunludur.
 
 ---
 
@@ -60,8 +60,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.15](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.8](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.16](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v2.9](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.17](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -119,8 +119,9 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Geçici HTTP/cleartext ayarları geri alındı; varsayılan API adresi
   `https://10.0.2.2:7241/api/v1/`.
 - **Testler:** ✅ toplam **335/335** (263 birim/mimari + 72 entegrasyon); son
-  yeşil CI run'ları `44365407221` (CI bakımı) ve `44366617692` (dokümanlar;
-  Slice 9 run `44189257561`, Slice 8 run `44156632893` idi).
+  yeşil CI run'ları `44365407221` (CI bakımı), `44366617692` (dokümanlar) ve
+  `44379256250` (Android düzeltmeleri; Slice 9 run `44189257561`, Slice 8 run
+  `44156632893` idi).
   Birim/mimari dağılımı: 4 mimari + 22 birim + 55 Expenses + 78 CreditCards +
   48 CashInflows + 31 Debts + 10 Reporting + 15 Mobile. Windows MAUI hedefi
   Debug + Release 0 uyarı/0 hata; Android hedefi yerel JDK 17 + SDK ile
@@ -139,10 +140,11 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 - **Sürüm kontrolü:** ✅ git (`main`) + GitHub uzak depo
   [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack).
   GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
-  doğruladı: run `44365407221` (CI bakımı) ve `44366617692` (dokümanlar) yeşil
-  (Android + Windows hedefleri, Java 17 + `dotnet workload restore`; 335/335;
-  Slice 9 run `44189257561`, Slice 8 run `44156632893`, Slice 7 run
-  `44150709461` idi). CI workflow'ü Node 24 action sürümleri ve sabit
+  doğruladı: run `44365407221` (CI bakımı), `44366617692` (dokümanlar) ve
+  `44379256250` (Android düzeltmeleri) yeşil (Android + Windows hedefleri,
+  Java 17 + `dotnet workload restore`; 335/335; Slice 9 run `44189257561`,
+  Slice 8 run `44156632893`, Slice 7 run `44150709461` idi). CI workflow'ü
+  Node 24 action sürümleri ve sabit
   `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** v1 dilimleri (0–9) kod tarafında tamamlandı; Android emülatör
   smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Yeni iş yok;
