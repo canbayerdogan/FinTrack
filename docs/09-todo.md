@@ -1,6 +1,6 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.17
+**Sürüm:** 1.18
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Durum notu v2.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
@@ -115,7 +115,7 @@ dotnet test FinTrack.slnx --nologo -v q
 ### 4.1 Planlama
 
 - [x] `docs/05` §5.3–5.6, `docs/06` §6.3–6.6, `docs/07` §4, `docs/08` §7 okundu
-- [x] `docs/answers-1.txt` kararları bağlayıcı belgelere uygulandı
+- [x] Kullanıcı kararları (`docs/08` §8.1) bağlayıcı belgelere uygulandı
       (`docs/05`, `docs/06`, `docs/07`, `docs/08`)
 - [x] 21 test senaryosu hazır (tarih kesiti, iptal, iade, `asOf`)
 - [x] Test senaryoları onaylandı; gelecek `asOf` için `400`
@@ -379,3 +379,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.15 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) son doğrulama olarak işlendi |
 | 1.16 | 2026-11-18 | Android emülatör smoke'u (giriş → harcama → kart → rapor), `MainApplication`/global `login`/klavye/root geri dönüş düzeltmeleri ve docs-only run `44366617692` işlendi; v1 kod tarafında kalan iş yok |
 | 1.17 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
+| 1.18 | 2026-11-18 | Yerel oturum yanıtları (`docs/answer*.txt`) ignore edildi; izlenen `docs/answers-1.txt` çalışma ağacından çıkarıldı ve referans `docs/08` §8.1'e bağlandı |

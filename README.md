@@ -61,7 +61,7 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.15](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
 | 08 | [Durum ve devam notu v2.9](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.17](docs/09-todo.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.18](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
