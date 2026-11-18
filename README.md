@@ -57,12 +57,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 02 | [Finansal Alan Modeli — kararlar v0.4](docs/02-finansal-alan-modeli-kararlar.md) | ✅ |
 | 03 | [Teknik Mimari (.NET)](docs/03-mimari.md) | ✅ |
 | 04 | [ADR'ler](docs/adr/) | ✅ |
-| 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
-| 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.15](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.9](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.19](docs/09-todo.md) | ✅ |
-| 10 | [Karar bekleyen konular v1.0](docs/10-karar-bekleyen-konular.md) | ⏳ yanıt bekliyor |
+| 05 | [İş kuralları (business rules) v1.4](docs/05-is-kurallari.md) | ✅ |
+| 06 | [API sözleşmeleri v1.5](docs/06-api-sozlesmeleri.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.16](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v2.10](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.20](docs/09-todo.md) | ✅ |
+| 10 | [Kararlar v1.1](docs/10-karar-bekleyen-konular.md) | ✅ yanıtlandı |
+| 11 | [Idempotency teknik tasarımı v1.0](docs/11-idempotency-teknik-tasarim.md) | ⏳ tasarım onayı bekliyor |
 
 ## Mevcut durum
 
@@ -148,9 +149,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Node 24 action sürümleri ve sabit
   `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** v1 dilimleri (0–9) kod tarafında tamamlandı; Android emülatör
-  smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Sıradaki adım
-  kararların verilmesi: [docs/10](docs/10-karar-bekleyen-konular.md). Açık karar
-  kapanmadan `Idempotency-Key` koduna başlanmayacak.
+  smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Kararlar
+  [docs/10 v1.1](docs/10-karar-bekleyen-konular.md) ile alındı; teknik tasarım
+  [docs/11](docs/11-idempotency-teknik-tasarim.md)'de ve görev kartı
+  [docs/07 §5.1](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md)'de.
+  **Kullanıcı talimatı gereği kod yazılmadı**; 1.6 atomiklik ve 1.10 mobil
+  depolama tasarımları onaylandıktan sonra ayrı kodlama onayı alınacak.
+  Idempotency sonrası v1.1 önceliği: parola sıfırlama + e-posta doğrulama.
 
 ## Çözüm yapısı (özet)
 

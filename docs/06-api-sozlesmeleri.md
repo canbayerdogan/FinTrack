@@ -1,8 +1,8 @@
 # FinTrack — API Sözleşmeleri (v1)
 
-**Sürüm:** 1.4
-**Tarih:** 2026-11-15
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.2](05-is-kurallari.md) · ADR-0007, ADR-0008
+**Sürüm:** 1.5
+**Tarih:** 2026-11-18
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları, mobil istemci geliştiricisi
 
 > Bu belge v1 REST API'sinin **davranış ve alan sözleşmesidir**. OpenAPI belgesi
@@ -31,7 +31,7 @@
 | Sıralama | v1'de sabit: listelerde en yeni önce; özel `sort` yok |
 | Sayfalama | `page` (varsayılan 1), `pageSize` (varsayılan 50, en fazla 200) |
 | Hata gövdesi | RFC 9457 `ProblemDetails` + `code`, `traceId`, `errors` |
-| İdempotency | `Idempotency-Key` başlığı v1'de desteklenir, zorunlu değildir |
+| İdempotency | v1: `Idempotency-Key` desteklenir, zorunlu değildir. v1.1: tüm finansal/mutasyon `POST` için **zorunlu**; `/api/v1/auth/*` hariç |
 | Eşzamanlılık | Güncelleme/iptal isteklerinde gövdede `rowVersion`; uyuşmazsa `409` |
 
 ### 1.1 Para
@@ -94,18 +94,39 @@ Doğrulama hatasında `errors` alan adı → mesaj dizisi eşlemesidir:
 
 ### 1.4 İdempotency
 
-- Yalnızca `POST` isteklerinde `Idempotency-Key` (UUID) kabul edilir.
-- Kapsam: kullanıcı + method + path + anahtar. Saklama süresi **24 saat**.
-- Aynı anahtar + aynı gövde → ilk yanıt (durum kodu ve gövde) tekrar döner;
-  yeni kayıt oluşmaz.
-- Aynı anahtar + farklı gövde → `409 IdempotencyKeyReused`.
+**v1 (mevcut uygulama):** `Idempotency-Key` başlığı kabul edilir ama zorunlu
+değildir; uygulama yapılmadı. İstemci aynı `POST` isteğini otomatik yeniden
+denememelidir.
+
+**v1.1 sözleşmesi (2026-11-18 kararı — uygulama tasarım onayı bekliyor):**
+
+- Başlık, **tüm finansal/mutasyon `POST`** uç noktalarında **zorunludur**.
+  Kapsam listesi `docs/11` §1.1'dedir.
+- `/api/v1/auth/*` (`register`, `login`, `refresh`, `logout`) **kapsam dışıdır**;
+  bu isteklerde başlık gönderilse bile dikkate alınmaz, token yanıtları
+  saklanmaz.
+- Başlık değeri **UUID** olmalıdır. Eksik/geçersiz değer → `400
+  ValidationFailed`, hata alanı `idempotencyKey`.
+- Kapsam: `userId + HTTP method + route template + route değerleri + anahtar`.
+  Query string kapsama **girmez**; kullanıcı/route/route değeri izolasyonu
+  korunur.
+- Gövde karşılaştırması: canonical JSON (JCS/RFC 8785 temelli, `docs/11` §3.2)
+  → SHA-256. Ham istek gövdesi saklanmaz.
+- Aynı kapsam + aynı anahtar + aynı gövde → ilk **2xx** yanıtı (durum kodu,
+  `Location` başlığı ve gövde) tekrar döner; yeni kayıt oluşmaz.
+- Aynı kapsam + aynı anahtar + farklı gövde → `409 IdempotencyKeyReused`.
 - İlk istek hâlâ işleniyorsa → `409 IdempotencyInProgress`.
-- v1.1'de tüm `POST` uç noktalarında **zorunlu** hale getirilmesi planlanır
-  (doküman 05 §2.7).
-- **Uygulama notu (2026-11-14):** Slice 2 (harcama + kategori) kapsamında
-  `Idempotency-Key` uygulanmadı. Davranış sözleşmesi geçerlidir; destek ayrı bir
-  görevde eklenecektir. O zamana kadar istemci aynı `POST` isteğini otomatik
-  yeniden denememelidir.
+- 4xx/5xx yanıtları replay için saklanmaz; istemci aynı anahtarla güvenle
+  yeniden deneyebilir.
+- Saklama süresi **24 saat**. Süresi dolan kayıt replay garantisi vermez;
+  istemci aynı anahtarı yeniden kullanmamalıdır.
+- Replay kaydı ile finansal kayıt **tek transaction'da** commit edilir; kalıcı
+  `InProgress` satırı yoktur, sunucu çökmesi çift kayıt oluşturmaz. Ayrıntı,
+  hata pencereleri ve test senaryoları: `docs/11` §4.
+
+> **Uygulama notu (2026-11-18):** Kararlar `docs/10` v1.1'de kapatıldı, teknik
+> tasarım `docs/11`'de sunuldu. Kodlama onayı ayrı alınacak; onay gelene kadar
+> yukarıdaki v1.1 davranışı **sözleşme olarak geçerli, uygulama olarak yoktur**.
 
 ### 1.5 Eşzamanlılık
 
@@ -1149,7 +1170,7 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 | 5 | Sayfalama | `items/page/pageSize/totalCount/totalPages`; varsayılan 50, üst 200 |
 | 6 | İade | `POST /expenses/{id}/refunds`; ayrı gelir kaydı yok |
 | 7 | Kart alışverişi | `POST /expenses` + `paymentMethod=CreditCard`; kart uç noktası yok |
-| 8 | İdempotency | v1'de opsiyonel `Idempotency-Key`; 24 saat; v1.1'de zorunlu |
+| 8 | İdempotency | v1'de opsiyonel; v1.1'de tüm finansal/mutasyon `POST` için zorunlu, auth hariç; 24 saat; 2xx replay; tek transaction |
 | 9 | Auth yanıtı | Register/login/refresh aynı `AuthResponse`; rotating refresh |
 | 10 | Profil | `GET/PUT /auth/me`; saat dilimi buradan yönetilir |
 | 11 | Kart bakiyesi tarih kesiti | `GET /cards/{id}/balance?asOf=YYYY-MM-DD`; yoksa kullanıcının bugünü; yanıtta `asOfDate`; gelecek `asOf` `400` |
@@ -1161,8 +1182,9 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 
 Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'de izlenir:
 
-- `Idempotency-Key`'in v1.1'de zorunlu hale getirilmesi.
-- Parola sıfırlama ve e-posta doğrulama uç noktaları (v1.1).
+- `Idempotency-Key` uygulaması: karar ve sözleşme tamam (`docs/10` v1.1,
+  `docs/11`); teknik tasarım onayı ve ayrı kodlama onayı bekliyor.
+- Parola sıfırlama ve e-posta doğrulama uç noktaları (v1.1, **sıradaki öncelik**).
 - Hesap silme / KVKK akışı (v1.1).
 - Ekstre belgesi yükleme, OCR ve otomatik içe aktarma (v1.1+).
 - Kart harcamaları için taksitli ödeme planı (v1 kapsamı dışı).
@@ -1184,3 +1206,4 @@ Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'
 | 1.2 | 2026-11-14 | Slice 3 uygulama notları: kart listesi varsayılanı, bilinmeyen alan reddi, bakiye formülünde eksik terimler |
 | 1.3 | 2026-11-15 | Slice 4 bakiye `asOf`/kesit sözleşmesi, ekstre/ödeme listeleri ve türetilen alanlar; kredi `monthlyPayment` girdisi ve türetilen `totalRepayment` |
 | 1.4 | 2026-11-15 | Gelecek `asOf` için `400`; iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
+| 1.5 | 2026-11-18 | `Idempotency-Key` v1.1 sözleşmesi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; kapsam/hash/TTL/2xx replay kuralları ve tek transaction atomikliği; "tüm POST" ifadesindeki çelişki giderildi |

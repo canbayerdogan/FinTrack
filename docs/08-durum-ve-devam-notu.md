@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.9
+**Sürüm:** 2.10
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
+**Bağlı belgeler:** [Yol haritası v1.16](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.5](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [Kararlar v1.1](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -48,6 +48,13 @@ doğruladı: run `44189257561` (Slice 9), `44365407221` (CI bakımı),
 (335/335; Android + Windows hedefleri; Slice 8 run `44156632893`, Slice 7 run
 `44150709461` idi). Android emülatör smoke'u giriş → harcama → kart → rapor
 akışıyla tamamlandı.
+
+**v1.1 durumu (2026-11-18):** Açık kararlar `docs/10` v1.1 ile kapatıldı;
+teknik tasarım `docs/11`'de, görev kartı `docs/07` §5.1'de (V11-T01). Kullanıcı
+**"Henüz kodlamaya başlama"** talimatı verdi; 1.6 atomiklik ve 1.10 mobil depolama
+tasarımları için ayrı onay bekleniyor. **Kod yazılmadı.** Karar dokümanı push'u
+`decd69d`, docs-only CI run'ı `44385538919`; kod doğrulaması için
+`44379256250` referans alınır (karar 2.4 gereği son docs run'ı eklenmez).
 
 **Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
 typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
@@ -148,7 +155,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `DELETE` yok; iptal `POST /{id}/cancel`, arşiv `POST /{id}/archive` | `docs/06` §1 |
 | Eşzamanlılık gövdedeki `rowVersion` ile; uyuşmazlık `409 ConcurrencyConflict` | `docs/06` §1.5 |
 | Sayfalama `page=1`, `pageSize=50` (max 200); hatalı değer `400 ValidationFailed` | `docs/06` §1.6 |
-| `Idempotency-Key` **uygulanmadı**; ayrı görev (§6) | `docs/06` §1.4 |
+| `Idempotency-Key` v1'de **uygulanmadı**; v1.1 sözleşmesi tamam, uygulama tasarım onayı bekliyor (§6, §8.4) | `docs/06` §1.4, `docs/10` v1.1, `docs/11` |
 
 ### 4.3 İş kuralları
 
@@ -378,7 +385,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 | Konu | Durum |
 |---|---|
-| `Idempotency-Key` (tüm POST) | **Ertelendi**; ayrı görev. O zamana kadar istemci otomatik POST retry yapmamalı |
+| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01**: kararlar + sözleşme + tasarım hazır; tasarım/kodlama onayı bekliyor. O zamana kadar istemci otomatik POST retry yapmamalı |
 | Kart harcamaları için taksitli ödeme planı | v1 kapsam dışı |
 | Çoklu para birimi / kur dönüşümü | v1 kapsam dışı |
 | Kategori `restore`, arşivli kartı geri açma | v1'de yok |
@@ -688,16 +695,19 @@ alındı.
    toplam 1 sayfa`, pano `Net harcama 125,00 TRY`, kartlar `0 aktif kart`,
    raporlar `Kategori kırılımı: Market` gösterdi. Geçici HTTP/cleartext ayarları
    kaldırıldı; final varsayılan `https://10.0.2.2:7241/api/v1/`.
-2. **Windows manuel UI smoke (opsiyonel):** Build 0/0 ama uygulama elle açılıp
-   denmedi; aynı akış Windows hedefinde denenebilir.
+2. **Windows manuel UI smoke (karar 2.1 — A, yapılacak):** Build 0/0 ama
+   uygulama elle açılmadı; `giriş → harcama → kart → rapor` akışı Windows
+   hedefinde de denenecek. V11-T01 doğrulama maddesi olarak kaydedildi; henüz
+   çalıştırılmadı (öncelik: tasarım onayı).
 3. **CI bakımı ✅ (2026-11-18):** Run `44190582258` annotasyonları giderildi —
    `checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6` ve
    `upload-artifact@v7` (hepsi Node 24); runner `ubuntu-latest` yerine
    `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası
    CI run `44365407221`, docs-only run `44366617692` ve Android düzeltmeleri
    run'ı `44379256250` yeşil (335/335).
-4. **Ertelenen kapsam:** `Idempotency-Key` (`docs/06` §1.4 / `docs/07` Slice 2);
-   okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
+4. **Ertelenen kapsam:** `Idempotency-Key` artık v1.1 görev kartı V11-T01
+   (`docs/07` §5.1); kararlar `docs/10` v1.1, tasarım `docs/11`. Kod onayı ayrı.
+   Okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
 
 **Ortam notları:** `gh` CLI kurulu değil → GitHub API `curl.exe` ile kullanılıyor;
@@ -713,6 +723,26 @@ binary dosyayı bozar; ekran görüntüsü için `adb shell screencap -p /sdcard
 `dotnet build FinTrack.slnx -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot' --nologo` ·
 `dotnet test FinTrack.slnx -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot' --nologo -v q` → 335/335 ·
 `dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -f net10.0-android -t:Install` (emülatör kurulumu için).
+
+### 8.4 Kararlar v1.1 (2026-11-18)
+
+Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` (yerel, commit edilmez).
+
+| Konu | Karar | İşlendiği yer |
+|---|---|---|
+| Zorunluluk kapsamı | Finansal/mutasyon `POST`; auth hariç | `docs/05` §2.7, `docs/06` §1.4 |
+| Anahtar kapsamı / gövde | userId + method + route template + route değerleri + key; canonical JSON + SHA-256 | `docs/11` §3 |
+| Saklama / TTL | `shared.IdempotencyKeys`, host migration, 24 saat, sınırlı temizlik | `docs/11` §5–6 |
+| Çökme/atomiklik | 5 dk stale timeout **reddedildi**; tek transaction, kalıcı `InProgress` yok — **tasarım onayı bekliyor** | `docs/11` §4 |
+| Auth / hata replay / hata kodu | Auth kapsam dışı; sadece 2xx; `400 ValidationFailed` | `docs/06` §1.4 |
+| Mobil | Uygulama restart'ında anahtar + gövde korunur; SQLite + AES-GCM önerisi — **tasarım onayı bekliyor** | `docs/11` §7 |
+| Test kapsamı | Tüm kapsam + S1–S20 entegrasyon | `docs/07` §5.1 |
+| Operasyonel | Windows smoke A, LocalDB sil A, git geçmişi A, son CI run A | `docs/07` §5.1, `docs/09` |
+| v1.1 önceliği | **A — parola sıfırlama + e-posta doğrulama** | `docs/07` §5 |
+
+> Kullanıcı talimatı: **"Önce tasarımı göster, onaylayınca kod onayı ayrıca
+> vereceğim."** Bu nedenle V11-T01 "tasarım onayı bekliyor" durumunda, kod
+> yazılmadı.
 
 ---
 
@@ -740,3 +770,4 @@ binary dosyayı bozar; ekran görüntüsü için `adb shell screencap -p /sdcard
 | 2.7 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) dokümanlara işlendi; güncel HEAD `a0286ad` |
 | 2.8 | 2026-11-18 | Android emülatör smoke'u ve bulunan platform hatalarının düzeltmeleri dokümanlara işlendi; docs-only CI run `44366617692` yeşil (335/335). Geçici HTTP/cleartext ayarları geri alındı, final API adresi `https://10.0.2.2:7241/api/v1/` |
 | 2.9 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
+| 2.10 | 2026-11-18 | `docs/10` cevapları işlendi; `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 görev kartı ve §8.4 karar özeti eklendi; "tüm POST" / "auth hariç" çelişkisi giderildi; kod yazılmadı, tasarım+kod onayı bekleniyor |

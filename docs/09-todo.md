@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.19
+**Sürüm:** 1.20
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Durum notu v2.9](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.10](08-durum-ve-devam-notu.md) · [Yol haritası v1.16](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.1](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil, Android smoke tamamlandı) |
+| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 görev kartı **V11-T01 — Idempotency-Key**: kararlar verildi, teknik tasarım hazır, **tasarım + kodlama onayı bekliyor** (`docs/07` §5.1, `docs/11`) |
 | Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · Android yerel build 0/0 + emülatör smoke · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` (CI bakımı), `44366617692` (docs-only) ve `44379256250` (Android düzeltmeleri) yeşil, `ubuntu-24.04`; Slice 9 run `44189257561` · 2026-11-18 |
-| Sıradaki komut | Yeni iş yok; `Idempotency-Key` v1.1'de ayrı görev. İstersen Windows manuel UI smoke (opsiyonel) |
+| Sıradaki komut | **Kod yok.** Önce `docs/11` §9'daki 6 tasarım onayı maddesini yanıtla; onay sonrası V11-T01'e geç. Windows manuel UI smoke (2.1-A) ve LocalDB temizliği (2.2-A) görev kartında bekliyor |
 
 ---
 
@@ -313,8 +313,18 @@ dotnet test FinTrack.slnx --nologo -v q
 
 ### Teknik borç / ertelenen
 
-- [ ] `Idempotency-Key` (tüm POST) — ayrı görev; karar talebi:
-      [docs/10-karar-bekleyen-konular.md](10-karar-bekleyen-konular.md)
+- [ ] `Idempotency-Key` (finansal/mutasyon `POST`, auth hariç) — **v1.1 V11-T01**
+      · kararlar: [docs/10 v1.1](10-karar-bekleyen-konular.md) · teknik tasarım:
+      [docs/11 v1.0](11-idempotency-teknik-tasarim.md) · görev kartı:
+      [docs/07 §5.1](07-yol-haritasi-ve-ajan-gorev-standardi.md).
+      **Durum: 1.6/1.10 tasarım onayı + ayrı kodlama onayı bekliyor; kod yazılmadı.**
+      Onay sonrası: host middleware + `shared` migration + ADR-0009 genişletmesi
+      + S1–S20 testleri + mobil pending store; ardından Windows smoke (2.1) ve
+      LocalDB temizliği (2.2).
+- [ ] Windows manuel UI smoke — karar 2.1-A: `giriş → harcama → kart → rapor` akışı
+      Windows hedefinde de yapılacak (henüz çalıştırılmadı)
+- [ ] LocalDB smoke verilerinin silinmesi — karar 2.2-A:
+      `smoke_20261118@example.com`, `Market`, 125,00 TRY
 - [x] CI bakımı — action'lar Node 24 major sürümlerine yükseltildi
       (`checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6`,
       `upload-artifact@v7`); runner `ubuntu-24.04` sabitlendi; `actionlint` 0 hata
@@ -382,3 +392,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.17 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
 | 1.18 | 2026-11-18 | Yerel oturum yanıtları (`docs/answer*.txt`) ignore edildi; izlenen `docs/answers-1.txt` çalışma ağacından çıkarıldı ve referans `docs/08` §8.1'e bağlandı |
 | 1.19 | 2026-11-18 | Açık kararlar `docs/10-karar-bekleyen-konular.md` dosyasına taşındı; `Idempotency-Key` maddesine karar talebi bağlantısı eklendi |
+| 1.20 | 2026-11-18 | Kullanıcı cevapları işlendi: `docs/10` v1.1, `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 kartı, `docs/08` §8.4; "tüm POST" çelişkisi giderildi; Windows smoke ve LocalDB temizliği onaylı görevler olarak eklendi; kod yazılmadı |

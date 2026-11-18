@@ -1,19 +1,21 @@
 # FinTrack — Karar Bekleyen Konular
 
-**Sürüm:** 1.0  
+**Sürüm:** 1.1  
 **Tarih:** 2026-11-18  
-**Durum:** ⏳ Yanıt bekliyor  
-**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [TODO — teknik borç](09-todo.md)
+**Durum:** ✅ Kararlar verildi — 1.6 ve 1.10 için **teknik tasarım onayı bekliyor**  
+**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [Teknik tasarım v1.0](11-idempotency-teknik-tasarim.md) · [TODO — teknik borç](09-todo.md)
 
 > Bu dosya **kod yazılmadan önce** kapatılması gereken kararları içerir.
 > Her maddede bir öneri ve seçenekler var. Yanıtını iki yoldan verebilirsin:
 >
 > 1. Kısa yol: **“Öneriler onaylandı.”** yazman yeterli; varsa istisnaları belirtirsin.
-> 2. Ayrıntılı yol: Her maddedeki `**Kararınız:**` alanını doldurursun.
+> 2. Ayrıntılı yol: Her maddedeki `**Kararınız:**` alanını doldurursun (kullanıcı bu yolu seçti).
 >
-> Cevapları aldıktan sonra kararları `docs/05`, `docs/06`, `docs/07`, `docs/08`,
-> `docs/09` üzerine işler, görev kartını açar ve ancak sonra koda başlarım.
-> Açık karar varken kod yazmayacağım.
+> **Cevaplar `10-karar-bekleyen-konulara-cevap.txt` ile verildi (2026-11-18).**
+> Kararlar `docs/05`, `docs/06`, `docs/07`, `docs/08`, `docs/09`'a işlendi;
+> teknik tasarım [docs/11](11-idempotency-teknik-tasarim.md)'de toplandı.
+> Kullanıcı açıkça **"Henüz kodlamaya başlama"** dediği için **kod yazılmadı**;
+> 1.6 ve 1.10 tasarım onayı sonrası ayrı kodlama onayı beklenecek.
 
 ---
 
@@ -33,7 +35,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Tüm `POST` zorunlu, auth dahil (mevcut sözleşmenin birebir yorumu).
   - **C)** v1.1'de de opsiyonel kalır, sadece desteklenir.
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Tüm finansal/mutasyon `POST` zorunlu; auth `POST` kapsam dışı. → `docs/05` §2.7, `docs/06` §1.4, `docs/11` §1.1.
 
 ### 1.2 Anahtarın kapsamı
 
@@ -46,7 +48,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Query string de dahil edilir.
   - **C)** Kullanıcı bazlı izolasyon kaldırılır, anahtar global kabul edilir (önerilmez; güvenlik riski).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** `userId + method + route template + route değerleri + anahtar`; query string hariç. → `docs/11` §3.1.
 
 ### 1.3 Gövde karşılaştırma yöntemi
 
@@ -58,7 +60,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Ham istek baytlarının SHA-256'sı (basit ama istemci serileştirme farklarına duyarlı).
   - **C)** Gövdenin tamamını sakla ve birebir karşılaştır (daha fazla veri, kişisel veri saklama riski).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Canonical JSON (JCS/RFC 8785 tabanlı kurallar) + SHA-256; ham gövde saklanmaz. Deterministik kurallar → `docs/11` §3.2.
 
 ### 1.4 Saklama yeri ve şema
 
@@ -71,7 +73,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **C)** Redis / distributed cache (yeni altyapı bağımlılığı → ADR gerekir).
   - **D)** In-memory cache (tek instance varsayımı; yatay ölçeklemeyi bozar).
 
-**Kararınız:** ______________________________________
+**Karar: A, mimari koşulla — Kabul edildi.** Host sahipliğinde `shared.IdempotencyKeys` + ayrı migration; modüller tabloya erişmez, modül DbContext/migration düzeni korunur. → `docs/11` §5.
 
 ### 1.5 Saklama süresi ve temizlik
 
@@ -84,7 +86,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** 24 saat + periyodik cleanup job'u.
   - **C)** Farklı süre: ____ saat.
 
-**Kararınız:** ______________________________________
+**Karar: A, küçük eklemeyle — Kabul edildi.** 24 saat; background job yok; erişimde silme + saatte bir en fazla 1000 satırlık sınırlı toplu temizlik. → `docs/11` §6.
 
 ### 1.6 Eşzamanlılık ve `InProgress`
 
@@ -97,7 +99,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** 1 dk stale timeout.
   - **C)** Stale timeout yok; manuel müdahale gerekir.
 
-**Kararınız:** ______________________________________
+**Karar: Mevcut A önerisi REDDEDİLDİ; tasarım onayı bekliyor.** 5 dk stale timeout tek başına yetersiz. Önerilen tasarım: idempotency kaydı ile finansal kayıt **tek `Serializable` transaction'da** commit edilir; kalıcı `InProgress` satırı oluşmaz, stale kurtarma gerekmez. Çökme pencereleri, akış diyagramı ve S1–S20 testleri → `docs/11` §4. **Bu bölüm onaylanmadan koda geçilmez.**
 
 ### 1.7 Auth uç noktaları ve token güvenliği
 
@@ -110,7 +112,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Auth dahil; token içeren yanıt gövdesi şifrelenerek saklanır (ek kriptografi işi).
   - **C)** Auth dahil; sadece durum kodu saklanır, gövde tekrar döndürülmez (login/refresh için pratik değil).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** `register/login/refresh/logout` kapsam dışı; token içeren yanıtlar kaydedilmez. `docs/05` §2.7 ve `docs/06` §1.4 "tüm POST" ifadesi "finansal/mutasyon POST" olarak düzeltildi.
 
 ### 1.8 Hata yanıtlarının tekrarı
 
@@ -122,7 +124,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** 2xx + 4xx replay, 5xx saklanmaz.
   - **C)** Tüm yanıtlar saklanır (sözleşmedeki “ilk yanıt” ifadesinin birebir yorumu).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Yalnızca 2xx durum kodu + `Location` başlığı + gövde replay için saklanır; 4xx/5xx kalıcı kayıt oluşturmaz.
 
 ### 1.9 Eksik / geçersiz header davranışı
 
@@ -134,7 +136,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** `422 Unprocessable Entity`.
   - **C)** `409 IdempotencyKeyReused`.
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Eksik/geçersiz UUID/bozuk JSON → `400 ValidationFailed`, hata alanı `idempotencyKey`.
 
 ### 1.10 Mobil istemci davranışı
 
@@ -147,7 +149,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Key `SecureStorage`'da kalıcı olur; kullanıcı aksiyonu tamamlanana kadar saklanır.
   - **C)** Mobil tarafta retry hiç açılmaz; sadece API tarafı korunur.
 
-**Kararınız:** ______________________________________
+**Karar: B, geliştirilmiş haliyle — Kabul edildi; depolama tasarımı onay bekliyor.** Anahtar + istek gövdesi uygulama restart'ında korunur; çoklu bekleyen işlem desteklenir; kesin başarıda silinir; offline yazma kuyruğuna dönüşmez. Öneri: app-private SQLite + AES-GCM (anahtar `SecureStorage`'da). → `docs/11` §7.
 
 ### 1.11 Uygulama ve test kapsamı
 
@@ -159,7 +161,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Önce `/expenses` ve `/cards` ile pilot, sonra genişlet.
   - **C)** Sadece unit test; entegrasyon testi eklenmez (önerilmez).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Tüm kapsam dahili POST'lar + `docs/11` §4.7 S1–S20 entegrasyon senaryoları zorunlu.
 
 ### 1.12 Mimari yerleşim
 
@@ -171,7 +173,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Modül başına filter/endpoint filtresi (tekrar ve sınır ihlali riski).
   - **C)** Paylaşılan kütüphaneye middleware, host kaydeder (A ile mantık aynı, sadece dosya yeri değişir).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Host middleware; modül sınırları korunur; auth uç noktaları açıkça hariç tutulur. ADR-0009 transaction altyapısı tüm mutasyon POST'larına genişletilir (onay: `docs/11` §9/2).
 
 ---
 
@@ -184,7 +186,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 - **Öneri:** Evet, yapılsın. Build 0/0 ama uygulama elle açılmadı; aynı `giriş → harcama → kart → rapor` akışı ~10 dk sürer.
 - **Seçenekler:** **A)** Yapılsın (öneri) · **B)** Şimdilik atlanır.
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Windows manuel UI smoke (`giriş → harcama → kart → rapor`) görev kartının doğrulama maddesi olarak eklendi.
 
 ### 2.2 LocalDB smoke verileri
 
@@ -193,7 +195,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 - **Öneri:** Silinsin; bunlar doğrulama verisi, ürün verisi değil. Repo etkilenmez.
 - **Seçenekler:** **A)** Silinsin (öneri) · **B)** Kalsın, lokal geliştirmede kullanılır.
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** `smoke_20261118@example.com`, `Market` kategorisi ve 125,00 TRY harcama LocalDB'den silinecek (uygulama kodu etkilenmez).
 
 ### 2.3 `answers-1.txt` git geçmişi
 
@@ -202,7 +204,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 - **Öneri:** Dokunulmasın. Geçmişi yeniden yazmak zorunlu force-push gerektirir; faydası riskinden az.
 - **Seçenekler:** **A)** Olduğu gibi kalsın (öneri) · **B)** Geçmişten kazınacak (ayrı, yıkıcı işlem).
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Git geçmişine dokunulmayacak; force-push/yeniden yazma yok. `docs/answer*.txt` ignore kuralı korunuyor.
 
 ### 2.4 Son CI run'ını dokümanlara eklemek
 
@@ -211,7 +213,7 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 - **Öneri:** Hayır. Kod düzeltmelerinin doğrulaması `44379256250` ile zaten dokümanlarda. Her docs-only run'ı kovalamak gereksiz commit döngüsü yaratır.
 - **Seçenekler:** **A)** Eklenmesin (öneri) · **B)** Eklenir.
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** `44381807517` docs-only run'ı dokümanlara eklenmeyecek; kod doğrulaması `44379256250` referansı yeterli.
 
 ---
 
@@ -228,36 +230,43 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **E)** Ekstre belgesi yükleme / OCR
   - **F)** Diğer: __________________
 
-**Kararınız:** ______________________________________
+**Karar: A — Kabul edildi.** Idempotency tamamlandıktan sonra v1.1 önceliği **parola sıfırlama + e-posta doğrulama**. Diğer konular TODO'da korunur, ayrıca değerlendirilir.
 
 ---
 
-## 4. Hızlı cevap özeti (istersen sadece burayı doldur)
+## 4. Verilen cevapların özeti
 
 ```text
-1.1 Zorunluluk kapsamı: A / B / C
-1.2 Anahtar kapsamı:    A / B / C
-1.3 Gövde hash:         A / B / C
-1.4 Saklama yeri:       A / B / C / D
-1.5 TTL/temizlik:       A / B / C
-1.6 InProgress:         A / B / C
-1.7 Auth kapsamı:       A / B / C
-1.8 Hata replay:        A / B / C
-1.9 Hata kodu:          A / B / C
-1.10 Mobil retry:       A / B / C
-1.11 Test kapsamı:      A / B / C
-1.12 Mimari yer:        A / B / C
-2.1 Windows smoke:      A / B
-2.2 LocalDB verisi:     A / B
-2.3 Git geçmişi:        A / B
-2.4 Son CI run:         A / B
-3. v1.1 öncelik:        A / B / C / D / E / F
+1.1 Zorunluluk kapsamı: A
+1.2 Anahtar kapsamı:    A
+1.3 Gövde hash:         A
+1.4 Saklama yeri:       A (mimari koşulla)
+1.5 TTL/temizlik:       A (küçük eklemeyle)
+1.6 InProgress:         A REDDEDİLDİ → yeni tasarım önerisi, ONAY BEKLİYOR
+1.7 Auth kapsamı:       A
+1.8 Hata replay:        A
+1.9 Hata kodu:          A
+1.10 Mobil retry:       B (geliştirilmiş; depolama tasarımı ONAY BEKLİYOR)
+1.11 Test kapsamı:      A
+1.12 Mimari yer:        A
+2.1 Windows smoke:      A
+2.2 LocalDB verisi:     A
+2.3 Git geçmişi:        A
+2.4 Son CI run:         A
+3. v1.1 öncelik:        A
 ```
+
+Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` (yerel, commit edilmez).
 
 ---
 
 ## 5. Bu dokümanın akıbeti
 
-- Yanıtları aldıktan sonra bu dosya **Sürüm 1.0 → 1.1** yapılır ve kararlar yazılır.
-- Kararlar bağlayıcı belgelere işlenir: `docs/05` §2.7, `docs/06` §1.4, `docs/07` (yeni görev kartı), `docs/08` §4/§8, `docs/09` teknik borç maddesi.
-- Bu dosya kalıcı bir karar kaynağı değil, **oturumluk karar talebidir**; kapatıldığında `docs/05`–`docs/07` esas alınır.
+- ✅ Bu dosya **Sürüm 1.1** yapıldı; tüm kararlar yukarıya işlendi.
+- ✅ Kararlar bağlayıcı belgelere işlendi: `docs/05` §2.7, `docs/06` §1.4,
+  `docs/07` §5 görev kartı, `docs/08` §4/§8, `docs/09` teknik borç maddesi.
+- ⏳ Teknik tasarım ve onay bekleyen maddeler: [docs/11](11-idempotency-teknik-tasarim.md).
+- **Kodlama onayı ayrı alınacak.** 1.6 ve 1.10 tasarım onayı olmadan uygulamaya
+  geçilmez.
+- Bu dosya kalıcı karar kaynağı değildir; kapatıldığında `docs/05`–`docs/07`
+  esas alınır.

@@ -1,8 +1,8 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.15
+**Sürüm:** 1.16
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
+**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.5](06-api-sozlesmeleri.md) · ADR-0001…0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu belge iki şeyi tanımlar:
@@ -626,8 +626,8 @@ uçtan uca akış test edildi.
 
 | Konu | Not |
 |---|---|
-| `Idempotency-Key` zorunlu | Mobil ağ kopmalarında çift kayıt önlemi |
-| Parola sıfırlama / e-posta doğrulama | Identity genişlemesi |
+| `Idempotency-Key` zorunlu | Kararlar alındı (`docs/10` v1.1); teknik tasarım `docs/11`'de; **tasarım onayı ve ayrı kodlama onayı bekliyor** → görev kartı §5.1 |
+| Parola sıfırlama / e-posta doğrulama | Identity genişlemesi; **Idempotency sonrası sıradaki öncelik (karar: 3-A)** |
 | Hesap silme (KVKK) | Soft delete + 30 gün |
 | Çoklu para birimi | Model hazır; kur dönüşümü yok |
 | Rate limiting / kota | API koruması |
@@ -636,6 +636,76 @@ uçtan uca akış test edildi.
 | Kart harcaması taksit planı | v1 kapsamı dışı |
 | Kategori restore / kart arşivden çıkarma | v1'de yok |
 | Tam audit log | v1'de durum + iade/iptal kayıtları yeterli |
+
+### 5.1 Görev kartı — V11-T01 — Idempotency-Key
+
+**Dilim:** v1.1
+**Büyüklük:** L
+**Durum:** ⏳ Tasarım onayı bekliyor — **kod yazılmadı / yazılmayacak**
+
+**Amaç:**
+Ağ kopması, timeout veya sunucu çökmesinde kullanıcının parasal kayıtlarının
+mükerrer oluşmamasını ve belirsiz sonucun güvenle kurtarılmasını sağlamak.
+Amaç yalnızca bir header eklemek değil, finansal kaydın replay kaydıyla atomik
+olarak korunmasıdır (`docs/10` §3 nihai tavsiye).
+
+**Kapsam:**
+- Host `IdempotencyMiddleware`: kapsam tespiti, UUID/JSON doğrulama, canonical
+  JSON + SHA-256, pozitif endpoint listesi, yanıt tamponlama (2xx + `Location`).
+- `shared.IdempotencyKeys` tablosu, host sahipliğinde `IdempotencyDbContext` ve
+  ayrı migration; `Program.cs` migration sırası: identity → idempotency → modüller.
+- ADR-0009 `IWriteTransactionScope` altyapısının tüm mutasyon POST'larına
+  genişletilmesi; `IWriteTransactionScopeAccessor`; modül `Enlist(scope)`
+  uyumları (Expenses dâhil); commit tek noktada.
+- 24 saat TTL, erişimde silme ve sınırlı toplu temizlik (job yok).
+- Mobil `PendingOperationStore`: SQLite + AES-GCM, anahtar `SecureStorage`'da;
+  `SentUnconfirmed` kurtarma, `Created` kullanıcı onayı; `AuthHandler` POST retry.
+- Testler: `docs/11` §4.7 S1–S20 + mimari testleri (R4, R6).
+
+**Kapsam dışı:**
+- `/api/v1/auth/*` ve token yanıtlarının saklanması.
+- `PUT`/`GET` retry, offline yazma kuyruğu, dağıtık kilit, background cleanup job.
+- Parola sıfırlama / e-posta doğrulama (sıradaki görev).
+
+**Dokunulacak projeler:**
+`FinTrack.Api` (middleware, IdempotencyDbContext, migration, DI, accessor),
+`FinTrack.ModuleContracts` (accessor sözleşmesi), Expenses/CashInflows/
+CreditCards/Debts altyapıları (`Enlist`/no-op wrapper; iş mantığı değişmez),
+`FinTrack.Mobile.Core` + `FinTrack.Mobile` (pending store, handler), test projeleri.
+
+**API / sözleşme:**
+`docs/06` §1.4 (v1.5), `docs/11` §1–6; `409 IdempotencyKeyReused`,
+`409 IdempotencyInProgress`, `400 ValidationFailed`.
+
+**İş kuralları:**
+`docs/05` §2.7; `docs/10` v1.1 kararları; `docs/11` §9 onay maddeleri.
+
+**Kabul kriterleri:**
+- [ ] `docs/11` §9'daki 6 tasarım onayı maddesi kullanıcı tarafından onaylandı.
+- [ ] Kapsam dahili her mutasyon `POST` zorunlu anahtar istiyor; auth hariç.
+- [ ] Aynı key + aynı gövde → aynı 2xx + `Location`, tek finansal kayıt.
+- [ ] Aynı key + farklı gövde → `409 IdempotencyKeyReused`.
+- [ ] Çökme/commit pencereleri S5–S6 ve ADR-0009 S18 testleri geçiyor; çift kayıt yok.
+- [ ] Kalıcı `InProgress` satırı yok; stale timeout kullanılmıyor.
+- [ ] Migration host'ta, `shared` şemasında; modül DbContext/migration'ları değişmedi.
+- [ ] Mobil restart sonrası aynı key/gövde ile güvenli replay; offline kuyruğu yok.
+- [ ] Entegrasyon testleri Testcontainers MSSQL üzerinde yeşil; toplam test sayısı güncellendi.
+- [ ] Windows manuel UI smoke (karar 2.1) yapıldı; LocalDB smoke verileri silindi (2.2).
+- [ ] CI yeşil; doküman sürümleri ve değişiklik geçmişleri güncellendi.
+
+**Testler:**
+- Unit: scope/hash/canonicalizer, header doğrulama, pending store durum makinesi.
+- Integration: S1–S20 (Testcontainers MSSQL), çökme hook'ları, cross-module atomiklik.
+- Architecture: modüller `IdempotencyDbContext`'e referans vermez; tüm `MapPost`
+  kapsam listesinde veya auth; kapsam dahili handler'da ikinci transaction yok.
+
+**Doküman güncellemeleri:**
+`docs/05` §2.7 ✅ · `docs/06` §1.4 ✅ · `docs/07` §5/§5.1 ✅ · `docs/08` §4/§8 ✅ ·
+`docs/09` teknik borç ✅ · `docs/10` v1.1 ✅ · `docs/11` v1.0 ✅ · README ✅.
+
+**Riskler / açık sorular:**
+`docs/11` §9 (1.6 atomiklik tasarımı, ADR-0009 genişletmesi, canonicalizer, şema,
+mobil şifreleme, kurtarma kuralı). **Onay gelmeden uygulamaya geçilmez.**
 
 ---
 
@@ -896,3 +966,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
 | 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI run `44189257561` yeşil |
 | 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221`, `44366617692` ve `44379256250` yeşil |
+| 1.16 | 2026-11-18 | `docs/10` kararları işlendi; `docs/11` teknik tasarımı ve V11-T01 görev kartı eklendi; 1.6/1.10 tasarım onayı ve ayrı kodlama onayı bekliyor, kod yazılmadı |

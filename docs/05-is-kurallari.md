@@ -1,8 +1,8 @@
 # FinTrack — İş Kuralları (Business Rules)
 
 **Sürüm:** 1.4
-**Tarih:** 2026-11-17
-**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009
+**Tarih:** 2026-11-18
+**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu doküman v1 iş kurallarını tanımlar. `docs/02` §5'teki 7 açık karar ile
@@ -101,9 +101,34 @@ nasıl yansıdığını tanımlar.
 
 ### 2.7 İdempotency
 
-- v1'de `Idempotency-Key` başlığı **desteklenir** ancak zorunlu değildir.
-- v1.1'de tüm `POST` uç noktalarında zorunlu hale getirilmesi planlanır.
-- Aynı anahtarla gelen tekrar istek yeni kayıt oluşturmaz; ilk yanıt döner.
+- v1'de `Idempotency-Key` başlığı **desteklenir** ancak zorunlu değildir;
+  uygulama v1.1 görevine bırakılmıştır (`docs/06` §1.4).
+- **v1.1 kararı (2026-11-18):** Başlık, **tüm finansal/mutasyon `POST`**
+  uç noktalarında **zorunludur**. `/api/v1/auth/*` (`register`, `login`,
+  `refresh`, `logout`) **kapsam dışıdır**; token içeren yanıtlar asla
+  idempotency kaydında saklanmaz. Kapsam listesi `docs/11` §1.1'dedir.
+- Kapsam: `userId + HTTP method + route template + route değerleri + anahtar`.
+  Query string kapsama girmez; farklı kullanıcı/route/route değeri farklı
+  kapsamdır.
+- Aynı kapsam + aynı anahtar + **aynı gövde** (canonical JSON + SHA-256) →
+  ilk **2xx** yanıtı (durum kodu, `Location` başlığı ve gövde) tekrar döner;
+  **yeni kayıt oluşmaz**.
+- Aynı kapsam + aynı anahtar + farklı gövde → `409 IdempotencyKeyReused`.
+- Aynı anahtar hâlâ işleniyorsa → `409 IdempotencyInProgress`.
+- Eksik/geçersiz UUID veya bozuk JSON → `400 ValidationFailed` (alan
+  `idempotencyKey`).
+- Yalnızca 2xx yanıtları replay için saklanır; 4xx/5xx kalıcı kayıt oluşturmaz.
+- Saklama süresi **24 saattir**; süresi dolan anahtar replay garantisi vermez,
+  istemci aynı anahtarı yeniden kullanmamalıdır.
+- **Atomiklik kuralı:** Replay kaydı ile finansal kayıt **aynı veritabanı
+  transaction'ında** commit edilir. Kalıcı `InProgress` kaydı yoktur; sunucu
+  çökmesi yarım kayıt bırakmaz. Stale-lock ile otomatik yeniden çalıştırma
+  yapılmaz (bkz. `docs/11` §4 — tasarım onayı bekliyor).
+- Mobil istemci, aynı işlemin anahtarını ve gövdesini uygulama yeniden
+  başladıktan sonra da korur; yalnızca belirsiz sonuç kurtarma ve güvenli retry
+  için kullanır (offline yazma kuyruğu değil; `docs/11` §7).
+- Uygulama ayrıntıları ve onay bekleyen tasarım maddeleri:
+  [docs/11-idempotency-teknik-tasarim.md](11-idempotency-teknik-tasarim.md).
 
 ---
 
@@ -631,7 +656,9 @@ Aşağıdaki testler CI'da zorunludur; biri kırmızıysa sürüm çıkmaz.
 
 Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 
-- `Idempotency-Key`'in v1.1'de zorunlu hale getirilmesi.
+- `Idempotency-Key` uygulaması: kararlar alındı (`docs/10` v1.1), teknik tasarım
+  `docs/11`'de; **tasarım onayı ve ayrı kodlama onayı bekliyor** (artık açık iş
+  kuralı değil).
 - Çoklu para birimi ve kur dönüşümü.
 - `Endpoints` projelerinin ayrı kalıp kalmayacağı.
 - Parola sıfırlama ve e-posta doğrulama.
@@ -649,3 +676,4 @@ Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 | 1.1 | 2026-11-15 | Slice 4 tarih kesiti/iptal/devreden borç kuralları netleştirildi; kredi sözleşmesi `MonthlyPayment` girdisine geçti, taksitler eşitlendi |
 | 1.2 | 2026-11-15 | Gelecek `asOf` reddi ve iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
 | 1.3 | 2026-11-17 | Taksit ödeme iptalinde son ödenmiş taksit kısıtı kaldırıldı; sıra kuralı yalnızca ödeme anında uygulanıyor (2026-11-17 onayı) |
+| 1.4 | 2026-11-18 | `Idempotency-Key` kararları işlendi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; 24 saat, 2xx replay, tek transaction atomikliği ve mobil kalıcı kayıt kuralı §2.7'ye eklendi; ayrıntı `docs/11` |
