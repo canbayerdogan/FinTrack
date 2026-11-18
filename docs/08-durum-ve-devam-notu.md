@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.7
+**Sürüm:** 2.8
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Yol haritası v1.14](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
+**Bağlı belgeler:** [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -43,8 +43,10 @@
 **git** (`main`); uzak depo
 [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack) (public).
 GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
-doğruladı: run `44189257561` yeşil (335/335; Android + Windows hedefleri;
-Slice 8 run `44156632893`, Slice 7 run `44150709461` idi).
+doğruladı: run `44189257561` (Slice 9), `44365407221` (CI bakımı) ve
+`44366617692` (dokümanlar) yeşil (335/335; Android + Windows hedefleri;
+Slice 8 run `44156632893`, Slice 7 run `44150709461` idi). Android emülatör
+smoke'u giriş → harcama → kart → rapor akışıyla tamamlandı.
 
 **Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
 typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
@@ -69,11 +71,11 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 > **2026-11-18 notu:** Slice 9 tamamlandı. Backend Debug/Release build 0/0;
 > Windows MAUI build (Debug + Release) 0/0; birim/mimari **263/263** (248
-> backend + 15 mobile). Android SDK/JDK yerel eksik → `net10.0-android` CI
-> Ubuntu job'unda derlendi; run `44189257561` yeşil. Entegrasyon 72/72, toplam
-> **335/335** CI'da doğrulandı. Yerel Docker daemon'u kapalıydı
-> (`npipe:////./pipe/dockerDesktopLinuxEngine` bulunamadı). CI bakımı sonrası
-> run `44365407221` de yeşil (335/335, `ubuntu-24.04`).
+> backend + 15 mobile). Android SDK/JDK kuruldu; `net10.0-android` yerel JDK 17
+> ile 0 uyarı/0 hata derlendi ve `fintrack_smoke` AVD'sinde giriş → harcama →
+> kart → rapor smoke'u başarılı. Entegrasyon 72/72; toplam **335/335** yerelde
+> (Docker açık) ve CI'da doğrulandı. CI bakımı sonrası run `44365407221` ve
+> dokümanlar için `44366617692` yeşil (335/335, `ubuntu-24.04`).
 
 | Kontrol | Komut | Sonuç |
 |---|---|---|
@@ -83,9 +85,10 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Build (Release, Windows MAUI) | `dotnet build src/Mobile/FinTrack.Mobile -c Release -f net10.0-windows10.0.19041.0` | ✅ 0 uyarı, 0 hata |
 | Birim testleri (Debug) | 8 birim/mimari projesi ayrı ayrı | ✅ 263/263 |
 | Release testleri | 8 birim/mimari projesi `-c Release` | ✅ 263/263 |
-| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (CI run `44156632893`; yerel daemon kapalı) |
-| Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` (CI Ubuntu, Java 17) | ✅ Yerel SDK/JDK yok; CI run `44189257561` ile derlendi |
-| CI | GitHub Actions `build-test` | ✅ run `44365407221` yeşil (CI bakımı sonrası; 335/335; `ubuntu-24.04`); önceki: `44189257561` (335/335; Android + Windows), `44156632893` (320/320) |
+| Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (yerel Docker açık; CI run `44156632893`) |
+| Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -f net10.0-android -p:JavaSdkDirectory=<JDK 17>` | ✅ 0 uyarı, 0 hata (yerel JDK 17 + SDK 36; CI Ubuntu job'unda da yeşil) |
+| Android uçtan uca smoke | `dotnet build ... -f net10.0-android -t:Install` + `fintrack_smoke` AVD | ✅ giriş → harcama (125,00 TRY / `Market`) → kartlar (`0 aktif kart`) → raporlar (`Kategori kırılımı: Market`) |
+| CI | GitHub Actions `build-test` | ✅ run `44365407221` (CI bakımı) ve `44366617692` (dokümanlar) yeşil (335/335; `ubuntu-24.04`); önceki: `44189257561` (335/335; Android + Windows), `44156632893` (320/320) |
 | CI workflow lint | `actionlint` v1.7.12 — `.github/workflows/ci.yml` | ✅ 0 hata (Node 24 action'ları + `ubuntu-24.04`) |
 | Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 9'da DbContext/entity/migration yok) |
 
@@ -344,9 +347,22 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 - **MAUI çoklu hedef:** `Directory.Build.props` tek TFM verdiği için MAUI
   csproj'da `<TargetFramework></TargetFramework>` gerekir; `-p:TargetFrameworks=...`
   geçirmek core projenin `net10.0` varlıklarını bozar. `-f <tfm>` kullan.
-- **Android SDK/JDK:** Windows'ta yerel JDK yalnızca JRE 1.8 (`jar` yok) ve SDK
-  yok → `XA5300` + `Could not find required file 'jar'`. Android derlemesi CI
-  Ubuntu job'unda (Java 17 + workload restore) doğrulanır.
+- **Android SDK/JDK:** Windows'ta varsayılan `JAVA_HOME` hâlâ JRE 1.8'i
+  (`C:\Program Files\Java\jre1.8.0_451`, `jar` yok) gösterir; komut satırı
+  derlemesinde `-p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot'`
+  geçirilir. JDK 17 + Android SDK 36 kuruldu; `net10.0-android` yerel olarak
+  0 uyarı/0 hata derlenir. `adb install` fast-deployment ile `No assemblies
+  found ... .__override__/x86_64` verir; emülatöre kurulum için
+  `dotnet build ... -f net10.0-android -t:Install` kullanılır.
+- **Android çalışma zamanı:** MAUI uygulaması için `MainApplication`
+  (`MauiApplication` subclass) dosyası zorunlu; yoksa manifest
+  `android.app.Application` kalır ve `MauiProgram.CreateMauiApp()` çalışmaz.
+  Tek sayfalık başlangıçta global `//login` rotası `Global routes currently
+  cannot be the only page on the stack` hatası verir; `login` kullanılır. XAML
+  `Keyboard="Decimal"` geçersizdir, `Keyboard="Numeric"` kullanılır. Root
+  sayfalarda `GoBackAsync` `..` yerine `//main`'e döner. Smoke için geçici
+  `http://10.0.2.2:5241/api/v1/` ve `usesCleartextTraffic` ayarları geri
+  alındı; varsayılan `https://10.0.2.2:7241/api/v1/`.
 - **.NET 10 MAUI API:** `IQueryProperty` yok (`IQueryAttributable` kullan);
   `Application.MainPage` deprecated (`CreateWindow` kullan); `DisplayAlert` yerine
   `DisplayAlertAsync`.
@@ -370,7 +386,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Mobil çevrimdışı yazma | v1 kapsam dışı (Slice 9) |
 | Mobil okuma önbelleği | Opsiyoneldi; eklenmedi |
 | Bildirimler, biyometrik giriş, çoklu cihaz oturum ekranı | v1 kapsam dışı (Slice 9) |
-| Android emülatör uçtan uca smoke | Emülatör/SDK kurulumuna bırakıldı |
+| Android emülatör uçtan uca smoke | ✅ Tamamlandı (2026-11-18); `fintrack_smoke` AVD, giriş → harcama → kart → rapor |
 
 ---
 
@@ -638,50 +654,61 @@ Token'lar loglanmaz, hata mesajlarına eklenmez.
 - Slice 9 kapandı; 15 mobile testi eklendi; birim/mimari 263/263, entegrasyon
   72/72; toplam 335/335. MAUI iş yükleri kuruldu, Windows build 0/0; Android
   CI run `44189257561` ile yeşil.
-- Yerel Android SDK/JDK ve emülatör kurulmadı; manuel uçtan uca smoke emülatör
-  kurulumuna bırakıldı.
+- Android SDK/JDK 17 ve `fintrack_smoke` AVD kuruldu; manuel uçtan uca smoke
+  giriş → harcama → kart → rapor akışıyla tamamlandı.
 
 ### 8.3 Oturum devri notu (2026-11-18)
 
-**Depo durumu:** Slice 9 kodu `7b4e00a`, yeşil CI run ID'sinin dokümanlara
-eklenmesi `7455546` commit'inde. Bu devir notundan sonra kod değişmeden CI
-bakım commit'i `a0286ad` eklendi; güncel HEAD ve çalışma ağacı için
-`git log -1` / `git status` ile kontrol et. CI: run `44189257561` (kod,
-335/335), `44190582258` (dokümanlar) ve `44365407221` (CI bakımı, 335/335)
-`success`; `main` rozeti yeşil.
+**Depo durumu:** Slice 9 kodu `7b4e00a`, CI run ID'si `7455546`, CI bakımı
+`a0286ad`, docs-only doğrulama `755eebb`; bu not sonrası Android smoke
+düzeltmeleri ve doküman güncellemesi commit edildi. Güncel HEAD ve çalışma
+ağacı için `git log -1` / `git status` ile kontrol et. CI: run `44189257561`
+(kod, 335/335), `44190582258` (dokümanlar), `44365407221` (CI bakımı, 335/335)
+ve `44366617692` (docs-only, 335/335) `success`; `main` rozeti yeşil.
 
-**Tamamlanan:** Slice 0–9 kod + test + doküman + CI. Çözümde 33 proje; 263
-birim/mimari + 72 entegrasyon = **335/335**. Backend ve Windows MAUI Debug/Release
-0 uyarı/0 hata; Android derlemesi CI Ubuntu job'ında (Java 17 + `dotnet workload
-restore`) yeşil. Release XAML `XC0022` uyarıları `x:DataType` ile temizlendi.
+**Tamamlanan:** Slice 0–9 kod + test + doküman + CI + Android emülatör smoke.
+Çözümde 33 proje; 263 birim/mimari + 72 entegrasyon = **335/335**. Backend ve
+Windows MAUI Debug/Release 0 uyarı/0 hata; Android derlemesi yerel JDK 17 + SDK
+36 ile 0 uyarı/0 hata, CI Ubuntu job'unda (Java 17 + `dotnet workload restore`)
+yeşil. `fintrack_smoke` AVD'sinde giriş → harcama → kart → rapor akışı
+doğrulandı. Release XAML `XC0022` uyarıları `x:DataType` ile temizlendi. Smoke
+sırasında bulunan `MainApplication`, global `login` rotası, `Keyboard="Numeric"`
+ve root `GoBackAsync` hataları düzeltildi; geçici HTTP/cleartext ayarları geri
+alındı.
 
 **Devam noktaları (öncelik sırası):**
 
-1. **Android uçtan uca smoke — tek kalan kod tarafı iş:** Yerel Windows'ta Android
-   SDK + JDK 17 (mevcut JRE 1.8, `jar` yok) ve emülatör kur; giriş → harcama
-   ekle → kartlar/detay → rapor akışını doğrula. Hata çıkarsa ilgili ViewModel/
-   `AuthHandler` testiyle birlikte düzelt.
+1. **Android uçtan uca smoke ✅ (2026-11-18):** `fintrack_smoke` AVD, API
+   `http://10.0.2.2:5241/api/v1/` üzerinden geçici olarak bağlandı. Kullanıcı
+   `smoke_20261118@example.com` ile giriş yapıldı; API ile `Market` kategorisi
+   oluşturuldu; UI ile 125,00 TRY harcama kaydedildi. Harcamalar `1 kayıt ·
+   toplam 1 sayfa`, pano `Net harcama 125,00 TRY`, kartlar `0 aktif kart`,
+   raporlar `Kategori kırılımı: Market` gösterdi. Geçici HTTP/cleartext ayarları
+   kaldırıldı; final varsayılan `https://10.0.2.2:7241/api/v1/`.
 2. **Windows manuel UI smoke (opsiyonel):** Build 0/0 ama uygulama elle açılıp
    denmedi; aynı akış Windows hedefinde denenebilir.
 3. **CI bakımı ✅ (2026-11-18):** Run `44190582258` annotasyonları giderildi —
    `checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6` ve
    `upload-artifact@v7` (hepsi Node 24); runner `ubuntu-latest` yerine
    `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası
-   CI run `44365407221` yeşil (335/335, `ubuntu-24.04`).
+   CI run `44365407221` ve docs-only run `44366617692` yeşil (335/335).
 4. **Ertelenen kapsam:** `Idempotency-Key` (`docs/06` §1.4 / `docs/07` Slice 2);
    okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
 
-**Ortam notları:** `gh` CLI kurulu değil → GitHub API `webfetch` ile kullanılıyor;
+**Ortam notları:** `gh` CLI kurulu değil → GitHub API `curl.exe` ile kullanılıyor;
 kimliksiz API 403 rate limit döndürebilir (HTML run sayfası alternatifi). PowerShell
-`&&` desteklemez; `git rev-parse '@{u}'` tırnak ister. Yerel Docker daemon kapalı
-→ entegrasyon testleri CI'da koşuyor.
+`&&` desteklemez; `git rev-parse '@{u}'` tırnak ister. Yerel Docker daemon açık;
+entegrasyon testleri 72/72 yerelde de koşuyor. `adb exec-out screencap -p`
+binary dosyayı bozar; ekran görüntüsü için `adb shell screencap -p /sdcard/...`
++ `adb pull` kullanılır.
 
 **Yeniden doğrulama komutları:**
 `dotnet build src/Host/FinTrack.Api/FinTrack.Api.csproj -c Release --nologo` ·
 `dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -c Release -f net10.0-windows10.0.19041.0` ·
-8 birim/mimari projesi için `dotnet test <proje> -c Release` → 263/263 ·
-Android doğrulaması CI run'ında (yerel SDK yok).
+`dotnet build FinTrack.slnx -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot' --nologo` ·
+`dotnet test FinTrack.slnx -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot' --nologo -v q` → 335/335 ·
+`dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -f net10.0-android -t:Install` (emülatör kurulumu için).
 
 ---
 
@@ -707,3 +734,4 @@ Android doğrulaması CI run'ında (yerel SDK yok).
 | 2.5 | 2026-11-18 | Oturum devri notu eklendi (§8.3): depo/CI durumu, kalan manuel smoke, CI bakım uyarıları ve yeniden doğrulama komutları |
 | 2.6 | 2026-11-18 | CI bakımı tamamlandı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` doğrulaması eklendi |
 | 2.7 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) dokümanlara işlendi; güncel HEAD `a0286ad` |
+| 2.8 | 2026-11-18 | Android emülatör smoke'u ve bulunan platform hatalarının düzeltmeleri dokümanlara işlendi; docs-only CI run `44366617692` yeşil (335/335). Geçici HTTP/cleartext ayarları geri alındı, final API adresi `https://10.0.2.2:7241/api/v1/` |

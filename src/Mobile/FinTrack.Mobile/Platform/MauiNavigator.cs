@@ -22,8 +22,17 @@ public sealed class MauiNavigator : IAppNavigator
         return Shell.Current.GoToAsync(route);
     }
 
-    public Task GoBackAsync(CancellationToken cancellationToken = default) =>
-        Shell.Current?.GoToAsync("..") ?? Task.CompletedTask;
+    public Task GoBackAsync(CancellationToken cancellationToken = default)
+    {
+        if (Shell.Current is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return Shell.Current.Navigation.NavigationStack.Count > 1
+            ? Shell.Current.GoToAsync("..")
+            : Shell.Current.GoToAsync("//main");
+    }
 
     public Task DisplayAlertAsync(string title, string message, CancellationToken cancellationToken = default)
     {

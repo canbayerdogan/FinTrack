@@ -11,7 +11,7 @@
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Start" />
 
             <Label Text="Tutar" />
-            <Entry Text="{Binding AmountText}" Placeholder="0,00" Keyboard="Decimal" />
+            <Entry Text="{Binding AmountText}" Placeholder="0,00" Keyboard="Numeric" />
 
             <Label Text="Kategori" />
             <Picker ItemsSource="{Binding Categories}"

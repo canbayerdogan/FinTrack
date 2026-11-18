@@ -1,6 +1,6 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.14
+**Sürüm:** 1.15
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
@@ -78,6 +78,7 @@
 | EF aracı | `dotnet-ef` `10.0.15` (yerel tool manifest: `dotnet-tools.json`) |
 | Docker | CLI ✅ `29.7.2`; yerel daemon kapalı — Testcontainers MSSQL CI'da kullanılabilir |
 | MAUI iş yükü | ✅ `maui-android` + `maui-windows` `10.0.110/10.0.100` (SDK `10.0.400`) |
+| Android SDK/JDK/emülatör | ✅ JDK 17, SDK 36 (`platform-tools`, `emulator`, `build-tools/36.0.0`), Pixel 7 / Android 16 AVD `fintrack_smoke` |
 | Sürüm kontrolü | ✅ git (`main`) + GitHub uzak depo + GitHub Actions CI (yeşil) |
 | NuGet sürümleri | Microsoft paketleri `10.0.15`; 11.x net11 hedefler, kullanılmaz |
 
@@ -585,6 +586,11 @@ slice 1–8 tamam.
 - [x] v1: çevrimdışı yazma yok; okuma önbelleği eklenmedi (opsiyonel).
 - [x] `IQueryProperty` yerine .NET 10 `IQueryAttributable` /
       `ApplyQueryAttributes` kullanıldı; `App.MainPage` yerine `CreateWindow`.
+- [x] Android smoke'da bulunan platform hataları düzeltildi: eksik
+      `MainApplication` (MAUI `Application` subclass) eklendi; tek sayfalık
+      global `//login` rotası `login` yapıldı; `Keyboard="Decimal"` yerine
+      `Keyboard="Numeric"` kullanıldı; `GoBackAsync` root sayfalarda `//main`'e
+      dönüş yapıyor. Geçici HTTP/cleartext ayarları geri alındı.
 
 **Kapsam dışı:** Çevrimdışı yazma, bildirimler, biyometrik giriş, çoklu cihaz
 oturum ekranı.
@@ -596,18 +602,22 @@ oturum ekranı.
 - [x] Birim/mimari toplam **263/263** (248 backend + 15 mobile); entegrasyon
       72/72; toplam **335/335**; CI run `44189257561` yeşil.
 - [x] Windows hedefi (`net10.0-windows10.0.19041.0`) 0 uyarı/0 hata.
-- [x] Android hedefi (`net10.0-android`) yerel SDK/JDK olmadığı için CI Ubuntu
-      job'ında (Java 17 + `dotnet workload restore`) derlendi; run `44189257561`
-      yeşil. Emülatör smoke'u SDK kurulumuna bırakıldı.
+- [x] Android hedefi (`net10.0-android`) yerel JDK 17 + SDK 36 ile 0 uyarı/0
+      hata derlendi; CI Ubuntu job'unda da (Java 17 + `dotnet workload restore`)
+      run `44189257561`, `44365407221` ve `44366617692` ile doğrulandı.
 
 **Kabul kriterleri:**
 - [x] `docs/06` sözleşmeleriyle uyum; token'lar loglanmaz.
-- [ ] Cihazda giriş → harcama → kart → rapor akışı: Windows build hazır;
-      Android emülatör smoke'u SDK kurulumuna bırakıldı.
+- [x] Cihazda giriş → harcama → kart → rapor akışı Android emülatöründe
+      (`fintrack_smoke`, Pixel 7 / Android 16) doğrulandı: giriş başarılı,
+      `Market` kategorisiyle 125,00 TRY harcama kaydedildi, harcama listesi
+      `1 kayıt · toplam 1 sayfa`, pano `Net harcama 125,00 TRY`, kartlar
+      `0 aktif kart`, raporlar `Kategori kırılımı: Market` gösterdi.
 
-**Riskler:** ✅ İş yükü kuruldu. Android SDK/JDK yerel eksik → CI doğrulaması;
-platform farkları (`IQueryAttributable`, `CreateWindow`) çözüldü; SecureStorage
-token store test edildi.
+**Riskler:** ✅ İş yükü, Android SDK/JDK ve emülatör kuruldu; platform farkları
+(`IQueryAttributable`, `CreateWindow`, `MainApplication`, global `login` rotası,
+`Keyboard="Numeric"`, root `GoBackAsync`) çözüldü; SecureStorage token store ve
+uçtan uca akış test edildi.
 
 ---
 
@@ -884,3 +894,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.12 | 2026-11-17 | Slice 7 (kredi + kişisel borç) tamamlandı: `debts` şeması/migration, tam taksit planı, ödeme/iptal ve geri ödeme kuralları, ADR-0009 atomikliği; 31 modül + 8 entegrasyon testi, toplam 300/300, CI run `44150709461` yeşil |
 | 1.13 | 2026-11-17 | Slice 8 (raporlama) tamamlandı: 3 salt okunur uç nokta, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
 | 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI run `44189257561` yeşil |
+| 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221` ve `44366617692` yeşil |

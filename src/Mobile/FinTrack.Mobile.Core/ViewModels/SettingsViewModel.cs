@@ -98,7 +98,7 @@ public partial class SettingsViewModel : ViewModelBase
         try
         {
             await _session.LogoutAsync(cancellationToken);
-            await _navigator.GoToAsync("//login", cancellationToken);
+            await _navigator.GoToAsync("login", cancellationToken);
         }
         finally
         {

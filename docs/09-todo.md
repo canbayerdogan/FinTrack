@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.15
+**Sürüm:** 1.16
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Durum notu v2.7](08-durum-ve-devam-notu.md) · [Yol haritası v1.14](07-yol-haritasi-ve-ajan-gorev-standardi.md)
+**Bağlı belgeler:** [Durum notu v2.8](08-durum-ve-devam-notu.md) · [Yol haritası v1.15](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil) |
-| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` yeşil (CI bakımı sonrası, `ubuntu-24.04`; Slice 9 run `44189257561`) · 2026-11-18 |
-| Sıradaki komut | Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke (giriş → harcama → kart → rapor) |
+| Aktif dilim | **9 — MAUI istemci** ✅ (tamamlandı; CI yeşil, Android smoke tamamlandı) |
+| Son doğrulama | 263/263 birim/mimari (248 backend + 15 mobile) · Windows MAUI build 0/0 · Android yerel build 0/0 + emülatör smoke · 72/72 entegrasyon · toplam **335/335** · CI run `44365407221` (CI bakımı) ve `44366617692` (docs-only) yeşil, `ubuntu-24.04`; Slice 9 run `44189257561` · 2026-11-18 |
+| Sıradaki komut | Yeni iş yok; `Idempotency-Key` v1.1'de ayrı görev. İstersen Windows manuel UI smoke (opsiyonel) |
 
 ---
 
@@ -277,12 +277,18 @@ dotnet test FinTrack.slnx --nologo -v q
       15 mobile) + 72 entegrasyon = **335/335** beklenen; Debug + Release yeşil.
 - [x] **Build:** Windows hedefi Debug + Release 0 uyarı/0 hata; backend Release
       0/0.
-- [x] **Android/CI:** yerel SDK/JDK eksik → Android derlemesi CI Ubuntu
-      job'ında (Java 17 + `dotnet workload restore`) derlendi; run
-      `44189257561` yeşil (335/335).
-- [ ] **Emülatör smoke:** Android emülatörü kurulmadı; manuel uçtan uca akış
-      daha sonra.
-- [x] **Dokümanlar:** `docs/07` v1.14, `docs/08` v2.4, `README.md`, bu dosya.
+- [x] **Android/CI:** yerel JDK 17 + SDK 36 kuruldu; `net10.0-android` 0 uyarı/
+      0 hata derlendi. CI Ubuntu job'unda da (Java 17 + `dotnet workload
+      restore`) run `44189257561`, `44365407221` ve `44366617692` yeşil
+      (335/335).
+- [x] **Android platform düzeltmeleri:** eksik `Platforms/Android/MainApplication.cs`
+      eklendi; global `//login` rotası `login` yapıldı; `Keyboard="Decimal"`
+      yerine `Keyboard="Numeric"`; `MauiNavigator.GoBackAsync` root sayfalarda
+      `//main`'e dönüyor. Geçici HTTP/cleartext ayarları geri alındı.
+- [x] **Emülatör smoke:** `fintrack_smoke` AVD (Pixel 7 / Android 16) ile giriş
+      → harcama (125,00 TRY / `Market`) → kartlar (`0 aktif kart`) → raporlar
+      (`Kategori kırılımı: Market`) doğrulandı.
+- [x] **Dokümanlar:** `docs/07` v1.15, `docs/08` v2.8, `README.md`, bu dosya.
 
 ### Yüksek seviye
 
@@ -303,7 +309,7 @@ dotnet test FinTrack.slnx --nologo -v q
       yukarıda ve `docs/08` §7.5.
 - [x] **Slice 9 — MAUI istemci:** ✅ 2026-11-18. Shell + MVVM, typed
       `HttpClient`, SecureStorage + 401 refresh, v1 ekranları; Android CI
-      doğrulaması ve emülatör smoke'u kaldı. Ayrıntı yukarıda.
+      doğrulaması ve emülatör smoke'u tamamlandı. Ayrıntı yukarıda.
 
 ### Teknik borç / ertelenen
 
@@ -371,3 +377,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil; emülatör smoke'u kaldı |
 | 1.14 | 2026-11-18 | CI bakımı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` ile workflow doğrulandı |
 | 1.15 | 2026-11-18 | CI bakım run'ı `44365407221` yeşil (335/335, `ubuntu-24.04`) son doğrulama olarak işlendi |
+| 1.16 | 2026-11-18 | Android emülatör smoke'u (giriş → harcama → kart → rapor), `MainApplication`/global `login`/klavye/root geri dönüş düzeltmeleri ve docs-only run `44366617692` işlendi; v1 kod tarafında kalan iş yok |

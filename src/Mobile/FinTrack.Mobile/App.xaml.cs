@@ -27,6 +27,6 @@ public partial class App : Application
         var session = _services.GetRequiredService<SessionService>();
         var navigator = _services.GetRequiredService<IAppNavigator>();
         var authenticated = await session.IsAuthenticatedAsync();
-        await navigator.GoToAsync(authenticated ? "//main" : "//login");
+        await navigator.GoToAsync(authenticated ? "//main" : "login");
     }
 }

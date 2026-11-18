@@ -75,7 +75,7 @@ public static class MauiProgram
         var app = builder.Build();
         var authHandler = app.Services.GetRequiredService<AuthHandler>();
         authHandler.SessionExpired += async () =>
-            await app.Services.GetRequiredService<IAppNavigator>().GoToAsync("//login");
+            await app.Services.GetRequiredService<IAppNavigator>().GoToAsync("login");
         return app;
     }
 }
