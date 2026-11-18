@@ -1,7 +1,7 @@
 # ADR-0010 — Idempotent yazmalarda host sahipliğinde transaction
 
-**Durum:** Kabul edildi (koşullu tasarım onayı 2026-11-18) — **kodlama onayı bekliyor**
-**Tarih:** 2026-11-18
+**Durum:** Kabul edildi (koşullu tasarım onayı 2026-11-18, açık kodlama onayı 2026-11-19) — **uygulamada**
+**Tarih:** 2026-11-18 (son güncelleme 2026-11-19)
 **İlgili:** [ADR-0009](0009-moduller-arasi-atomik-yazma.md), ADR-0004, [docs/11](../11-idempotency-teknik-tasarim.md) §4, `docs/07` §5.1 (V11-T01)
 
 ## Bağlam

@@ -1,8 +1,8 @@
 # FinTrack — Idempotency Teknik Tasarımı
 
-**Sürüm:** 1.1
-**Tarih:** 2026-11-18
-**Durum:** ✅ Koşullu tasarım onayı alındı — **kodlama onayı BEKLİYOR (kod yazılmadı)**
+**Sürüm:** 1.2
+**Tarih:** 2026-11-19
+**Durum:** ✅ V11-T01 uygulandı; çalıştırılabilir testler **435/435** yeşil — Windows manuel UI smoke ve MAUI head build operatör görevleri
 **Bağlı belgeler:** [Kararlar v1.2](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5.1
 
 > Bu dosya, `docs/10` kararlarının teknik tasarımı ve kullanıcının
@@ -17,14 +17,16 @@
 > | 24 saatten uzun belirsiz mobil işlem | §7.5 + test S28/S29 |
 > | Çoklu API instance eşzamanlılığı | §4.4.1 + test S4/S22–S24 |
 >
-> **Kodlama onayı ayrıca alınacaktır.** Bu tasarım onaylansa bile kullanıcı açık
-> kodlama onayı vermeden `Idempotency-Key` koduna başlanmaz.
+> **Kodlama onayı alındı ve uygulama tamamlandı.** Kullanıcı, `5abb6af`
+> commit'indeki dokümanları inceleyip açık kodlama onayı verdi (2026-11-19).
+> Önce §3.2 bloklayıcı kapısı koşuldu; kapı sonucu §3.2.1'e işlendi. V11-T01
+> kodu yazıldı; doğrulama sonuçları §9.5'te.
 
 ---
 
 ## 1. Kapsam ve onay durumu
 
-| Madde | Karar | v1.1 durumu |
+| Madde | Karar | Durum (v1.2) |
 |---|---|---|
 | 1.1 | **A** | Finansal/mutasyon `POST` zorunlu; auth `POST` kapsam dışı |
 | 1.2 | **A** | `userId + method + route template + route değerleri + anahtar`; query string hariç |
@@ -169,19 +171,30 @@ RFC 8785 sayıları **IEEE 754 double** olarak serileştirir. Finansal tutarlar 
 double'a, dolayısıyla aynı `RequestHash`'a düşebilir; bu durumda farklı bir tutar
 "aynı gövde" sanılarak ilk yanıt replay edilir.
 
-**Karar — desteklenen sayı alanı:**
+**Karar — desteklenen sayı alanı (v1.2 düzeltmesi):**
 
-- İstek gövdesindeki tüm para alanları için **mutlak değer sınırı** uygulanır:
-  `|tutar| × 10^4 < 2^53` → yaklaşık **900.719.925.474,09 TRY**. Bu sınır
-  kişisel finans alanını fazlasıyla kapsar.
-- Sınır dışı veya sonlu olmayan sayı (`NaN`, `Infinity`) → `400 ValidationFailed`.
+- İstek gövdesindeki tüm sayı alanları için **mutlak değer sınırı** uygulanır:
+  `|sayı| < 2^39` → **549.755.813.888 TRY**. Bu sınır kişisel finans alanını
+  fazlasıyla kapsar.
+- Sınır dışı veya sonlu olmayan sayı (`NaN`, `Infinity`,
+  `1e400` gibi double dışı) → `400 ValidationFailed`.
 - `Money` zaten 4 ondalık basamağa yuvarlar; canonicalizer yalnızca doğrulanmış
   alana uygulanır.
-- S27 testi sınırın hemen altındaki iki farklı decimal'in **farklı hash**
-  ürettiğini (veya sınır dışının `400` döndüğünü) doğrular.
-- Gerekirse ek önlem: para alanları DTO'da **string** olarak taşınır — ancak bu
-  `docs/06` §1.1'deki `number` sözleşmesini değiştireceğinden **ayrı onay ister**;
-  v1.1'de uygulanmaz.
+- S27 testi sınırın hemen altındaki ardışık decimal'lerin **farklı hash**
+  ürettiğini ve sınır dışının `400` döndüğünü doğrular.
+
+> **v1.2 kapı bulgusu (2026-11-19, kullanıcı onayıyla düzeltildi):**
+> v1.1'deki `|tutar| × 10^4 < 2^53` (≈900,7 mlr TRY) sınırı yetersizdi.
+> `Jcs.Net` 0.1.1 kapıyı geçti (6/6 resmî vektör + 6 ECMAScript sayı örneği +
+> S13 + strict I-JSON reddi), ancak yapılan 5.000 ardışık çift taramasında
+> sınırın **içinde** çakışmalar bulundu:
+> `900719925473.5992` ve `900719925473.5993` aynı `RequestHash`'ı üretti.
+> Sebep: ~9×10¹¹ büyüklükte IEEE-754 double aralığı ~0,000122 > 0,0001'dir.
+> `|sayı| < 2^39` (≈549,7 mlr TRY) sınırında 5.000 ardışık çiftin tamamı
+> farklı hash üretti; hemen üstünde (`549755813888.0002` /
+> `549755813888.0003`) tekrar çakışma gözlendi. Bu nedenle uygulanan sınır
+> `2^39`'dur. Para alanlarını JSON `string` taşıma alternatifi `docs/06` §1.1
+> sözleşmesini değiştireceğinden **uygulanmadı**.
 
 `RequestHash = SHA256(UTF8(canonicalJson))` → 64 karakter hex. Ham gövde, kişisel
 veri veya token saklanmaz.
@@ -413,9 +426,16 @@ CreditCards, Debts).
 | **S24** | **İki instance × {commit, rollback, deadlock, lock timeout} matrisi** | §4.4.1 tablosunun tamamı doğrulanır |
 | **S25** | **Expenses / CashInflows / CreditCards / Debts entegrasyonu** | Dördü de host scope'unda `Enlist`; host yokken eski davranış |
 | **S26** | **RFC 8785 resmî test vektörleri** | Kütüphane kapı koşulu geçer (§3.2) |
-| **S27** | **decimal sınırı (§3.2.1)** | Farklı hash veya sınır dışı `400` |
+| **S27** | **decimal sınırı (§3.2.1 — `2^39`)** | Sınır altındaki ardışık tutarlar farklı hash; `2^39` ve üzeri `400 ValidationFailed` |
 | **S28** | **Durum sorgusu + tombstone** | `GET /idempotency/{key}` → 200 (Completed/tombstone) / 404; gövde sızdırılmaz |
 | **S29** | **>24 h belirsiz mobil kayıt** | Otomatik yeni UUID **yok**; `Uncertain`; kullanıcıya "sonuç bilinmiyor" |
+
+> **Uygulama notu (V11-T01):** S1–S18 ve S20–S29 çalıştırılabilir testlerle
+> doğrulandı. **S19 (gerçek SQL 1205 deadlock enjeksiyonu)** ayrı bir testle
+> tetiklenmedi; aynı `UNIQUE (ScopeHash, Key)` hakem yolu S4/S21/S22–S24'te
+> determine edilmiş hook ve zorla sonuçlarla (commit / rollback / lock timeout)
+> doğrulandı. `1205` deadlock kurbanı genel exception yolunda rollback olarak
+> ele alınır; aynı key ile retry tek finansal kayıtla sonuçlanır.
 
 ---
 
@@ -427,6 +447,7 @@ CreditCards, Debts).
 |---|---|---|
 | `Id` | `bigint IDENTITY` | PK |
 | `ScopeHash` | `char(64)` | §3.1; userId dahil |
+| `UserHash` | `char(64)` | `SHA256(JWT sub)`; §7.5 durum sorgusunda kullanıcı izolasyonu için (v1.2 eklemesi) |
 | `Key` | `nvarchar(36)` | UUID `D` formatı, normalize |
 | `RequestHash` | `char(64)` | RFC 8785 kanonik JSON SHA-256 (§3.2) |
 | `Status` | `tinyint NOT NULL` | `1=InProgress` (yalnızca transaction içi, **asla commit edilmez**), `2=Completed`, `3=Tombstone` |
@@ -443,6 +464,7 @@ CreditCards, Debts).
 **Kısıtlar**
 
 - `UNIQUE (ScopeHash, Key)` — replay, çakışma ve çoklu instance arbitri.
+- `IX (UserHash, Key)` — durum sorgusu; aynı anahtar farklı route'larda kullanılmışsa en yeni kayıt döner.
 - `IX (ExpiresAtUtc)`, `IX (TombstoneExpiresAtUtc)` — sınırlı temizlik.
 - `CK_Status`: `Status IN (1,2,3)`.
 - `CK_Completed`: `Status <> 2 OR (ResponseStatusCode BETWEEN 200 AND 299 AND ResponseBody IS NOT NULL AND ResponseContentType IS NOT NULL)`.
@@ -668,7 +690,7 @@ Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 
 ### 9.1 Altı onay maddesinin güncel durumu
 
-| # | Madde | Kullanıcı kararı | v1.1 durumu |
+| # | Madde | Kullanıcı kararı | Durum (v1.2) |
 |---|---|---|---|
 | 1 | §4.2 Tek transaction, kalıcı `InProgress` yok | **Koşullu onay** | ✅ 5 koşul §4.2 tablosunda karşılandı; belirsiz commit §4.2.1, bağlantı kopması S21 |
 | 2 | §4.5 ADR-0009 genişletmesi + Expenses `Enlist` | **Koşullu onay** | ✅ **ADR-0010** yazıldı; ADR-0009 reference güncellendi; host var/no-op, host yok/eski davranış; S25 dört modül |
@@ -698,17 +720,37 @@ Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 | # | Risk | Etki | Azaltma / not |
 |---|---|---|---|
 | K1 | RFC 8785 paketinin kapıyı geçememesi | Kodlama kapısı kapanır | §3.2: kapsam daraltılır, uyum iddiası geri çekilir, kullanıcıya dönülür |
-| K2 | Decimal sınırı (900 trilyon) üzeri tutar | Farklı tutar aynı hash'a düşebilir | §3.2.1 doğrulama + S27; string DTO alternatifi ayrı onay ister |
+| K2 | Decimal sınırı (`2^39` ≈ 549,7 mlr TRY) üzeri tutar | Farklı tutar aynı hash'a düşebilir | §3.2.1 doğrulama + S27 (kapıda 5.000 çift tarandı); string DTO alternatifi ayrı onay ister |
 | K3 | Tombstone 30 gün KVKK saklama süresi | Kişisel veri tartışması | Gövdesiz, yalnızca hash/durum; 30 gün; operasyonel onay önerilir |
-| K4 | Yeni `409 IdempotencyExpired` kodu | İstemci sözleşmesi genişler | `docs/06` §1.3 güncellendi; mobil durum sorgusu zorunlu |
-| K5 | Windows manuel smoke yapılmadı | DoD eksik | §9.3; kod onayından önce/sonra operatör tamamlar |
+| K4 | Yeni `409 IdempotencyExpired` kodu | İstemci sözleşmesi genişler | `docs/06` §1.4 güncellendi; mobil durum sorgusu zorunlu |
+| K5 | Windows manuel smoke yapılmadı | DoD eksik | §9.3; operatör tamamlar |
 | K6 | Dağıtık kilit yok | Yüksek eşzamanlılıkta gecikme | §4.4.1 lock timeout → `409 InProgress`; gerekirse yeni ADR |
 | K7 | `Microsoft.Data.Sqlite` yeni bağımlılığı | Paket yönetimi | §7.1 gerekçe; mevcut structured store olmadığı için tek altyapı |
 
-> **Kodlama onayı:** Altı koşullu onayın tamamı ve dört kritik konu bu sürümde
-> kapatılmıştır. Kullanıcı, bu son tasarımı inceledikten sonra **ayrıca açık
-> kodlama onayı** verecektir. O onay gelene kadar `docs/11` v1.1 referans alınır,
-> **kod yazılmaz**.
+> **Kodlama onayı ve uygulama:** Altı koşullu onayın tamamı ve dört kritik konu
+> kapatılmıştır; kullanıcı `5abb6af` sonrası açık kodlama onayını vermiştir.
+> V11-T01 uygulandı ve doğrulandı (§9.5). Kalan işler operasyoneldir: Windows
+> manuel UI smoke (§9.3) ve Android Java SDK gerektiren MAUI head build.
+
+### 9.5 V11-T01 uygulama ve doğrulama durumu (2026-11-19)
+
+| Alan | Sonuç |
+|---|---|
+| Host build (`FinTrack.Api.csproj`) | 0 uyarı, 0 hata |
+| API entegrasyon (`FinTrack.Api.IntegrationTests`) | **95/95** (72 mevcut + 23 yeni: 13 çekirdek + 6 lifecycle/commit + 4 çoklu instance) |
+| API birim (`FinTrack.Api.UnitTests`) | **77/77** (RFC 8785/S13, S27, scope, middleware kapsamı, transaction internals) |
+| Mimari (`FinTrack.ArchitectureTests`) | **10/10** (R6 pozitif POST listesi, modül izolasyonu, `IWriteScopeParticipant`, host scope koruması) |
+| Mobil (`FinTrack.Mobile.Tests`) | **31/31** (SQLite store, AES-256-GCM, S16/S28/S29, `AuthHandler` POST retry) |
+| Modül testleri | **222/222** |
+| **Toplam (çalıştırılabilir)** | **435/435** |
+
+**S1–S29 karşılığı:** S1–S18 ve S20–S29 entegrasyon/birim testleriyle karşılandı;
+S19 (gerçek SQL 1205 deadlock) §4.7 uygulama notundaki sınırlarla hook tabanlı
+commit/rollback/lock-timeout senaryoları (S4/S21/S22–S24) ile örtüldü.
+
+**Doğrulanmadı (operatör):** Windows `giriş → harcama → kart → rapor` manuel UI
+smoke (§9.3); yerel Android Java SDK yapılandırması nedeniyle MAUI head projesinin
+tam build'i. `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip test edildi.
 
 ---
 
@@ -718,3 +760,5 @@ Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 |---|---|---|
 | 1.0 | 2026-11-18 | `docs/10` cevapları işlendi; 1.4/1.6/1.10 teknik tasarımı, çökme akış diyagramı, S1–S20 testleri |
 | 1.1 | 2026-11-18 | `docs/11-kararlar.txt` koşulları işlendi: §4.2 beş zorunlu koşul + §4.2.1 belirsiz commit; ADR-0010 + §4.5 dört modül/host scope kuralları; §3.2 özel canonicalizer reddedilip RFC 8785 kütüphanesi + decimal sınırı; §5.1 şema/metadata/kısıtlar/veri koruması; §7.2 AES-256-GCM güvenlik koşulları; §7.5 R13 düzeltildi (durum sorgusu + tombstone + `Uncertain`); §4.4.1 çoklu instance matrisi; S21–S29 eklendi; LocalDB temizliği tamamlandı, Windows smoke bekliyor |
+| 1.2 | 2026-11-19 | Açık kodlama onayı işlendi. §3.2 RFC 8785 kapısı koşuldu: `Jcs.Net` 0.1.1 resmî vektörler/S13/strict I-JSON testlerini geçti (26/26). §3.2.1 sayı sınırı, kapıda bulunan double çakışması nedeniyle `2^53/10^4`'ten `2^39`'a düzeltildi (kullanıcı onayıyla); S27 ve K2 güncellendi. |
+| 1.3 | 2026-11-19 | **V11-T01 uygulandı:** host middleware/store/`shared` migration/DI, tek `DbTransaction` + ADR-0010 modül uyumları, durum sorgusu ve `409 IdempotencyExpired`, mobil AES-256-GCM pending store + kurtarma; S1–S29 kapsamı (S19 gerçek deadlock enjeksiyonu yerine hook tabanlı arbit) ve 435/435 test. §4.7 uygulama notu, §9.5 doğrulama tablosu ve son onay notu güncellendi. |

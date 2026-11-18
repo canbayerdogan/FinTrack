@@ -1,24 +1,32 @@
 using System.Net;
+using System.Net.Http.Headers;
 using FinTrack.Mobile.Core.Abstractions;
+using FinTrack.Mobile.Core.PendingOperations;
 
 namespace FinTrack.Mobile.Core.Api;
 
 /// <summary>
 /// Her isteğe Bearer token ekler; 401 alındığında tek sefer refresh dener.
 /// Eşzamanlı isteklerde refresh tek uçuş (single-flight) ile yapılır.
-/// Idempotency-Key zorunluluğu v1.1'e ertelendiği için otomatik tekrar yalnızca
-/// güvenli (GET/HEAD) isteklerde yapılır; POST/PUT kullanıcıya bırakılır.
+/// GET/HEAD/OPTIONS her zaman tekrar edilir; POST yalnızca pending-operation
+/// kaydı SentUnconfirmed ise ve aynı Idempotency-Key/gövde baytlarıyla tekrar
+/// edilir. Auth POST'ları ve PUT hiçbir zaman otomatik tekrar edilmez.
 /// </summary>
 public sealed class AuthHandler : DelegatingHandler
 {
     private readonly ITokenStore _tokenStore;
     private readonly SessionRefresher _refresher;
+    private readonly IPendingOperationStore? _pendingOperations;
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
-    public AuthHandler(ITokenStore tokenStore, SessionRefresher refresher)
+    public AuthHandler(
+        ITokenStore tokenStore,
+        SessionRefresher refresher,
+        IPendingOperationStore? pendingOperations = null)
     {
         _tokenStore = tokenStore;
         _refresher = refresher;
+        _pendingOperations = pendingOperations;
         _refresher.SessionExpired += OnSessionExpired;
     }
 
@@ -28,6 +36,25 @@ public sealed class AuthHandler : DelegatingHandler
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
+        byte[]? postBody = null;
+        IReadOnlyList<KeyValuePair<string, IEnumerable<string>>>? postHeaders = null;
+        string? idempotencyKey = null;
+        if (request.Method == HttpMethod.Post && !IsAuthRequest(request))
+        {
+            idempotencyKey = TryGetIdempotencyKey(request);
+            if (idempotencyKey is not null && request.Content is not null)
+            {
+                // Gövde baytları ilk gönderimden önce bir kez okunur; retry aynı
+                // baytları kullanır (docs/11 §7.4).
+                postBody = await request.Content.ReadAsByteArrayAsync(cancellationToken);
+                postHeaders = request.Content.Headers
+                    .Select(header => new KeyValuePair<string, IEnumerable<string>>(
+                        header.Key,
+                        header.Value.ToArray()))
+                    .ToArray();
+            }
+        }
+
         var accessToken = await _tokenStore.GetAccessTokenAsync(cancellationToken);
         AttachToken(request, accessToken);
 
@@ -50,21 +77,19 @@ public sealed class AuthHandler : DelegatingHandler
             _refreshGate.Release();
         }
 
-        if (!refreshed)
+        if (!refreshed || !await IsRetryableAsync(request, idempotencyKey, cancellationToken))
         {
-            // SessionRefresher oturum sonu olayını zaten yükseltti.
-            return response;
-        }
-
-        if (!IsRetryable(request))
-        {
-            // Token yenilendi ama POST/PUT otomatik tekrar gönderilmez
-            // (docs/08 §6: Idempotency-Key ertelendi).
+            // Token yenilendi ama istek güvenli değilse tekrar gönderilmez.
             return response;
         }
 
         response.Dispose();
         var retry = CloneRequest(request);
+        if (postBody is not null)
+        {
+            retry.Content = CreateBodyContent(postBody, postHeaders);
+        }
+
         var newToken = await _tokenStore.GetAccessTokenAsync(cancellationToken);
         AttachToken(retry, newToken);
         return await base.SendAsync(retry, cancellationToken);
@@ -86,7 +111,7 @@ public sealed class AuthHandler : DelegatingHandler
         if (!string.IsNullOrWhiteSpace(accessToken))
         {
             request.Headers.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                new AuthenticationHeaderValue("Bearer", accessToken);
         }
     }
 
@@ -97,10 +122,42 @@ public sealed class AuthHandler : DelegatingHandler
                path.EndsWith("/auth", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsRetryable(HttpRequestMessage request) =>
-        request.Method == HttpMethod.Get ||
-        request.Method == HttpMethod.Head ||
-        request.Method == HttpMethod.Options;
+    private static string? TryGetIdempotencyKey(HttpRequestMessage request)
+    {
+        if (!request.Headers.TryGetValues("Idempotency-Key", out var values))
+        {
+            return null;
+        }
+
+        var value = values.FirstOrDefault();
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : Guid.TryParse(value, out var parsed) ? parsed.ToString("D") : value;
+    }
+
+    private async Task<bool> IsRetryableAsync(
+        HttpRequestMessage request,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        if (request.Method == HttpMethod.Get ||
+            request.Method == HttpMethod.Head ||
+            request.Method == HttpMethod.Options)
+        {
+            return true;
+        }
+
+        if (request.Method != HttpMethod.Post ||
+            idempotencyKey is null ||
+            _pendingOperations is null ||
+            IsAuthRequest(request))
+        {
+            return false;
+        }
+
+        var operation = await _pendingOperations.GetAsync(idempotencyKey, cancellationToken);
+        return operation?.State == PendingOperationState.SentUnconfirmed;
+    }
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage request)
     {
@@ -111,6 +168,22 @@ public sealed class AuthHandler : DelegatingHandler
         }
 
         return clone;
+    }
+
+    private static ByteArrayContent CreateBodyContent(
+        byte[] body,
+        IReadOnlyList<KeyValuePair<string, IEnumerable<string>>>? headers)
+    {
+        var content = new ByteArrayContent(body);
+        if (headers is not null)
+        {
+            foreach (var header in headers)
+            {
+                content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        return content;
     }
 
     private Task OnSessionExpired() => RaiseSessionExpiredAsync();

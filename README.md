@@ -57,13 +57,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 02 | [Finansal Alan Modeli — kararlar v0.4](docs/02-finansal-alan-modeli-kararlar.md) | ✅ |
 | 03 | [Teknik Mimari (.NET)](docs/03-mimari.md) | ✅ |
 | 04 | [ADR'ler](docs/adr/) | ✅ |
-| 05 | [İş kuralları (business rules) v1.5](docs/05-is-kurallari.md) | ✅ |
-| 06 | [API sözleşmeleri v1.6](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.17](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.11](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.21](docs/09-todo.md) | ✅ |
+| 05 | [İş kuralları (business rules) v1.6](docs/05-is-kurallari.md) | ✅ |
+| 06 | [API sözleşmeleri v1.7](docs/06-api-sozlesmeleri.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.18](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v2.12](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.22](docs/09-todo.md) | ✅ |
 | 10 | [Kararlar v1.2](docs/10-karar-bekleyen-konular.md) | ✅ yanıtlandı |
-| 11 | [Idempotency teknik tasarımı v1.1](docs/11-idempotency-teknik-tasarim.md) | ✅ koşullu onay — ⏳ kodlama onayı bekliyor |
+| 11 | [Idempotency teknik tasarımı v1.3](docs/11-idempotency-teknik-tasarim.md) | ✅ koşullu onay + açık kodlama onayı — V11-T01 uygulandı (435/435 test) |
 | 12 | [ADR-0010 — host sahipliğinde idempotent yazma](docs/adr/0010-host-owned-idempotent-writes.md) | ✅ koşullu onay |
 
 ## Mevcut durum
@@ -121,21 +121,22 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   `Keyboard="Numeric"` ve root geri dönüş düzeltmeleri kalıcı hale getirildi.
   Geçici HTTP/cleartext ayarları geri alındı; varsayılan API adresi
   `https://10.0.2.2:7241/api/v1/`.
-- **Testler:** ✅ toplam **335/335** (263 birim/mimari + 72 entegrasyon); son
-  yeşil CI run'ları `44365407221` (CI bakımı), `44366617692` (dokümanlar) ve
-  `44379256250` (Android düzeltmeleri; Slice 9 run `44189257561`, Slice 8 run
-  `44156632893` idi).
-  Birim/mimari dağılımı: 4 mimari + 22 birim + 55 Expenses + 78 CreditCards +
-  48 CashInflows + 31 Debts + 10 Reporting + 15 Mobile. Windows MAUI hedefi
-  Debug + Release 0 uyarı/0 hata; Android hedefi yerel JDK 17 + SDK ile
-  `net10.0-android` 0 uyarı/0 hata derlendi ve emülatörde smoke edildi.
-  Entegrasyon testleri 72/72 hem yerelde (Docker açık) hem CI'da doğrulandı.
+- **Testler:** ✅ V11-T01 sonrası toplam **435/435** yerel: 222 modül + 77 API
+  birim + 10 mimari + 31 mobil + 95 entegrasyon (72 mevcut + 23 idempotency);
+  host build 0 uyarı/0 hata. Ayrıntı: `docs/11` §9.5. Önceki yeşil CI run'ları
+  `44365407221` (CI bakımı), `44366617692` (dokümanlar), `44379256250`
+  (Android düzeltmeleri; Slice 9 run `44189257561`); V11-T01 değişiklikleri
+  henüz commit/push edilmedi.
+  Windows MAUI head hedefi bu oturumda yerel Java SDK yapılandırması nedeniyle
+  derlenemedi; `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip
+  test edildi. Windows manuel UI smoke operatör görevidir.
 - **Dokümanlar:** ✅ 01–11 + ADR-0010 tamam; `docs/02` §5 açık kararları ve kart
   alışverişi sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma)
   kabul edildi; ADR-0010 (v1.1 idempotent yazmalarda host sahipliğinde transaction)
-  koşullu onayla kabul edildi. `Idempotency-Key` uygulaması v1.1 görev kartı
-  V11-T01 olarak ayrıldı (`docs/06` §1.4, `docs/07` §5.1). Güncel durum: `docs/08`;
-  sıradaki adımlar: `docs/09`.
+  koşullu onay + açık kodlama onayıyla kabul edildi ve V11-T01'de uygulandı.
+  `Idempotency-Key` uygulaması (`docs/06` §1.4, `docs/07` §5.1) tamamlandı;
+  güncel durum `docs/08`, doğrulama `docs/11` §9.5, sıradaki operasyonel
+  adımlar `docs/09`.
 - **Migration:** `dotnet run --project src/Host/FinTrack.Api -- --migrate`
   (üretimde otomatik migration yok). Testlerde `Database:MigrateOnStartup=true`.
   Slice 4: `20261116180727_AddCardPaymentsAndStatements`. Slice 5:
@@ -151,16 +152,18 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Slice 8 run `44156632893`, Slice 7 run `44150709461` idi). CI workflow'ü
   Node 24 action sürümleri ve sabit
   `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
-- **Sıradaki:** v1 dilimleri (0–9) kod tarafında tamamlandı; Android emülatör
-  smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Kararlar
-  [docs/10 v1.2](docs/10-karar-bekleyen-konular.md) ile alındı; **altı koşullu
-  tasarım onayı** karşılandı: [docs/11 v1.1](docs/11-idempotency-teknik-tasarim.md)
-  ve [ADR-0010](docs/adr/0010-host-owned-idempotent-writes.md). Görev kartı
-  [docs/07 §5.1](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md)'de.
-  **Kullanıcı talimatı gereği kod yazılmadı; yalnızca ayrı kodlama onayı
-  bekleniyor.** Dört kritik konunun çözümü `docs/11` §9.2'de; kalan riskler §9.4.
-  LocalDB smoke temizliği ✅ tamamlandı; Windows manuel UI smoke bekliyor.
-  Idempotency sonrası v1.1 önceliği: parola sıfırlama + e-posta doğrulama.
+- **Sıradaki:** v1 dilimleri (0–9) ve **V11-T01 (Idempotency-Key)** kod tarafında
+  tamamlandı; Android emülatör smoke'u giriş → harcama → kart → rapor akışıyla
+  doğrulandı. Kararlar [docs/10 v1.2](docs/10-karar-bekleyen-konular.md) ile
+  alındı; **altı koşullu tasarım onayı** karşılandı:
+  [docs/11 v1.3](docs/11-idempotency-teknik-tasarim.md) ve
+  [ADR-0010](docs/adr/0010-host-owned-idempotent-writes.md). Görev kartı
+  [docs/07 §5.1](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md)'de. Açık
+  kodlama onayı alındı; uygulama ve 435/435 doğrulama `docs/11` §9.5'te. Dört
+  kritik konunun çözümü `docs/11` §9.2'de; kalan riskler §9.4. LocalDB smoke
+  temizliği ✅ tamamlandı; **Windows manuel UI smoke ve MAUI head build operatör
+  görevleri bekliyor.** Idempotency sonrası v1.1 önceliği: parola sıfırlama +
+  e-posta doğrulama.
 
 ## Çözüm yapısı (özet)
 

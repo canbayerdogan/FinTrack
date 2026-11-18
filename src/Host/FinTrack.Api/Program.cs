@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json.Serialization;
 using FinTrack.Api.Identity;
+using FinTrack.Api.Idempotency;
 using FinTrack.Api.WriteTransactions;
 using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Endpoints;
@@ -58,6 +59,22 @@ builder.Services.AddScoped<AuthTokenService>();
 // ADR-0009: yazma yapan modüller aynı bağlantıyı ve açık transaction'ı paylaşır.
 builder.Services.AddScoped<IWriteConnectionProvider>(_ => new SqlWriteConnectionProvider(connectionString));
 builder.Services.AddScoped<IWriteTransactionScopeFactory, SqlWriteTransactionScopeFactory>();
+
+// ADR-0010: host middleware aktif scope'u ayarlar; modüller salt okunur accessor görür.
+builder.Services.AddScoped<IWriteTransactionScopeSetter, WriteTransactionScopeAccessor>();
+builder.Services.AddScoped<IWriteTransactionScopeAccessor>(sp =>
+    sp.GetRequiredService<IWriteTransactionScopeSetter>());
+
+// Idempotency kaydı, modüllerle aynı fiziksel bağlantı ve transaction üzerinde yazılır.
+builder.Services.AddDbContext<IdempotencyDbContext>((sp, options) =>
+    IdempotencyDbContextOptions.UseFinTrackSqlServer(
+        options,
+        sp.GetRequiredService<IWriteConnectionProvider>().Connection));
+builder.Services.AddScoped<IIdempotencyStore, IdempotencyStore>();
+builder.Services.AddSingleton<IIdempotencyTestHooks, IdempotencyTestHooks>();
+builder.Services.AddSingleton<IIdempotencyCleanup, IdempotencyCleanupService>();
+// Migration sırası: identity → idempotency → modüller (docs/11 §5.2).
+builder.Services.AddScoped<IModuleMigration, IdempotencyModuleMigration>();
 
 builder.Services.AddDbContext<FinTrackIdentityDbContext>(options =>
     IdentityDbContextOptions.UseFinTrackSqlServer(options, connectionString));
@@ -155,6 +172,8 @@ app.UseStatusCodePages();
 
 app.UseAuthentication();
 app.UseAuthorization();
+// Yalnızca mutasyon POST'ları kapsar; kimlik doğrulama zaten tamamlanmıştır.
+app.UseMiddleware<IdempotencyMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -164,6 +183,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthChecks("/health");
 
+app.MapIdempotencyEndpoints();
 app.MapAuthEndpoints();
 app.MapExpensesEndpoints();
 app.MapCashInflowsEndpoints();

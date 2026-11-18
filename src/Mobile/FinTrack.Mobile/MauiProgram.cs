@@ -1,5 +1,6 @@
 using FinTrack.Mobile.Core.Abstractions;
 using FinTrack.Mobile.Core.Api;
+using FinTrack.Mobile.Core.PendingOperations;
 using FinTrack.Mobile.Core.Services;
 using FinTrack.Mobile.Core.ViewModels;
 using FinTrack.Mobile.Platform;
@@ -27,6 +28,13 @@ public static class MauiProgram
         var apiAddress = new Uri(baseUrl);
 
         builder.Services.AddSingleton<ITokenStore, SecureStorageTokenStore>();
+        builder.Services.AddSingleton<ISecureKeyValueStore, SecureStorageKeyValueStore>();
+        builder.Services.AddSingleton<TimeProvider>(_ => TimeProvider.System);
+        builder.Services.AddSingleton<IPendingOperationStore>(services =>
+            new PendingOperationStore(
+                Path.Combine(FileSystem.AppDataDirectory, "fintrack-pending-operations.db"),
+                services.GetRequiredService<ISecureKeyValueStore>(),
+                services.GetRequiredService<TimeProvider>()));
         builder.Services.AddSingleton<IAppNavigator, MauiNavigator>();
 
         builder.Services.AddSingleton(_ => new HttpClient { BaseAddress = apiAddress });
@@ -37,7 +45,8 @@ public static class MauiProgram
         builder.Services.AddSingleton<AuthHandler>(services =>
             new AuthHandler(
                 services.GetRequiredService<ITokenStore>(),
-                services.GetRequiredService<SessionRefresher>())
+                services.GetRequiredService<SessionRefresher>(),
+                services.GetRequiredService<IPendingOperationStore>())
             {
                 InnerHandler = new HttpClientHandler(),
             });
@@ -46,6 +55,14 @@ public static class MauiProgram
             {
                 BaseAddress = apiAddress,
             }));
+        builder.Services.AddSingleton(services =>
+            new PendingOperationRecoveryService(
+                new HttpClient(services.GetRequiredService<AuthHandler>())
+                {
+                    BaseAddress = apiAddress,
+                },
+                services.GetRequiredService<IPendingOperationStore>(),
+                services.GetRequiredService<TimeProvider>()));
 
         builder.Services.AddSingleton<SessionService>();
 

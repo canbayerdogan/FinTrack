@@ -168,7 +168,7 @@ public sealed class CashAdvanceEndpointTests(ApiFixture fixture)
 
     private async Task<Session> RegisterAsync()
     {
-        var client = fixture.Factory.CreateClient();
+        var client = IdempotencyTestClient.Create(fixture.Factory);
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = $"user-{Guid.NewGuid():N}@example.com",

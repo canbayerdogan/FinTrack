@@ -20,6 +20,9 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
 
+    /// <summary>Testlerin doğrudan doğrulama/senaryo verisi yazması için konteyner bağlantısı.</summary>
+    public string ConnectionString { get; private set; } = string.Empty;
+
     public async Task InitializeAsync()
     {
         await _container.StartAsync();
@@ -44,8 +47,8 @@ public sealed class ApiFixture : IAsyncLifetime
             ["Jwt__RefreshTokenDays"] = "30",
         });
 
-        Factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
+        ConnectionString = connectionString;
+        Factory = CreateFactory();
 
         using var client = Factory.CreateClient();
         using var response = await client.GetAsync("/health");
@@ -58,6 +61,13 @@ public sealed class ApiFixture : IAsyncLifetime
         await _container.DisposeAsync();
         RestoreEnvironment();
     }
+
+    /// <summary>
+    /// Aynı veritabanını paylaşan ikinci bir uygulama instance'ı (W6 / S4).
+    /// </summary>
+    public WebApplicationFactory<Program> CreateFactory() =>
+        new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
 
     private void ApplyEnvironmentOverrides(IReadOnlyDictionary<string, string?> values)
     {

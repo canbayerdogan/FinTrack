@@ -49,14 +49,14 @@ doğruladı: run `44189257561` (Slice 9), `44365407221` (CI bakımı),
 `44150709461` idi). Android emülatör smoke'u giriş → harcama → kart → rapor
 akışıyla tamamlandı.
 
-**v1.1 durumu (2026-11-18):** Açık kararlar `docs/10` v1.1 ile kapatıldı;
+**v1.1 durumu (2026-11-19):** Açık kararlar `docs/10` v1.2 ile kapatıldı;
 `docs/11-kararlar.txt` ile **altı koşullu tasarım onayı** alındı ve `docs/11`
-v1.1 + **ADR-0010**'da işlendi. Görev kartı `docs/07` §5.1'de (V11-T01).
-Kullanıcı **"Henüz kodlamaya başlama"** talimatını koruyor; **şu an yalnızca
-ayrı kodlama onayı bekleniyor**. **Kod yazılmadı.** Dört kritik konunun çözümü
-`docs/11` §9.2'de; kalan riskler §9.4'te. Karar dokümanı push'u `decd69d`,
-docs-only CI run'ı `44385538919`; kod doğrulaması için `44379256250` referans
-alınır (karar 2.4 gereği son docs run'ı eklenmez).
+v1.3 + **ADR-0010**'da işlendi. Görev kartı `docs/07` §5.1'de (V11-T01).
+Kullanıcı açık kodlama onayını verdi; **V11-T01 uygulandı ve 435/435 test
+yeşil** (`docs/11` §9.5). Dört kritik konunun çözümü `docs/11` §9.2'de; kalan
+riskler §9.4'te. Karar dokümanı push'u `decd69d`, docs-only CI run'ı
+`44385538919`; kod doğrulaması için `44379256250` referans alınır (karar 2.4
+gereği son docs run'ı eklenmez).
 **Operasyonel:** LocalDB smoke verileri temizlendi (0 satır doğrulandı); Windows
 manuel UI smoke operatör tarafından tamamlanacak (§8.4, §8.3 madde 2).
 
@@ -160,7 +160,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `DELETE` yok; iptal `POST /{id}/cancel`, arşiv `POST /{id}/archive` | `docs/06` §1 |
 | Eşzamanlılık gövdedeki `rowVersion` ile; uyuşmazlık `409 ConcurrencyConflict` | `docs/06` §1.5 |
 | Sayfalama `page=1`, `pageSize=50` (max 200); hatalı değer `400 ValidationFailed` | `docs/06` §1.6 |
-| `Idempotency-Key` v1'de **uygulanmadı**; v1.1 sözleşmesi + koşullu tasarım onayı tamam, **kodlama onayı bekliyor** (§6, §8.4) | `docs/06` §1.4 (v1.6), `docs/10` v1.2, `docs/11` v1.1, ADR-0010 |
+| `Idempotency-Key` **V11-T01 ile uygulandı**; v1.1 sözleşmesi + koşullu tasarım onayı + açık kodlama onayı tamam (§6, §8.4, `docs/11` §9.5) | `docs/06` §1.4 (v1.7), `docs/10` v1.2, `docs/11` v1.3, ADR-0010 |
 
 ### 4.3 İş kuralları
 
@@ -390,7 +390,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 | Konu | Durum |
 |---|---|
-| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01**: kararlar + sözleşme + koşullu onaylar + son tasarım hazır; **yalnızca kodlama onayı bekliyor**. O zamana kadar istemci otomatik POST retry yapmamalı |
+| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01 tamamlandı**: kararlar + sözleşme + koşullu onaylar + son tasarım uygulandı (435/435 test); istemci aynı key/gövde ile güvenle retry edebilir (`docs/11` §9.5) |
 | Kart harcamaları için taksitli ödeme planı | v1 kapsam dışı |
 | Çoklu para birimi / kur dönüşümü | v1 kapsam dışı |
 | Kategori `restore`, arşivli kartı geri açma | v1'de yok |
@@ -711,9 +711,9 @@ alındı.
    `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası
    CI run `44365407221`, docs-only run `44366617692` ve Android düzeltmeleri
    run'ı `44379256250` yeşil (335/335).
-4. **Ertelenen kapsam:** `Idempotency-Key` artık v1.1 görev kartı V11-T01
-   (`docs/07` §5.1); kararlar `docs/10` v1.2, altı koşullu onay ve son tasarım
-   `docs/11` v1.1 + ADR-0010. **Kod onayı ayrıca alınacak.**
+4. **Ertelenen kapsam:** `Idempotency-Key` v1.1 görev kartı V11-T01
+   (`docs/07` §5.1) **tamamlandı**; kararlar `docs/10` v1.2, altı koşullu onay
+   ve son tasarım `docs/11` v1.3 + ADR-0010 uygulandı (§9.5).
    Okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
 
@@ -754,8 +754,8 @@ ve veri koruması ✅ · §7.1 SQLite + AES-GCM ✅ · §7.3/R13 `Uncertain` + d
 sorgusu ✅. Dört kritik konunun çözümü `docs/11` §9.2'de, kalan riskler §9.4'te.
 
 > Kullanıcı talimatı: **"Önce tasarımı göster, onaylayınca kod onayı ayrıca
-> vereceğim."** Koşullu tasarım onayı alındı; V11-T01 **kodlama onayı bekliyor**
-> durumunda ve kod yazılmadı.
+> vereceğim."** Koşullu tasarım onayı ve açık kodlama onayı alındı; V11-T01
+> uygulandı ve doğrulandı (`docs/11` §9.5). Kalan maddeler operasyoneldir.
 
 ---
 
@@ -785,3 +785,4 @@ sorgusu ✅. Dört kritik konunun çözümü `docs/11` §9.2'de, kalan riskler �
 | 2.9 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
 | 2.10 | 2026-11-18 | `docs/10` cevapları işlendi; `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 görev kartı ve §8.4 karar özeti eklendi; "tüm POST" / "auth hariç" çelişkisi giderildi; kod yazılmadı, tasarım+kod onayı bekleniyor |
 | 2.11 | 2026-11-18 | `docs/11-kararlar.txt` altı koşullu onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, dört kritik konunun çözümü ve K1–K7 riskleri; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
+| 2.12 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency (middleware/store/migration/DI, tek `DbTransaction`, ADR-0010 modül uyumları), durum sorgusu, mobil AES-256-GCM pending store ve kurtarma; 435/435 test. §4/§6/§8 durum notları güncellendi; Windows UI smoke ve MAUI head build operatörde, değişiklikler henüz commit edilmedi |

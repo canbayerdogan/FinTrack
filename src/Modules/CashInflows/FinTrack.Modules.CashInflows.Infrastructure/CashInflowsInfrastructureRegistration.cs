@@ -21,6 +21,8 @@ public static class CashInflowsInfrastructureRegistration
         services.AddScoped<ICashInflowRepository, CashInflowRepository>();
         services.AddScoped<ICashInflowQueries, CashInflowQueries>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWriteScopeParticipant>(sp =>
+            (IWriteScopeParticipant)sp.GetRequiredService<IUnitOfWork>());
         services.AddScoped<IModuleMigration, CashInflowsModuleMigration>();
 
         return services;

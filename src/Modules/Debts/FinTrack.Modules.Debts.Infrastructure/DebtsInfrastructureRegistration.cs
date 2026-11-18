@@ -24,6 +24,8 @@ public static class DebtsInfrastructureRegistration
         services.AddScoped<IPersonalDebtQueries, PersonalDebtQueries>();
         services.AddScoped<IDebtSummaryQueries, DebtSummaryQueries>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWriteScopeParticipant>(sp =>
+            (IWriteScopeParticipant)sp.GetRequiredService<IUnitOfWork>());
         services.AddScoped<IModuleMigration, DebtsModuleMigration>();
 
         return services;

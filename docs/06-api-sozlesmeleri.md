@@ -2,7 +2,7 @@
 
 **Sürüm:** 1.6
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009, ADR-0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
+**Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009, ADR-0010 · [Idempotency teknik tasarımı v1.2](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları, mobil istemci geliştiricisi
 
 > Bu belge v1 REST API'sinin **davranış ve alan sözleşmesidir**. OpenAPI belgesi
@@ -99,7 +99,7 @@ Doğrulama hatasında `errors` alan adı → mesaj dizisi eşlemesidir:
 değildir; uygulama yapılmadı. İstemci aynı `POST` isteğini otomatik yeniden
 denememelidir.
 
-**v1.1 sözleşmesi (2026-11-18 kararı + koşullu onaylar — kodlama onayı bekliyor):**
+**v1.1 sözleşmesi (2026-11-18 kararı + koşullu onaylar — V11-T01'de uygulandı):**
 
 - Başlık, **tüm finansal/mutasyon `POST`** uç noktalarında **zorunludur**.
   Kapsam listesi `docs/11` §1.1'dedir.
@@ -136,9 +136,9 @@ denememelidir.
   çökmesi veya bağlantı kopması çift kayıt oluşturmaz. Ayrıntı, W1–W9 hata
   pencereleri, çoklu instance matrisi ve S1–S29: `docs/11` §4.
 
-> **Uygulama notu (2026-11-18):** Kararlar `docs/10` v1.2'de, koşullu onaylar
-> `docs/11` v1.1'de işlendi. Kodlama onayı ayrı alınacak; onay gelene kadar
-> yukarıdaki v1.1 davranışı **sözleşme olarak geçerli, uygulama olarak yoktur**.
+> **Uygulama notu (2026-11-19):** Kararlar `docs/10` v1.2'de, koşullu onaylar
+> `docs/11` v1.2'de işlendi. Açık kodlama onayı alındı ve yukarıdaki v1.1
+> davranışı **V11-T01 ile uygulandı** (doğrulama: `docs/11` §9.5).
 
 ### 1.5 Eşzamanlılık
 
@@ -1194,8 +1194,10 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 
 Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'de izlenir:
 
-- `Idempotency-Key` uygulaması: karar, sözleşme ve koşullu onaylar tamam
-  (`docs/10` v1.2, `docs/11` v1.1, ADR-0010); **kodlama onayı bekliyor**.
+- `Idempotency-Key` uygulaması **tamamlandı (V11-T01)**: karar, sözleşme ve
+  koşullu onaylar (`docs/10` v1.2, `docs/11` v1.2, ADR-0010) uygulandı;
+  doğrulama `docs/11` §9.5'te. Kalan operasyonel maddeler: Windows manuel UI
+  smoke ve MAUI head build.
 - Parola sıfırlama ve e-posta doğrulama uç noktaları (v1.1, **sıradaki öncelik**).
 - Hesap silme / KVKK akışı (v1.1).
 - Ekstre belgesi yükleme, OCR ve otomatik içe aktarma (v1.1+).
@@ -1220,3 +1222,4 @@ Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'
 | 1.4 | 2026-11-15 | Gelecek `asOf` için `400`; iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
 | 1.5 | 2026-11-18 | `Idempotency-Key` v1.1 sözleşmesi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; kapsam/hash/TTL/2xx replay kuralları ve tek transaction atomikliği; "tüm POST" ifadesindeki çelişki giderildi |
 | 1.6 | 2026-11-18 | Koşullu onaylar işlendi: `409 IdempotencyExpired` eklendi; 24 s + 30 g tombstone, güvenli durum sorgusu `GET /api/v1/idempotency/{key}`, RFC 8785 kütüphane zorunluluğu, 64 KB sınırı, `Location` allowlist'i ve ADR-0010 aynı `DbTransaction` kuralı §1.4'e eklendi |
+| 1.7 | 2026-11-19 | V11-T01 uygulandı: §1.4 sözleşmesi host middleware/store, tek transaction, durum sorgusu ve mobil pending store ile gerçekleşti; §1.4 uygulama notu ve §11 açık konular güncellendi; bağlı tasarım belgesi v1.2'ye yükseltildi |

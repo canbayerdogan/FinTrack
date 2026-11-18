@@ -1,3 +1,4 @@
+using System.Data.Common;
 using FinTrack.ModuleContracts;
 using FinTrack.Modules.Debts.Application.Abstractions;
 using Microsoft.Data.SqlClient;
@@ -5,9 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FinTrack.Modules.Debts.Infrastructure.Persistence;
 
-internal sealed class UnitOfWork(DebtsDbContext db) : IUnitOfWork
+internal sealed class UnitOfWork(
+    DebtsDbContext db,
+    IWriteTransactionScopeAccessor? scopeAccessor = null) : IUnitOfWork, IWriteScopeParticipant
 {
-    public void Enlist(IWriteTransactionScope? scope) => db.Database.UseTransaction(scope?.Transaction);
+    private DbTransaction? _enlisted;
+
+    public void Enlist(IWriteTransactionScope? scope)
+    {
+        // ADR-0010: null çağrısı host transaction'ına geri düşer; host yoksa
+        // mevcut ADR-0009 davranışı korunur (bağlantı temizlenir).
+        var transaction = (scope ?? scopeAccessor?.Current)?.Transaction;
+        if (ReferenceEquals(_enlisted, transaction))
+        {
+            return;
+        }
+
+        db.Database.UseTransaction(transaction);
+        _enlisted = transaction;
+    }
 
     public async Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken)
     {

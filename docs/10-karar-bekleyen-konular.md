@@ -2,8 +2,8 @@
 
 **Sürüm:** 1.2  
 **Tarih:** 2026-11-18  
-**Durum:** ✅ Kararlar verildi + 1.6/1.10 için **koşullu tasarım onayı alındı** — **kodlama onayı bekliyor**  
-**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [Teknik tasarım v1.1](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [TODO — teknik borç](09-todo.md)
+**Durum:** ✅ Kararlar verildi + 1.6/1.10 için **koşullu tasarım onayı alındı** + açık kodlama onayı — **V11-T01 uygulandı** (435/435 test, `docs/11` §9.5)\
+**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [Teknik tasarım v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [TODO — teknik borç](09-todo.md)
 
 > Bu dosya **kod yazılmadan önce** kapatılması gereken kararları içerir.
 > Her maddede bir öneri ve seçenekler var. Yanıtını iki yoldan verebilirsin:
@@ -13,12 +13,12 @@
 >
 > **Cevaplar `10-karar-bekleyen-konulara-cevap.txt` ile verildi (2026-11-18).**
 > Kararlar `docs/05`, `docs/06`, `docs/07`, `docs/08`, `docs/09`'a işlendi;
-> teknik tasarım [docs/11 v1.1](11-idempotency-teknik-tasarim.md)'de toplandı.
+> teknik tasarım [docs/11 v1.3](11-idempotency-teknik-tasarim.md)'de toplandı.
 > Kullanıcı `docs/11-kararlar.txt` ile **altı koşullu tasarım onayı** verdi;
 > koşulların karşılanması `docs/11` §9.1'de, dört kritik konunun çözümü §9.2'de.
-> Kullanıcı açıkça **"Henüz kodlamaya başlama"** dediği için **kod yazılmadı**;
-> **şu an yalnızca ayrı kodlama onayı bekleniyor**. Operasyonel: LocalDB temizliği
-> tamamlandı, Windows manuel UI smoke bekliyor.
+> Kullanıcı daha sonra `5abb6af` sonrası **açık kodlama onayı** verdi ve
+> **V11-T01 uygulandı** (435/435 test, `docs/11` §9.5). Operasyonel: LocalDB
+> temizliği tamamlandı; Windows manuel UI smoke ve MAUI head build bekliyor.
 
 ---
 

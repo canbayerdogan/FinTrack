@@ -1,3 +1,4 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.Expenses.Application.Categories;
 using FinTrack.Modules.Expenses.Application.Common;
 using FinTrack.Modules.Expenses.Application.Expenses;
@@ -74,6 +75,13 @@ public enum SaveChangesOutcome
 public interface IUnitOfWork
 {
     Task<SaveChangesOutcome> SaveChangesAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// ADR-0010: bu modülün DbContext'ini verilen transaction'a bağlar.
+    /// <c>null</c>, host transaction'ına (varsa) geri düşer; ikisi de yoksa
+    /// bağlantıyı temizler.
+    /// </summary>
+    void Enlist(IWriteTransactionScope? scope);
 }
 
 /// <summary>Yazma işlemini atomik tutan altyapı bağımsız işlem sınırı.</summary>

@@ -13,8 +13,10 @@ public static class ExpensesInfrastructureRegistration
         this IServiceCollection services,
         string connectionString)
     {
-        services.AddDbContext<ExpensesDbContext>(options =>
-            ExpensesDbContextOptions.UseFinTrackSqlServer(options, connectionString));
+        services.AddDbContext<ExpensesDbContext>((sp, options) =>
+            ExpensesDbContextOptions.UseFinTrackSqlServer(
+                options,
+                sp.GetRequiredService<IWriteConnectionProvider>().Connection));
 
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
@@ -22,6 +24,8 @@ public static class ExpensesInfrastructureRegistration
         services.AddScoped<IExpenseQueries, ExpenseQueries>();
         services.AddScoped<ICardExpenseQuery, CardExpenseQuery>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWriteScopeParticipant>(sp =>
+            (IWriteScopeParticipant)sp.GetRequiredService<IUnitOfWork>());
         services.AddScoped<ITransactionScopeFactory, TransactionScopeFactory>();
         services.AddScoped<IModuleMigration, ExpensesModuleMigration>();
 

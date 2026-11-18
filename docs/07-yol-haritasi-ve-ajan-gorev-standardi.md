@@ -626,7 +626,7 @@ uçtan uca akış test edildi.
 
 | Konu | Not |
 |---|---|
-| `Idempotency-Key` zorunlu | Kararlar (`docs/10` v1.2) ve **altı koşullu tasarım onayı** (`docs/11` v1.1, ADR-0010) tamam; **yalnızca kodlama onayı bekliyor** → görev kartı §5.1 |
+| `Idempotency-Key` zorunlu | Kararlar (`docs/10` v1.2), **altı koşullu tasarım onayı** (`docs/11` v1.2, ADR-0010) ve açık kodlama onayı tamam; **V11-T01 uygulandı** (435/435 test) → görev kartı §5.1 |
 | Parola sıfırlama / e-posta doğrulama | Identity genişlemesi; **Idempotency sonrası sıradaki öncelik (karar: 3-A)** |
 | Hesap silme (KVKK) | Soft delete + 30 gün |
 | Çoklu para birimi | Model hazır; kur dönüşümü yok |
@@ -641,7 +641,7 @@ uçtan uca akış test edildi.
 
 **Dilim:** v1.1
 **Büyüklük:** L
-**Durum:** ✅ Koşullu tasarım onayı alındı (`docs/11` v1.1 + ADR-0010) — **kodlama onayı BEKLİYOR; kod yazılmadı**
+**Durum:** ✅ Koşullu tasarım onayı + açık kodlama onayı alındı — **V11-T01 uygulandı; 435/435 test yeşil** (`docs/11` v1.2/§9.5 + ADR-0010). Kalan: Windows manuel UI smoke ve MAUI head build (operatör)
 
 **Amaç:**
 Ağ kopması, timeout veya sunucu çökmesinde kullanıcının parasal kayıtlarının
@@ -688,27 +688,30 @@ CreditCards/Debts altyapıları (`Enlist`/no-op wrapper; iş mantığı değişm
 `docs/05` §2.7; `docs/10` v1.2 kararları; `docs/11` §9 koşullu onaylar; ADR-0010.
 
 **Kabul kriterleri:**
-- [x] `docs/11` §9'daki 6 tasarım maddesinin **koşullu onayı** alındı (§9.1);
-  **kodlama onayı ayrıca alınacak**.
-- [ ] RFC 8785 paket kapısı (S26/S27) geçildi; geçilmezse "uyumlu" iddiası geri çekilir.
-- [ ] Kapsam dahili her mutasyon `POST` zorunlu anahtar istiyor; auth hariç.
-- [ ] Aynı key + aynı gövde → aynı 2xx + `Location`, tek finansal kayıt.
-- [ ] Aynı key + farklı gövde → `409 IdempotencyKeyReused`.
-- [ ] Finansal kayıt + `Completed` aynı `DbConnection`/`DbTransaction` içinde commit;
+- [x] `docs/11` §9'daki 6 tasarım maddesinin **koşullu onayı** ve açık kodlama
+      onayı alındı (§9.1).
+- [x] RFC 8785 paket kapısı (S26/S27) geçildi (`Jcs.Net` 0.1.1, 26/26).
+- [x] Kapsam dahili her mutasyon `POST` zorunlu anahtar istiyor; auth hariç.
+- [x] Aynı key + aynı gövde → aynı 2xx + `Location`, tek finansal kayıt.
+- [x] Aynı key + farklı gövde → `409 IdempotencyKeyReused`.
+- [x] Finansal kayıt + `Completed` aynı `DbConnection`/`DbTransaction` içinde commit;
       handler commit etmez (S18, S25).
-- [ ] Commit sırasında bağlantı kopması (S21) ve çoklu instance matrisi
-      (S4, S22–S24) → asla **2. finansal kayıt**.
-- [ ] 24 s+ için `409 IdempotencyExpired` + durum sorgusu; mobil `Uncertain`,
+- [x] Commit sırasında bağlantı kopması (S21) ve çoklu instance matrisi
+      (S4, S22–S24) → asla **2. finansal kayıt** (deterministik hook/force;
+      gerçek SQL 1205 enjeksiyonu yok — `docs/11` §4.7).
+- [x] 24 s+ için `409 IdempotencyExpired` + durum sorgusu; mobil `Uncertain`,
       otomatik yeni UUID yok (S28/S29).
-- [ ] Kalıcı `InProgress` satırı yok; stale timeout kullanılmıyor.
-- [ ] Migration host'ta, `shared` şemasında; modül DbContext/migration'ları
+- [x] Kalıcı `InProgress` satırı yok; stale timeout kullanılmıyor.
+- [x] Migration host'ta, `shared` şemasında; modül DbContext/migration'ları
       değişmedi; modüller tabloya erişmiyor.
-- [ ] Mobil restart sonrası aynı key/gövde ile güvenli replay; offline kuyruğu yok;
+- [x] Mobil restart sonrası aynı key/gövde ile güvenli replay; offline kuyruğu yok;
       decrypt hatasında otomatik işlem yok.
-- [ ] Entegrasyon testleri Testcontainers MSSQL üzerinde yeşil; toplam test sayısı güncellendi.
+- [x] Entegrasyon testleri Testcontainers MSSQL üzerinde yeşil (95/95); toplam
+      test sayısı güncellendi (435/435).
 - [x] LocalDB smoke verileri silindi (karar 2.2-A) ✅.
-- [ ] Windows manuel UI smoke (karar 2.1-A) yapıldı.
-- [ ] CI yeşil; doküman sürümleri ve değişiklik geçmişleri güncellendi.
+- [ ] Windows manuel UI smoke (karar 2.1-A) yapıldı — operatör.
+- [ ] CI yeşil; doküman sürümleri ve değişiklik geçmişleri güncellendi —
+      değişiklikler henüz commit/push edilmedi; CI doğrulaması bekliyor.
 
 **Testler:**
 - Unit: scope/hash/canonicalizer (RFC vektörleri), header doğrulama, pending store
@@ -719,14 +722,15 @@ CreditCards/Debts altyapıları (`Enlist`/no-op wrapper; iş mantığı değişm
   kapsam listesinde veya auth; kapsam dahili handler'da ikinci transaction yok.
 
 **Doküman güncellemeleri:**
-`docs/05` §2.7 (v1.5) ✅ · `docs/06` §1.4 (v1.6) ✅ · `docs/07` §5/§5.1 (v1.17) ✅ ·
-`docs/08` §4/§8 (v2.11) ✅ · `docs/09` teknik borç (v1.21) ✅ · `docs/10` v1.2 ✅ ·
-`docs/11` v1.1 ✅ · ADR-0010 ✅ · README ✅.
+`docs/05` §2.7 (v1.6) ✅ · `docs/06` §1.4 (v1.7) ✅ · `docs/07` §5/§5.1 (v1.18) ✅ ·
+`docs/08` §4/§8 (v2.12) ✅ · `docs/09` teknik borç (v1.22) ✅ · `docs/10` v1.2 ✅ ·
+`docs/11` v1.3 ✅ · ADR-0010 ✅ · README ✅.
 
 **Riskler / açık sorular:**
 `docs/11` §9.4 K1–K7 (RFC paket kapısı, decimal sınırı, tombstone/KVKK, yeni hata
 kodu, Windows smoke, dağıtık kilit yok, SQLite bağımlılığı). Koşullu tasarım
-onayı alındı; **kodlama onayı gelmeden uygulamaya geçilmez.**
+onayı ve açık kodlama onayı alındı; uygulama tamamlandı. Operatör görevleri:
+Windows manuel UI smoke ve Android Java SDK gerektiren MAUI head build.
 
 ---
 
@@ -990,3 +994,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221`, `44366617692` ve `44379256250` yeşil |
 | 1.16 | 2026-11-18 | `docs/10` kararları işlendi; `docs/11` teknik tasarımı ve V11-T01 görev kartı eklendi; 1.6/1.10 tasarım onayı ve ayrı kodlama onayı bekliyor, kod yazılmadı |
 | 1.17 | 2026-11-18 | Altı koşullu tasarım onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
+| 1.18 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency middleware/store/migration, ADR-0010 modül uyumları, durum sorgusu, mobil pending operations; kabul kriterleri ve doküman sürümleri güncellendi, 435/435 test yeşil. Windows UI smoke ve MAUI head build operatörde; değişiklikler henüz commit edilmedi |

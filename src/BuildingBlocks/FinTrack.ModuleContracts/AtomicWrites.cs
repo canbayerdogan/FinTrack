@@ -28,6 +28,26 @@ public interface IWriteTransactionScopeFactory
     Task<IWriteTransactionScope> BeginAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// ADR-0010: host tarafından açılmış aktif yazma transaction'ını modüllere
+/// salt okunur sunar. Host transaction'ı yoksa <c>null</c> döner ve modüller
+/// mevcut ADR-0009 davranışını sürdürür.
+/// </summary>
+public interface IWriteTransactionScopeAccessor
+{
+    IWriteTransactionScope? Current { get; }
+}
+
+/// <summary>
+/// Host middleware'inin, kapsam dahili istekte tüm modül DbContext'lerini tek
+/// transaction'a bağlamak için kullandığı sözleşme (ADR-0010). Modül
+/// sahipliği ve şemaları değişmez; yalnızca bağlantı katılımı yönetilir.
+/// </summary>
+public interface IWriteScopeParticipant
+{
+    void Enlist(IWriteTransactionScope? scope);
+}
+
 /// <summary>Borç bağlantısının türü; modül iç enum'lardan bağımsız sözleşme değeri.</summary>
 public enum DebtInflowKind
 {

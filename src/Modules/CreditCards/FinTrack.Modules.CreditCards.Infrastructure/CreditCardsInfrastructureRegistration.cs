@@ -27,6 +27,8 @@ public static class CreditCardsInfrastructureRegistration
         services.AddScoped<IStatementRepository, StatementRepository>();
         services.AddScoped<IStatementQueries, StatementQueries>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IWriteScopeParticipant>(sp =>
+            (IWriteScopeParticipant)sp.GetRequiredService<IUnitOfWork>());
         services.AddScoped<ITransactionScopeFactory, TransactionScopeFactory>();
         services.AddScoped<ICardQuery, CardQuery>();
         services.AddScoped<IModuleMigration, CreditCardsModuleMigration>();

@@ -662,9 +662,9 @@ Aşağıdaki testler CI'da zorunludur; biri kırmızıysa sürüm çıkmaz.
 
 Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 
-- `Idempotency-Key` uygulaması: kararlar (`docs/10` v1.2), koşullu onaylar ve son
-  tasarım (`docs/11` v1.1), ADR-0010 hazır; **kodlama onayı bekliyor** (artık açık
-  iş kuralı değil).
+- `Idempotency-Key` uygulaması **tamamlandı (V11-T01)**: kararlar (`docs/10`
+  v1.2), koşullu onaylar ve son tasarım (`docs/11` v1.2), ADR-0010 uygulandı
+  (artık açık iş kuralı değil; doğrulama `docs/11` §9.5).
 - Çoklu para birimi ve kur dönüşümü.
 - `Endpoints` projelerinin ayrı kalıp kalmayacağı.
 - Parola sıfırlama ve e-posta doğrulama.
@@ -684,3 +684,4 @@ Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 | 1.3 | 2026-11-17 | Taksit ödeme iptalinde son ödenmiş taksit kısıtı kaldırıldı; sıra kuralı yalnızca ödeme anında uygulanıyor (2026-11-17 onayı) |
 | 1.4 | 2026-11-18 | `Idempotency-Key` kararları işlendi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; 24 saat, 2xx replay, tek transaction atomikliği ve mobil kalıcı kayıt kuralı §2.7'ye eklendi; ayrıntı `docs/11` |
 | 1.5 | 2026-11-18 | Koşullu onaylar işlendi: ADR-0010 host sahipliğinde transaction, RFC 8785 uyumlu kütüphane zorunluluğu, 24 s tam gövde + 30 g tombstone, `409 IdempotencyExpired`, güvenli durum sorgusu ve `Uncertain` mobil durumu §2.7'ye eklendi; kodlama onayı bekliyor |
+| 1.6 | 2026-11-19 | V11-T01 uygulandı; §2.7 idempotency kuralları host/mobil koduyla gerçekleşti, §11 açık konular güncellendi; bağlı tasarım belgesi v1.2'ye yükseltildi |
