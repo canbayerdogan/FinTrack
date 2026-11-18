@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.10
+**Sürüm:** 2.11
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Yol haritası v1.16](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.5](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [Kararlar v1.1](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md) · ADR-0001…0009
+**Bağlı belgeler:** [Yol haritası v1.17](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.6](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -50,11 +50,15 @@ doğruladı: run `44189257561` (Slice 9), `44365407221` (CI bakımı),
 akışıyla tamamlandı.
 
 **v1.1 durumu (2026-11-18):** Açık kararlar `docs/10` v1.1 ile kapatıldı;
-teknik tasarım `docs/11`'de, görev kartı `docs/07` §5.1'de (V11-T01). Kullanıcı
-**"Henüz kodlamaya başlama"** talimatı verdi; 1.6 atomiklik ve 1.10 mobil depolama
-tasarımları için ayrı onay bekleniyor. **Kod yazılmadı.** Karar dokümanı push'u
-`decd69d`, docs-only CI run'ı `44385538919`; kod doğrulaması için
-`44379256250` referans alınır (karar 2.4 gereği son docs run'ı eklenmez).
+`docs/11-kararlar.txt` ile **altı koşullu tasarım onayı** alındı ve `docs/11`
+v1.1 + **ADR-0010**'da işlendi. Görev kartı `docs/07` §5.1'de (V11-T01).
+Kullanıcı **"Henüz kodlamaya başlama"** talimatını koruyor; **şu an yalnızca
+ayrı kodlama onayı bekleniyor**. **Kod yazılmadı.** Dört kritik konunun çözümü
+`docs/11` §9.2'de; kalan riskler §9.4'te. Karar dokümanı push'u `decd69d`,
+docs-only CI run'ı `44385538919`; kod doğrulaması için `44379256250` referans
+alınır (karar 2.4 gereği son docs run'ı eklenmez).
+**Operasyonel:** LocalDB smoke verileri temizlendi (0 satır doğrulandı); Windows
+manuel UI smoke operatör tarafından tamamlanacak (§8.4, §8.3 madde 2).
 
 **Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
 typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
@@ -146,6 +150,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Kart alışverişi Expenses'a aittir; kart borcu hesaplanır, saklanmaz | ADR-0008, ADR-0004 |
 | Ödemeler sahibi modülde; aynı olay iki kez sayılmaz | ADR-0007 |
 | Modüller arası atomik yazma: sync writer + paylaşılan `DbTransaction` | ADR-0009 |
+| Idempotent mutasyon POST: host sahipliğinde tek `DbConnection`/`DbTransaction`, tek commit, benzersiz key | ADR-0010, `docs/11` §4 (koşullu onay alındı, kod onayı bekliyor) |
 
 ### 4.2 API sözleşmesi
 
@@ -155,7 +160,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `DELETE` yok; iptal `POST /{id}/cancel`, arşiv `POST /{id}/archive` | `docs/06` §1 |
 | Eşzamanlılık gövdedeki `rowVersion` ile; uyuşmazlık `409 ConcurrencyConflict` | `docs/06` §1.5 |
 | Sayfalama `page=1`, `pageSize=50` (max 200); hatalı değer `400 ValidationFailed` | `docs/06` §1.6 |
-| `Idempotency-Key` v1'de **uygulanmadı**; v1.1 sözleşmesi tamam, uygulama tasarım onayı bekliyor (§6, §8.4) | `docs/06` §1.4, `docs/10` v1.1, `docs/11` |
+| `Idempotency-Key` v1'de **uygulanmadı**; v1.1 sözleşmesi + koşullu tasarım onayı tamam, **kodlama onayı bekliyor** (§6, §8.4) | `docs/06` §1.4 (v1.6), `docs/10` v1.2, `docs/11` v1.1, ADR-0010 |
 
 ### 4.3 İş kuralları
 
@@ -385,7 +390,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 | Konu | Durum |
 |---|---|
-| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01**: kararlar + sözleşme + tasarım hazır; tasarım/kodlama onayı bekliyor. O zamana kadar istemci otomatik POST retry yapmamalı |
+| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01**: kararlar + sözleşme + koşullu onaylar + son tasarım hazır; **yalnızca kodlama onayı bekliyor**. O zamana kadar istemci otomatik POST retry yapmamalı |
 | Kart harcamaları için taksitli ödeme planı | v1 kapsam dışı |
 | Çoklu para birimi / kur dönüşümü | v1 kapsam dışı |
 | Kategori `restore`, arşivli kartı geri açma | v1'de yok |
@@ -698,7 +703,8 @@ alındı.
 2. **Windows manuel UI smoke (karar 2.1 — A, yapılacak):** Build 0/0 ama
    uygulama elle açılmadı; `giriş → harcama → kart → rapor` akışı Windows
    hedefinde de denenecek. V11-T01 doğrulama maddesi olarak kaydedildi; henüz
-   çalıştırılmadı (öncelik: tasarım onayı).
+   çalıştırılmadı, operatör tarafından tamamlanacak. LocalDB smoke temizliği
+   (karar 2.2-A) tamamlandı ve doğrulandı (0 satır).
 3. **CI bakımı ✅ (2026-11-18):** Run `44190582258` annotasyonları giderildi —
    `checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6` ve
    `upload-artifact@v7` (hepsi Node 24); runner `ubuntu-latest` yerine
@@ -706,7 +712,8 @@ alındı.
    CI run `44365407221`, docs-only run `44366617692` ve Android düzeltmeleri
    run'ı `44379256250` yeşil (335/335).
 4. **Ertelenen kapsam:** `Idempotency-Key` artık v1.1 görev kartı V11-T01
-   (`docs/07` §5.1); kararlar `docs/10` v1.1, tasarım `docs/11`. Kod onayı ayrı.
+   (`docs/07` §5.1); kararlar `docs/10` v1.2, altı koşullu onay ve son tasarım
+   `docs/11` v1.1 + ADR-0010. **Kod onayı ayrıca alınacak.**
    Okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
 
@@ -724,25 +731,31 @@ binary dosyayı bozar; ekran görüntüsü için `adb shell screencap -p /sdcard
 `dotnet test FinTrack.slnx -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot' --nologo -v q` → 335/335 ·
 `dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -f net10.0-android -t:Install` (emülatör kurulumu için).
 
-### 8.4 Kararlar v1.1 (2026-11-18)
+### 8.4 Kararlar v1.1 ve koşullu onaylar (2026-11-18)
 
-Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` (yerel, commit edilmez).
+Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` ve `docs/11-kararlar.txt`
+(yerel, commit edilmez).
 
 | Konu | Karar | İşlendiği yer |
 |---|---|---|
 | Zorunluluk kapsamı | Finansal/mutasyon `POST`; auth hariç | `docs/05` §2.7, `docs/06` §1.4 |
-| Anahtar kapsamı / gövde | userId + method + route template + route değerleri + key; canonical JSON + SHA-256 | `docs/11` §3 |
-| Saklama / TTL | `shared.IdempotencyKeys`, host migration, 24 saat, sınırlı temizlik | `docs/11` §5–6 |
-| Çökme/atomiklik | 5 dk stale timeout **reddedildi**; tek transaction, kalıcı `InProgress` yok — **tasarım onayı bekliyor** | `docs/11` §4 |
-| Auth / hata replay / hata kodu | Auth kapsam dışı; sadece 2xx; `400 ValidationFailed` | `docs/06` §1.4 |
-| Mobil | Uygulama restart'ında anahtar + gövde korunur; SQLite + AES-GCM önerisi — **tasarım onayı bekliyor** | `docs/11` §7 |
-| Test kapsamı | Tüm kapsam + S1–S20 entegrasyon | `docs/07` §5.1 |
-| Operasyonel | Windows smoke A, LocalDB sil A, git geçmişi A, son CI run A | `docs/07` §5.1, `docs/09` |
+| Anahtar kapsamı / gövde | userId + method + route template + route değerleri + key; **RFC 8785 uyumlu kütüphane** + SHA-256 (özel canonicalizer reddedildi) | `docs/11` §3.2 |
+| Saklama / TTL | `shared.IdempotencyKeys`, host migration, 24 s tam gövde + 30 g gövdesiz tombstone, sınırlı temizlik | `docs/11` §5–6 |
+| Çökme/atomiklik | 5 dk stale timeout **reddedildi**; aynı `DbConnection`/`DbTransaction`, tek commit, kalıcı `InProgress` yok — **koşullu onay alındı** | `docs/11` §4, ADR-0010 |
+| Auth / hata replay / hata kodu | Auth kapsam dışı; sadece 2xx; `400 ValidationFailed`; **`409 IdempotencyExpired`** | `docs/06` §1.3–1.4 |
+| Mobil | Restart'ta anahtar + şifreli gövde; SQLite + AES-256-GCM; `Uncertain`, durum sorgusu, otomatik yeni UUID yok — **koşullu onay alındı** | `docs/11` §7 |
+| Test kapsamı | Tüm kapsam + **S1–S29** entegrasyon; RFC vektörleri, bağlantı kopması, çoklu instance matrisi | `docs/07` §5.1, `docs/11` §4.7 |
+| Operasyonel | Windows smoke **bekliyor**; LocalDB temizliği **✅ tamamlandı**; git geçmişi dokunulmadı; son docs CI run'ı eklenmedi | `docs/07` §5.1, `docs/09`, `docs/11` §9.3 |
 | v1.1 önceliği | **A — parola sıfırlama + e-posta doğrulama** | `docs/07` §5 |
 
+**Altı koşullu onayın durumu** (`docs/11` §9.1): §4.2 tek transaction ✅ ·
+§4.5 ADR-0010 + dört modül ✅ · §3.2 RFC 8785 kütüphane kapısı ✅ · §5.1 şema
+ve veri koruması ✅ · §7.1 SQLite + AES-GCM ✅ · §7.3/R13 `Uncertain` + durum
+sorgusu ✅. Dört kritik konunun çözümü `docs/11` §9.2'de, kalan riskler §9.4'te.
+
 > Kullanıcı talimatı: **"Önce tasarımı göster, onaylayınca kod onayı ayrıca
-> vereceğim."** Bu nedenle V11-T01 "tasarım onayı bekliyor" durumunda, kod
-> yazılmadı.
+> vereceğim."** Koşullu tasarım onayı alındı; V11-T01 **kodlama onayı bekliyor**
+> durumunda ve kod yazılmadı.
 
 ---
 
@@ -771,3 +784,4 @@ Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` (yerel, commit edilmez).
 | 2.8 | 2026-11-18 | Android emülatör smoke'u ve bulunan platform hatalarının düzeltmeleri dokümanlara işlendi; docs-only CI run `44366617692` yeşil (335/335). Geçici HTTP/cleartext ayarları geri alındı, final API adresi `https://10.0.2.2:7241/api/v1/` |
 | 2.9 | 2026-11-18 | Android düzeltmelerini içeren CI run `44379256250` yeşil (335/335, `ubuntu-24.04`); kod commit'i `aa9efbe` |
 | 2.10 | 2026-11-18 | `docs/10` cevapları işlendi; `docs/11` teknik tasarımı, `docs/07` §5.1 V11-T01 görev kartı ve §8.4 karar özeti eklendi; "tüm POST" / "auth hariç" çelişkisi giderildi; kod yazılmadı, tasarım+kod onayı bekleniyor |
+| 2.11 | 2026-11-18 | `docs/11-kararlar.txt` altı koşullu onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, dört kritik konunun çözümü ve K1–K7 riskleri; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |

@@ -1,8 +1,8 @@
 # FinTrack — API Sözleşmeleri (v1)
 
-**Sürüm:** 1.5
+**Sürüm:** 1.6
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
+**Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · ADR-0007, ADR-0008, ADR-0009, ADR-0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları, mobil istemci geliştiricisi
 
 > Bu belge v1 REST API'sinin **davranış ve alan sözleşmesidir**. OpenAPI belgesi
@@ -89,7 +89,8 @@ Doğrulama hatasında `errors` alan adı → mesaj dizisi eşlemesidir:
 | 409 | `StateConflict` | Kayıt mevcut durumunda bu işlemi kabul etmiyor |
 | 409 | `EmailAlreadyRegistered` | E-posta zaten kayıtlı |
 | 409 | `IdempotencyKeyReused` | Aynı anahtar farklı gövdeyle kullanıldı |
-| 409 | `IdempotencyInProgress` | Aynı anahtarlı istek hâlâ işleniyor |
+| 409 | `IdempotencyInProgress` | Aynı anahtarlı istek hâlâ işleniyor; güvenle tekrar dene |
+| 409 | `IdempotencyExpired` | 24 s tam gövde TTL'si doldu; yeni işlem otomatik açılmaz, durum sorgusu kullanılır |
 | 500 | `InternalError` | Beklenmeyen hata; iç detay dönmez |
 
 ### 1.4 İdempotency
@@ -98,7 +99,7 @@ Doğrulama hatasında `errors` alan adı → mesaj dizisi eşlemesidir:
 değildir; uygulama yapılmadı. İstemci aynı `POST` isteğini otomatik yeniden
 denememelidir.
 
-**v1.1 sözleşmesi (2026-11-18 kararı — uygulama tasarım onayı bekliyor):**
+**v1.1 sözleşmesi (2026-11-18 kararı + koşullu onaylar — kodlama onayı bekliyor):**
 
 - Başlık, **tüm finansal/mutasyon `POST`** uç noktalarında **zorunludur**.
   Kapsam listesi `docs/11` §1.1'dedir.
@@ -110,22 +111,33 @@ denememelidir.
 - Kapsam: `userId + HTTP method + route template + route değerleri + anahtar`.
   Query string kapsama **girmez**; kullanıcı/route/route değeri izolasyonu
   korunur.
-- Gövde karşılaştırması: canonical JSON (JCS/RFC 8785 temelli, `docs/11` §3.2)
-  → SHA-256. Ham istek gövdesi saklanmaz.
+- Gövde karşılaştırması: **RFC 8785 uyumlu, bakımı sürdürülen bir kütüphane** ile
+  kanonik JSON → SHA-256 (özel canonicalizer reddedildi). Sayı alanı sınırı
+  dışındaki tutarlar `400 ValidationFailed` döner. Ayrıntı: `docs/11` §3.2.
 - Aynı kapsam + aynı anahtar + aynı gövde → ilk **2xx** yanıtı (durum kodu,
-  `Location` başlığı ve gövde) tekrar döner; yeni kayıt oluşmaz.
+  `Content-Type`, yalnızca allowlist'teki `Location` başlığı ve gövde) tekrar
+  döner; yeni kayıt oluşmaz. **64 KB** yanıt gövdesi üst sınırı vardır.
 - Aynı kapsam + aynı anahtar + farklı gövde → `409 IdempotencyKeyReused`.
-- İlk istek hâlâ işleniyorsa → `409 IdempotencyInProgress`.
+- İlk istek hâlâ işleniyorsa → `409 IdempotencyInProgress` (aynı key ile
+  tekrar denemek güvenlidir).
 - 4xx/5xx yanıtları replay için saklanmaz; istemci aynı anahtarla güvenle
   yeniden deneyebilir.
-- Saklama süresi **24 saat**. Süresi dolan kayıt replay garantisi vermez;
-  istemci aynı anahtarı yeniden kullanmamalıdır.
-- Replay kaydı ile finansal kayıt **tek transaction'da** commit edilir; kalıcı
-  `InProgress` satırı yoktur, sunucu çökmesi çift kayıt oluşturmaz. Ayrıntı,
-  hata pencereleri ve test senaryoları: `docs/11` §4.
+- Saklama: **24 saat** tam gövde, ardından **30 gün** gövdesiz tombstone.
+  Tam gövde TTL'si dolan POST retry'si `409 IdempotencyExpired` döner; istemci
+  **otomatik yeni UUID/işlem oluşturmaz**, durum sorgusuna başvurur.
+- **Durum sorgusu:** `GET /api/v1/idempotency/{key}` (auth zorunlu, salt okunur).
+  Yanıt `200 { status, completedAtUtc, hasBody }` veya `404` (kayıt yok / 30 g
+  aşıldı). Gövde veya token döndürülmez; başka kullanıcının durumu görülemez.
+  404 durumunda otomatik yeni işlem açılmaz; kullanıcıya "kesin sonuç
+  bilinmiyor" gösterilir.
+- Replay kaydı ile finansal kayıt **aynı `DbConnection` ve aynı `DbTransaction`
+  nesnesinde** commit edilir (ADR-0010); commit'in tek sahibi host middleware'dir,
+  handler `SaveChanges` commit etmez. Kalıcı `InProgress` satırı yoktur, sunucu
+  çökmesi veya bağlantı kopması çift kayıt oluşturmaz. Ayrıntı, W1–W9 hata
+  pencereleri, çoklu instance matrisi ve S1–S29: `docs/11` §4.
 
-> **Uygulama notu (2026-11-18):** Kararlar `docs/10` v1.1'de kapatıldı, teknik
-> tasarım `docs/11`'de sunuldu. Kodlama onayı ayrı alınacak; onay gelene kadar
+> **Uygulama notu (2026-11-18):** Kararlar `docs/10` v1.2'de, koşullu onaylar
+> `docs/11` v1.1'de işlendi. Kodlama onayı ayrı alınacak; onay gelene kadar
 > yukarıdaki v1.1 davranışı **sözleşme olarak geçerli, uygulama olarak yoktur**.
 
 ### 1.5 Eşzamanlılık
@@ -1170,7 +1182,7 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 | 5 | Sayfalama | `items/page/pageSize/totalCount/totalPages`; varsayılan 50, üst 200 |
 | 6 | İade | `POST /expenses/{id}/refunds`; ayrı gelir kaydı yok |
 | 7 | Kart alışverişi | `POST /expenses` + `paymentMethod=CreditCard`; kart uç noktası yok |
-| 8 | İdempotency | v1'de opsiyonel; v1.1'de tüm finansal/mutasyon `POST` için zorunlu, auth hariç; 24 saat; 2xx replay; tek transaction |
+| 8 | İdempotency | v1'de opsiyonel; v1.1'de tüm finansal/mutasyon `POST` için zorunlu, auth hariç; 24 s tam gövde + 30 g tombstone; 2xx replay; RFC 8785; ADR-0010 tek transaction; durum sorgusu |
 | 9 | Auth yanıtı | Register/login/refresh aynı `AuthResponse`; rotating refresh |
 | 10 | Profil | `GET/PUT /auth/me`; saat dilimi buradan yönetilir |
 | 11 | Kart bakiyesi tarih kesiti | `GET /cards/{id}/balance?asOf=YYYY-MM-DD`; yoksa kullanıcının bugünü; yanıtta `asOfDate`; gelecek `asOf` `400` |
@@ -1182,8 +1194,8 @@ Yanıt `200` (bilgi amaçlı; yeni gider/borç kaydı oluşturmaz):
 
 Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'de izlenir:
 
-- `Idempotency-Key` uygulaması: karar ve sözleşme tamam (`docs/10` v1.1,
-  `docs/11`); teknik tasarım onayı ve ayrı kodlama onayı bekliyor.
+- `Idempotency-Key` uygulaması: karar, sözleşme ve koşullu onaylar tamam
+  (`docs/10` v1.2, `docs/11` v1.1, ADR-0010); **kodlama onayı bekliyor**.
 - Parola sıfırlama ve e-posta doğrulama uç noktaları (v1.1, **sıradaki öncelik**).
 - Hesap silme / KVKK akışı (v1.1).
 - Ekstre belgesi yükleme, OCR ve otomatik içe aktarma (v1.1+).
@@ -1207,3 +1219,4 @@ Aşağıdakiler v1 sözleşmesini bloke etmez; `docs/03` §17 ve `docs/05` §11'
 | 1.3 | 2026-11-15 | Slice 4 bakiye `asOf`/kesit sözleşmesi, ekstre/ödeme listeleri ve türetilen alanlar; kredi `monthlyPayment` girdisi ve türetilen `totalRepayment` |
 | 1.4 | 2026-11-15 | Gelecek `asOf` için `400`; iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
 | 1.5 | 2026-11-18 | `Idempotency-Key` v1.1 sözleşmesi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; kapsam/hash/TTL/2xx replay kuralları ve tek transaction atomikliği; "tüm POST" ifadesindeki çelişki giderildi |
+| 1.6 | 2026-11-18 | Koşullu onaylar işlendi: `409 IdempotencyExpired` eklendi; 24 s + 30 g tombstone, güvenli durum sorgusu `GET /api/v1/idempotency/{key}`, RFC 8785 kütüphane zorunluluğu, 64 KB sınırı, `Location` allowlist'i ve ADR-0010 aynı `DbTransaction` kuralı §1.4'e eklendi |

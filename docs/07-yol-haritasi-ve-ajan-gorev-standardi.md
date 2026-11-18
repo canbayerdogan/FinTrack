@@ -1,8 +1,8 @@
 # FinTrack — Yol Haritası ve Ajan Görev Standardı
 
-**Sürüm:** 1.16
+**Sürüm:** 1.17
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · [API Sözleşmeleri v1.5](06-api-sozlesmeleri.md) · ADR-0001…0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
+**Bağlı belgeler:** [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.5](05-is-kurallari.md) · [API Sözleşmeleri v1.6](06-api-sozlesmeleri.md) · ADR-0001…0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu belge iki şeyi tanımlar:
@@ -626,7 +626,7 @@ uçtan uca akış test edildi.
 
 | Konu | Not |
 |---|---|
-| `Idempotency-Key` zorunlu | Kararlar alındı (`docs/10` v1.1); teknik tasarım `docs/11`'de; **tasarım onayı ve ayrı kodlama onayı bekliyor** → görev kartı §5.1 |
+| `Idempotency-Key` zorunlu | Kararlar (`docs/10` v1.2) ve **altı koşullu tasarım onayı** (`docs/11` v1.1, ADR-0010) tamam; **yalnızca kodlama onayı bekliyor** → görev kartı §5.1 |
 | Parola sıfırlama / e-posta doğrulama | Identity genişlemesi; **Idempotency sonrası sıradaki öncelik (karar: 3-A)** |
 | Hesap silme (KVKK) | Soft delete + 30 gün |
 | Çoklu para birimi | Model hazır; kur dönüşümü yok |
@@ -641,7 +641,7 @@ uçtan uca akış test edildi.
 
 **Dilim:** v1.1
 **Büyüklük:** L
-**Durum:** ⏳ Tasarım onayı bekliyor — **kod yazılmadı / yazılmayacak**
+**Durum:** ✅ Koşullu tasarım onayı alındı (`docs/11` v1.1 + ADR-0010) — **kodlama onayı BEKLİYOR; kod yazılmadı**
 
 **Amaç:**
 Ağ kopması, timeout veya sunucu çökmesinde kullanıcının parasal kayıtlarının
@@ -650,17 +650,23 @@ Amaç yalnızca bir header eklemek değil, finansal kaydın replay kaydıyla ato
 olarak korunmasıdır (`docs/10` §3 nihai tavsiye).
 
 **Kapsam:**
-- Host `IdempotencyMiddleware`: kapsam tespiti, UUID/JSON doğrulama, canonical
-  JSON + SHA-256, pozitif endpoint listesi, yanıt tamponlama (2xx + `Location`).
+- Host `IdempotencyMiddleware`: kapsam tespiti, UUID/JSON doğrulama, **RFC 8785
+  uyumlu kütüphane** ile kanonik JSON + SHA-256 (kapı: S26/S27), pozitif endpoint
+  listesi, yanıt tamponu (yalnızca 2xx + `Location` allowlist'i, 64 KB sınırı).
 - `shared.IdempotencyKeys` tablosu, host sahipliğinde `IdempotencyDbContext` ve
   ayrı migration; `Program.cs` migration sırası: identity → idempotency → modüller.
-- ADR-0009 `IWriteTransactionScope` altyapısının tüm mutasyon POST'larına
-  genişletilmesi; `IWriteTransactionScopeAccessor`; modül `Enlist(scope)`
-  uyumları (Expenses dâhil); commit tek noktada.
-- 24 saat TTL, erişimde silme ve sınırlı toplu temizlik (job yok).
-- Mobil `PendingOperationStore`: SQLite + AES-GCM, anahtar `SecureStorage`'da;
-  `SentUnconfirmed` kurtarma, `Created` kullanıcı onayı; `AuthHandler` POST retry.
-- Testler: `docs/11` §4.7 S1–S20 + mimari testleri (R4, R6).
+- **ADR-0010** ile `IWriteTransactionScope` altyapısının tüm mutasyon
+  POST'larına genişletilmesi: aynı `DbConnection` + aynı `DbTransaction` nesnesi,
+  `IWriteTransactionScopeAccessor`, modül `Enlist(scope)` uyumları (Expenses
+  dâhil); **commit'in tek sahibi host**, handler `SaveChanges` commit etmez.
+- 24 s tam gövde + **30 gün gövdesiz tombstone**; erişimde silme ve sınırlı toplu
+  temizlik (job yok). `GET /api/v1/idempotency/{key}` durum sorgusu ve
+  `409 IdempotencyExpired`.
+- Mobil `PendingOperationStore`: SQLite + AES-256-GCM (96-bit nonce, auth tag,
+  AAD), şifreleme anahtarı yalnızca `SecureStorage`'da; `SentUnconfirmed`
+  kurtarma, `Created` kullanıcı onayı, **24 s+ `Uncertain`**, otomatik yeni UUID
+  yok; `AuthHandler` POST retry.
+- Testler: `docs/11` §4.7 **S1–S29** + mimari testleri (R4, R6).
 
 **Kapsam dışı:**
 - `/api/v1/auth/*` ve token yanıtlarının saklanması.
@@ -674,38 +680,53 @@ CreditCards/Debts altyapıları (`Enlist`/no-op wrapper; iş mantığı değişm
 `FinTrack.Mobile.Core` + `FinTrack.Mobile` (pending store, handler), test projeleri.
 
 **API / sözleşme:**
-`docs/06` §1.4 (v1.5), `docs/11` §1–6; `409 IdempotencyKeyReused`,
-`409 IdempotencyInProgress`, `400 ValidationFailed`.
+`docs/06` §1.4 (v1.6), `docs/11` §1–6; `409 IdempotencyKeyReused`,
+`409 IdempotencyInProgress`, `409 IdempotencyExpired`, `400 ValidationFailed`;
+`GET /api/v1/idempotency/{key}`.
 
 **İş kuralları:**
-`docs/05` §2.7; `docs/10` v1.1 kararları; `docs/11` §9 onay maddeleri.
+`docs/05` §2.7; `docs/10` v1.2 kararları; `docs/11` §9 koşullu onaylar; ADR-0010.
 
 **Kabul kriterleri:**
-- [ ] `docs/11` §9'daki 6 tasarım onayı maddesi kullanıcı tarafından onaylandı.
+- [x] `docs/11` §9'daki 6 tasarım maddesinin **koşullu onayı** alındı (§9.1);
+  **kodlama onayı ayrıca alınacak**.
+- [ ] RFC 8785 paket kapısı (S26/S27) geçildi; geçilmezse "uyumlu" iddiası geri çekilir.
 - [ ] Kapsam dahili her mutasyon `POST` zorunlu anahtar istiyor; auth hariç.
 - [ ] Aynı key + aynı gövde → aynı 2xx + `Location`, tek finansal kayıt.
 - [ ] Aynı key + farklı gövde → `409 IdempotencyKeyReused`.
-- [ ] Çökme/commit pencereleri S5–S6 ve ADR-0009 S18 testleri geçiyor; çift kayıt yok.
+- [ ] Finansal kayıt + `Completed` aynı `DbConnection`/`DbTransaction` içinde commit;
+      handler commit etmez (S18, S25).
+- [ ] Commit sırasında bağlantı kopması (S21) ve çoklu instance matrisi
+      (S4, S22–S24) → asla **2. finansal kayıt**.
+- [ ] 24 s+ için `409 IdempotencyExpired` + durum sorgusu; mobil `Uncertain`,
+      otomatik yeni UUID yok (S28/S29).
 - [ ] Kalıcı `InProgress` satırı yok; stale timeout kullanılmıyor.
-- [ ] Migration host'ta, `shared` şemasında; modül DbContext/migration'ları değişmedi.
-- [ ] Mobil restart sonrası aynı key/gövde ile güvenli replay; offline kuyruğu yok.
+- [ ] Migration host'ta, `shared` şemasında; modül DbContext/migration'ları
+      değişmedi; modüller tabloya erişmiyor.
+- [ ] Mobil restart sonrası aynı key/gövde ile güvenli replay; offline kuyruğu yok;
+      decrypt hatasında otomatik işlem yok.
 - [ ] Entegrasyon testleri Testcontainers MSSQL üzerinde yeşil; toplam test sayısı güncellendi.
-- [ ] Windows manuel UI smoke (karar 2.1) yapıldı; LocalDB smoke verileri silindi (2.2).
+- [x] LocalDB smoke verileri silindi (karar 2.2-A) ✅.
+- [ ] Windows manuel UI smoke (karar 2.1-A) yapıldı.
 - [ ] CI yeşil; doküman sürümleri ve değişiklik geçmişleri güncellendi.
 
 **Testler:**
-- Unit: scope/hash/canonicalizer, header doğrulama, pending store durum makinesi.
-- Integration: S1–S20 (Testcontainers MSSQL), çökme hook'ları, cross-module atomiklik.
+- Unit: scope/hash/canonicalizer (RFC vektörleri), header doğrulama, pending store
+  durum makinesi, AES-GCM nonce/AAD.
+- Integration: **S1–S29** (Testcontainers MSSQL), çökme hook'ları, bağlantı
+  kopması, çoklu instance matrisi, cross-module atomiklik, dört modül.
 - Architecture: modüller `IdempotencyDbContext`'e referans vermez; tüm `MapPost`
   kapsam listesinde veya auth; kapsam dahili handler'da ikinci transaction yok.
 
 **Doküman güncellemeleri:**
-`docs/05` §2.7 ✅ · `docs/06` §1.4 ✅ · `docs/07` §5/§5.1 ✅ · `docs/08` §4/§8 ✅ ·
-`docs/09` teknik borç ✅ · `docs/10` v1.1 ✅ · `docs/11` v1.0 ✅ · README ✅.
+`docs/05` §2.7 (v1.5) ✅ · `docs/06` §1.4 (v1.6) ✅ · `docs/07` §5/§5.1 (v1.17) ✅ ·
+`docs/08` §4/§8 (v2.11) ✅ · `docs/09` teknik borç (v1.21) ✅ · `docs/10` v1.2 ✅ ·
+`docs/11` v1.1 ✅ · ADR-0010 ✅ · README ✅.
 
 **Riskler / açık sorular:**
-`docs/11` §9 (1.6 atomiklik tasarımı, ADR-0009 genişletmesi, canonicalizer, şema,
-mobil şifreleme, kurtarma kuralı). **Onay gelmeden uygulamaya geçilmez.**
+`docs/11` §9.4 K1–K7 (RFC paket kapısı, decimal sınırı, tombstone/KVKK, yeni hata
+kodu, Windows smoke, dağıtık kilit yok, SQLite bağımlılığı). Koşullu tasarım
+onayı alındı; **kodlama onayı gelmeden uygulamaya geçilmez.**
 
 ---
 
@@ -936,6 +957,7 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | Risk | Etki | Önlem |
 |---|---|---|
 | Modüller arası atomik yazma | Nakit avans/kredi ile para girişi yarım kalabilir | ✅ ADR-0009: sync writer + paylaşılan `DbTransaction`; SQLite rollback testleri, SQL Server CI'da |
+| Idempotent yazma (v1.1) | Belirsiz commit sonucu çift finansal kayıt oluşturabilir | ✅ Koşullu tasarım onayı + ADR-0010: aynı `DbConnection`/`DbTransaction`, host tek commit, `UNIQUE (ScopeHash, Key)`; S21–S24 kod onayı sonrası uygulanacak |
 | Test DB altyapısı | Integration testleri yavaş/kırılgan | Testcontainers MSSQL; test başına temiz şema |
 | Hesaplanan kart borcu | Sorgu maliyeti | Önce doğruluk; gerekirse snapshot (kaynak doğruluk korunur) |
 | Tarih/yuvarlama | Taksit ve rapor farkları | Domain testleri; gösterimde `AwayFromZero`; eşit taksit, son taksit düzeltmesi yok |
@@ -967,3 +989,4 @@ tüm modül sorguları `UserId` izolasyonuna dayanır.
 | 1.14 | 2026-11-18 | Slice 9 (MAUI istemci) tamamlandı: `maui-android` + `maui-windows` iş yükleri, Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testi ile toplam 263 birim/mimari + 72 entegrasyon = 335; Windows build 0/0, Android CI run `44189257561` yeşil |
 | 1.15 | 2026-11-18 | Android emülatör uçtan uca smoke tamamlandı (giriş → harcama → kart → rapor); `MainApplication`, global `login` rotası, `Keyboard="Numeric"` ve root `GoBackAsync` düzeltmeleri; CI run `44365407221`, `44366617692` ve `44379256250` yeşil |
 | 1.16 | 2026-11-18 | `docs/10` kararları işlendi; `docs/11` teknik tasarımı ve V11-T01 görev kartı eklendi; 1.6/1.10 tasarım onayı ve ayrı kodlama onayı bekliyor, kod yazılmadı |
+| 1.17 | 2026-11-18 | Altı koşullu tasarım onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |

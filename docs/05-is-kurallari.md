@@ -1,8 +1,8 @@
 # FinTrack — İş Kuralları (Business Rules)
 
-**Sürüm:** 1.4
+**Sürüm:** 1.5
 **Tarih:** 2026-11-18
-**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.2 · ADR-0001…0009 · [Idempotency teknik tasarımı v1.0](11-idempotency-teknik-tasarim.md)
+**Bağlı belgeler:** Finansal Alan Modeli v0.4 · Teknik Mimari v1.3 · ADR-0001…0010 · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md)
 **Hedef okuyucu:** geliştirme ajanları ve geliştirici
 
 > Bu doküman v1 iş kurallarını tanımlar. `docs/02` §5'teki 7 açık karar ile
@@ -110,25 +110,31 @@ nasıl yansıdığını tanımlar.
 - Kapsam: `userId + HTTP method + route template + route değerleri + anahtar`.
   Query string kapsama girmez; farklı kullanıcı/route/route değeri farklı
   kapsamdır.
-- Aynı kapsam + aynı anahtar + **aynı gövde** (canonical JSON + SHA-256) →
-  ilk **2xx** yanıtı (durum kodu, `Location` başlığı ve gövde) tekrar döner;
-  **yeni kayıt oluşmaz**.
+- Aynı kapsam + aynı anahtar + **aynı gövde** (RFC 8785 uyumlu kanonik JSON +
+  SHA-256) → ilk **2xx** yanıtı (durum kodu, `Content-Type`, `Location` başlığı
+  ve gövde) tekrar döner; **yeni kayıt oluşmaz**.
 - Aynı kapsam + aynı anahtar + farklı gövde → `409 IdempotencyKeyReused`.
 - Aynı anahtar hâlâ işleniyorsa → `409 IdempotencyInProgress`.
-- Eksik/geçersiz UUID veya bozuk JSON → `400 ValidationFailed` (alan
-  `idempotencyKey`).
+- Eksik/geçersiz UUID, bozuk JSON veya desteklenen sayı alanı dışındaki tutar →
+  `400 ValidationFailed` (alan `idempotencyKey`).
 - Yalnızca 2xx yanıtları replay için saklanır; 4xx/5xx kalıcı kayıt oluşturmaz.
-- Saklama süresi **24 saattir**; süresi dolan anahtar replay garantisi vermez,
-  istemci aynı anahtarı yeniden kullanmamalıdır.
-- **Atomiklik kuralı:** Replay kaydı ile finansal kayıt **aynı veritabanı
-  transaction'ında** commit edilir. Kalıcı `InProgress` kaydı yoktur; sunucu
-  çökmesi yarım kayıt bırakmaz. Stale-lock ile otomatik yeniden çalıştırma
-  yapılmaz (bkz. `docs/11` §4 — tasarım onayı bekliyor).
-- Mobil istemci, aynı işlemin anahtarını ve gövdesini uygulama yeniden
-  başladıktan sonra da korur; yalnızca belirsiz sonuç kurtarma ve güvenli retry
-  için kullanır (offline yazma kuyruğu değil; `docs/11` §7).
-- Uygulama ayrıntıları ve onay bekleyen tasarım maddeleri:
-  [docs/11-idempotency-teknik-tasarim.md](11-idempotency-teknik-tasarim.md).
+- Saklama: **24 saat** tam gövde (replay), ardından **30 gün** gövdesiz
+  tombstone (yalnızca durum sorgusu). Tam gövde TTL'si dolan POST retry'si
+  `409 IdempotencyExpired` döner; **istemci otomatik yeni işlem açmaz**, güvenli
+  durum sorgusu (`GET /api/v1/idempotency/{key}`) kullanır. 30 gün sonra
+  sonuç doğrulanamıyorsa kullanıcıya "kesin sonuç bilinmiyor" gösterilir.
+- **Atomiklik kuralı (ADR-0010):** Replay kaydı ile finansal kayıt **aynı
+  fiziksel bağlantı ve aynı `DbTransaction` nesnesinde** commit edilir; commit'in
+  tek sahibi host middleware'dir, handler `SaveChanges` commit etmez. Kalıcı
+  `InProgress` satırı yoktur, stale-lock ile otomatik yeniden çalıştırma
+  yapılmaz. Commit sonucu belirsizse aynı key ile tekrar deneme güvenlidir;
+  benzersiz indeks ikinci finansal kaydı engeller.
+- Mobil istemci, aynı işlemin anahtarını ve şifreli gövdesini uygulama yeniden
+  başladıktan sonra da korur. `SentUnconfirmed` aynı key/gövde ile kurtarılır;
+  `Created` kullanıcı onayı bekler; 24 s+ belirsiz kayıt `Uncertain` olur,
+  **otomatik yeni UUID üretilmez**, offline yazma kuyruğu oluşmaz (`docs/11` §7).
+- Uygulama ayrıntıları, koşullu onayların karşılanması ve kalan riskler:
+  [docs/11-idempotency-teknik-tasarim.md](11-idempotency-teknik-tasarim.md) v1.1.
 
 ---
 
@@ -656,9 +662,9 @@ Aşağıdaki testler CI'da zorunludur; biri kırmızıysa sürüm çıkmaz.
 
 Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 
-- `Idempotency-Key` uygulaması: kararlar alındı (`docs/10` v1.1), teknik tasarım
-  `docs/11`'de; **tasarım onayı ve ayrı kodlama onayı bekliyor** (artık açık iş
-  kuralı değil).
+- `Idempotency-Key` uygulaması: kararlar (`docs/10` v1.2), koşullu onaylar ve son
+  tasarım (`docs/11` v1.1), ADR-0010 hazır; **kodlama onayı bekliyor** (artık açık
+  iş kuralı değil).
 - Çoklu para birimi ve kur dönüşümü.
 - `Endpoints` projelerinin ayrı kalıp kalmayacağı.
 - Parola sıfırlama ve e-posta doğrulama.
@@ -677,3 +683,4 @@ Aşağıdakiler v1 iş kurallarını bloke etmez; `docs/03` §17'de izlenir:
 | 1.2 | 2026-11-15 | Gelecek `asOf` reddi ve iptal zamanının UTC'den kullanıcı yerel tarihine çevrilmesi harcama/iade/ödeme için tek kurala bağlandı |
 | 1.3 | 2026-11-17 | Taksit ödeme iptalinde son ödenmiş taksit kısıtı kaldırıldı; sıra kuralı yalnızca ödeme anında uygulanıyor (2026-11-17 onayı) |
 | 1.4 | 2026-11-18 | `Idempotency-Key` kararları işlendi: tüm finansal/mutasyon `POST` zorunlu, auth kapsam dışı; 24 saat, 2xx replay, tek transaction atomikliği ve mobil kalıcı kayıt kuralı §2.7'ye eklendi; ayrıntı `docs/11` |
+| 1.5 | 2026-11-18 | Koşullu onaylar işlendi: ADR-0010 host sahipliğinde transaction, RFC 8785 uyumlu kütüphane zorunluluğu, 24 s tam gövde + 30 g tombstone, `409 IdempotencyExpired`, güvenli durum sorgusu ve `Uncertain` mobil durumu §2.7'ye eklendi; kodlama onayı bekliyor |

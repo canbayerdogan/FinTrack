@@ -57,13 +57,14 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 02 | [Finansal Alan Modeli — kararlar v0.4](docs/02-finansal-alan-modeli-kararlar.md) | ✅ |
 | 03 | [Teknik Mimari (.NET)](docs/03-mimari.md) | ✅ |
 | 04 | [ADR'ler](docs/adr/) | ✅ |
-| 05 | [İş kuralları (business rules) v1.4](docs/05-is-kurallari.md) | ✅ |
-| 06 | [API sözleşmeleri v1.5](docs/06-api-sozlesmeleri.md) | ✅ |
-| 07 | [Yol haritası ve ajan görev standardı v1.16](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.10](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.20](docs/09-todo.md) | ✅ |
-| 10 | [Kararlar v1.1](docs/10-karar-bekleyen-konular.md) | ✅ yanıtlandı |
-| 11 | [Idempotency teknik tasarımı v1.0](docs/11-idempotency-teknik-tasarim.md) | ⏳ tasarım onayı bekliyor |
+| 05 | [İş kuralları (business rules) v1.5](docs/05-is-kurallari.md) | ✅ |
+| 06 | [API sözleşmeleri v1.6](docs/06-api-sozlesmeleri.md) | ✅ |
+| 07 | [Yol haritası ve ajan görev standardı v1.17](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
+| 08 | [Durum ve devam notu v2.11](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.21](docs/09-todo.md) | ✅ |
+| 10 | [Kararlar v1.2](docs/10-karar-bekleyen-konular.md) | ✅ yanıtlandı |
+| 11 | [Idempotency teknik tasarımı v1.1](docs/11-idempotency-teknik-tasarim.md) | ✅ koşullu onay — ⏳ kodlama onayı bekliyor |
+| 12 | [ADR-0010 — host sahipliğinde idempotent yazma](docs/adr/0010-host-owned-idempotent-writes.md) | ✅ koşullu onay |
 
 ## Mevcut durum
 
@@ -129,10 +130,12 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   Debug + Release 0 uyarı/0 hata; Android hedefi yerel JDK 17 + SDK ile
   `net10.0-android` 0 uyarı/0 hata derlendi ve emülatörde smoke edildi.
   Entegrasyon testleri 72/72 hem yerelde (Docker açık) hem CI'da doğrulandı.
-- **Dokümanlar:** ✅ 01–09 tamam; `docs/02` §5 açık kararları ve kart alışverişi
-  sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma) kabul
-  edildi. `Idempotency-Key` uygulaması ayrı göreve ertelendi (`docs/06` §1.4,
-  `docs/07` slice 2). Güncel durum: `docs/08`; sıradaki adımlar: `docs/09`.
+- **Dokümanlar:** ✅ 01–11 + ADR-0010 tamam; `docs/02` §5 açık kararları ve kart
+  alışverişi sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma)
+  kabul edildi; ADR-0010 (v1.1 idempotent yazmalarda host sahipliğinde transaction)
+  koşullu onayla kabul edildi. `Idempotency-Key` uygulaması v1.1 görev kartı
+  V11-T01 olarak ayrıldı (`docs/06` §1.4, `docs/07` §5.1). Güncel durum: `docs/08`;
+  sıradaki adımlar: `docs/09`.
 - **Migration:** `dotnet run --project src/Host/FinTrack.Api -- --migrate`
   (üretimde otomatik migration yok). Testlerde `Database:MigrateOnStartup=true`.
   Slice 4: `20261116180727_AddCardPaymentsAndStatements`. Slice 5:
@@ -150,11 +153,13 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** v1 dilimleri (0–9) kod tarafında tamamlandı; Android emülatör
   smoke'u da giriş → harcama → kart → rapor akışıyla doğrulandı. Kararlar
-  [docs/10 v1.1](docs/10-karar-bekleyen-konular.md) ile alındı; teknik tasarım
-  [docs/11](docs/11-idempotency-teknik-tasarim.md)'de ve görev kartı
+  [docs/10 v1.2](docs/10-karar-bekleyen-konular.md) ile alındı; **altı koşullu
+  tasarım onayı** karşılandı: [docs/11 v1.1](docs/11-idempotency-teknik-tasarim.md)
+  ve [ADR-0010](docs/adr/0010-host-owned-idempotent-writes.md). Görev kartı
   [docs/07 §5.1](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md)'de.
-  **Kullanıcı talimatı gereği kod yazılmadı**; 1.6 atomiklik ve 1.10 mobil
-  depolama tasarımları onaylandıktan sonra ayrı kodlama onayı alınacak.
+  **Kullanıcı talimatı gereği kod yazılmadı; yalnızca ayrı kodlama onayı
+  bekleniyor.** Dört kritik konunun çözümü `docs/11` §9.2'de; kalan riskler §9.4.
+  LocalDB smoke temizliği ✅ tamamlandı; Windows manuel UI smoke bekliyor.
   Idempotency sonrası v1.1 önceliği: parola sıfırlama + e-posta doğrulama.
 
 ## Çözüm yapısı (özet)

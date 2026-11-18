@@ -1,7 +1,7 @@
 # FinTrack — Teknik Mimari
 
-**Sürüm:** 1.2 — tasarım
-**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.4 · İş Kuralları v1.2
+**Sürüm:** 1.3 — tasarım
+**Bağlı belgeler:** Product Vision & Scope · Finansal Alan Modeli v0.4 · [İş Kuralları v1.5](05-is-kurallari.md) · [API Sözleşmeleri v1.6](06-api-sozlesmeleri.md) · [Idempotency teknik tasarımı v1.1](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
 **Hedef okuyucu:** geliştirme ajanları (Codex / Claude) ve geliştirici
 
 ---
@@ -34,6 +34,7 @@ sözleşmeleri (doküman 06), ekran tasarımları, OpenAPI şemasının üretimi
 | 8 | İstemci | .NET MAUI, MVVM, Shell | Tek dil, tek ekip |
 | 9 | Para | `Money` value object, `decimal(19,4)` | Kayan nokta hatası imkânsız |
 | 10 | Silme | Finansal kayıt **hard delete edilmez**, iptal/iade ile düzeltilir | Geçmiş rapor tutarlılığı |
+| 11 | Idempotent yazma (v1.1) | Mutasyon `POST`larda **host sahipliğinde tek `DbConnection`/`DbTransaction`**, tek commit; modül sınırları korunur | Belirsiz commit sonucunda çift finansal kayıt riski; ADR-0009'un genişletmesi (ADR-0010) |
 
 ---
 
@@ -481,8 +482,16 @@ b.Entity<Expense>().HasQueryFilter(e => e.UserId == _currentUser.Id);
 ### 12.3 İdempotency
 
 Mobil ağ kopmalarında çift kayıt oluşmaması için `POST` uç noktaları
-`Idempotency-Key` başlığını destekler. v1.1'de zorunlu hale getirilmesi önerilir;
-ileride ekstre içe aktarma mükerrer tespiti bunun üzerine kurulacaktır.
+`Idempotency-Key` başlığını destekler. **v1.1 kararı (koşullu onay alındı):**
+başlık tüm finansal/mutasyon `POST`larda zorunlu, `/api/v1/auth/*` kapsam dışı.
+Host middleware kapsamı, RFC 8785 uyumlu kanonik JSON + SHA-256, 24 s tam gövde
++ 30 g gövdesiz tombstone ve `GET /api/v1/idempotency/{key}` durum sorgusu
+yönetir (`docs/11` v1.1). Replay kaydı ile finansal kayıt **aynı fiziksel
+bağlantı ve aynı `DbTransaction` nesnesinde** commit edilir; commit'in tek sahibi
+host middleware, handler `SaveChanges` commit etmez (**ADR-0010**). Kalıcı
+`InProgress` satırı yoktur; eşzamanlılık hakemi `UNIQUE (ScopeHash, Key)`,
+dağıtık kilit yoktur. Modüller `IdempotencyDbContext`'e erişmez; modül sınırları
+ve DbContext sahipliği değişmez. **Kodlama onayı ayrı alınacaktır.**
 
 ---
 
@@ -548,7 +557,7 @@ ileride ekstre içe aktarma mükerrer tespiti bunun üzerine kurulacaktır.
 ## 16. MVP dilimleri
 
 Her dilim uçtan uca çalışır (API + test). Dikey dilim mantığı. Ayrıntılı kapsam,
-kabul kriterleri ve ajan görev standardı: [Yol Haritası v1.1](07-yol-haritasi-ve-ajan-gorev-standardi.md).
+kabul kriterleri ve ajan görev standardı: [Yol Haritası v1.17](07-yol-haritasi-ve-ajan-gorev-standardi.md).
 
 | # | Dilim | Kapsam |
 |---|---|---|
@@ -570,7 +579,7 @@ kabul kriterleri ve ajan görev standardı: [Yol Haritası v1.1](07-yol-haritasi
 | # | Konu | Karar | Durum |
 |---|---|---|---|
 | 1 | Kullanıcı saat dilimi alanı | `User.PreferredTimeZone`, varsayılan `Europe/Istanbul` (doküman 05 §2.6) | ✅ Kapandı |
-| 2 | İdempotency zorunlu mu | v1'de desteklenir, v1.1'de zorunlu | ⏳ |
+| 2 | İdempotency zorunlu mu | v1'de desteklenir; v1.1'de finansal/mutasyon `POST` için zorunlu (auth hariç), ADR-0010 | ✅ Karar + koşullu tasarım onayı; ⏳ kodlama onayı |
 | 3 | Ekstre: manuel mi hesaplanan mı | Tarihler + tutar manuel; devreden borç ve hesaplanan borç türetilir (doküman 05 §5.6) | ✅ Kapandı |
 | 4 | Nakit avans mutabakat kuralları | Kart borcuna eklenir; geri ödeme kart ödemesidir; tek sayım (doküman 05 §5.5) | ✅ Kapandı |
 | 5 | Çoklu para birimi | v1 tek (TRY) | ⏳ |

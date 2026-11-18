@@ -2,7 +2,12 @@
 
 **Durum:** Kabul edildi
 **Tarih:** 2026-11-17
-**İlgili:** ADR-0004, `docs/05` §4.3/§5.5, `docs/06` §6.5, `docs/07` §4 Slice 6
+**İlgili:** ADR-0004, `docs/05` §4.3/§5.5, `docs/06` §6.5, `docs/07` §4 Slice 6 · **[ADR-0010](0010-host-owned-idempotent-writes.md)** (v1.1 genişletmesi)
+
+> **v1.1 notu (2026-11-18):** Bu ADR kabul edilmiş olmaya devam eder. Idempotency
+> zorunlu hale geldiğinde transaction'ın sahibi modülden **host middleware**'e
+> taşınmıştır; aynı fiziksel bağlantı/aynı `DbTransaction` ilkesi korunur, modül
+> sınırları değişmez. Genişletme ve zorunlu koşullar ADR-0010'da tanımlıdır.
 
 ## Bağlam
 

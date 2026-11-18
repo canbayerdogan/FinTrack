@@ -1,9 +1,9 @@
 # FinTrack — Karar Bekleyen Konular
 
-**Sürüm:** 1.1  
+**Sürüm:** 1.2  
 **Tarih:** 2026-11-18  
-**Durum:** ✅ Kararlar verildi — 1.6 ve 1.10 için **teknik tasarım onayı bekliyor**  
-**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [Teknik tasarım v1.0](11-idempotency-teknik-tasarim.md) · [TODO — teknik borç](09-todo.md)
+**Durum:** ✅ Kararlar verildi + 1.6/1.10 için **koşullu tasarım onayı alındı** — **kodlama onayı bekliyor**  
+**Bağlı belgeler:** [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [Teknik tasarım v1.1](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [TODO — teknik borç](09-todo.md)
 
 > Bu dosya **kod yazılmadan önce** kapatılması gereken kararları içerir.
 > Her maddede bir öneri ve seçenekler var. Yanıtını iki yoldan verebilirsin:
@@ -13,9 +13,12 @@
 >
 > **Cevaplar `10-karar-bekleyen-konulara-cevap.txt` ile verildi (2026-11-18).**
 > Kararlar `docs/05`, `docs/06`, `docs/07`, `docs/08`, `docs/09`'a işlendi;
-> teknik tasarım [docs/11](11-idempotency-teknik-tasarim.md)'de toplandı.
+> teknik tasarım [docs/11 v1.1](11-idempotency-teknik-tasarim.md)'de toplandı.
+> Kullanıcı `docs/11-kararlar.txt` ile **altı koşullu tasarım onayı** verdi;
+> koşulların karşılanması `docs/11` §9.1'de, dört kritik konunun çözümü §9.2'de.
 > Kullanıcı açıkça **"Henüz kodlamaya başlama"** dediği için **kod yazılmadı**;
-> 1.6 ve 1.10 tasarım onayı sonrası ayrı kodlama onayı beklenecek.
+> **şu an yalnızca ayrı kodlama onayı bekleniyor**. Operasyonel: LocalDB temizliği
+> tamamlandı, Windows manuel UI smoke bekliyor.
 
 ---
 
@@ -60,7 +63,10 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Ham istek baytlarının SHA-256'sı (basit ama istemci serileştirme farklarına duyarlı).
   - **C)** Gövdenin tamamını sakla ve birebir karşılaştır (daha fazla veri, kişisel veri saklama riski).
 
-**Karar: A — Kabul edildi.** Canonical JSON (JCS/RFC 8785 tabanlı kurallar) + SHA-256; ham gövde saklanmaz. Deterministik kurallar → `docs/11` §3.2.
+**Karar: A — Kabul edildi, uygulama yöntemi değişti.** Kullanıcı özel canonicalizer'ı
+reddetti: **bakımı sürdürülen, RFC 8785 uyumu doğrulanmış bir kütüphane** zorunlu
+(birincil aday `Jcs.Net` 0.1.1) ve kodlamadan önce S26/S27 kapısı geçilmeli.
+Ham gövde saklanmaz; decimal sayı alanı sınırı §3.2.1'de. → `docs/11` §3.2.
 
 ### 1.4 Saklama yeri ve şema
 
@@ -99,7 +105,14 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** 1 dk stale timeout.
   - **C)** Stale timeout yok; manuel müdahale gerekir.
 
-**Karar: Mevcut A önerisi REDDEDİLDİ; tasarım onayı bekliyor.** 5 dk stale timeout tek başına yetersiz. Önerilen tasarım: idempotency kaydı ile finansal kayıt **tek `Serializable` transaction'da** commit edilir; kalıcı `InProgress` satırı oluşmaz, stale kurtarma gerekmez. Çökme pencereleri, akış diyagramı ve S1–S20 testleri → `docs/11` §4. **Bu bölüm onaylanmadan koda geçilmez.**
+**Karar: Mevcut A önerisi REDDEDİLDİ; yeni tasarım koşullu olarak ONAYLANDI.**
+5 dk stale timeout tek başına yetersiz. Idempotency kaydı ile finansal kayıt
+**aynı `DbConnection` ve aynı `DbTransaction` nesnesinde** commit edilir; commit'in
+tek sahibi host middleware, handler commit etmez; kalıcı `InProgress` satırı
+oluşmaz, stale kurtarma gerekmez. Belirsiz commit sonucunda aynı key ile retry
+güvenlidir; bağlantı kopması ayrıca test edilir (S21). Çoklu instance hakemi
+`UNIQUE (ScopeHash, Key)` (S22–S24). → `docs/11` §4, **ADR-0010**.
+**Kodlama onayı ayrıca alınmalı.**
 
 ### 1.7 Auth uç noktaları ve token güvenliği
 
@@ -149,7 +162,15 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Key `SecureStorage`'da kalıcı olur; kullanıcı aksiyonu tamamlanana kadar saklanır.
   - **C)** Mobil tarafta retry hiç açılmaz; sadece API tarafı korunur.
 
-**Karar: B, geliştirilmiş haliyle — Kabul edildi; depolama tasarımı onay bekliyor.** Anahtar + istek gövdesi uygulama restart'ında korunur; çoklu bekleyen işlem desteklenir; kesin başarıda silinir; offline yazma kuyruğuna dönüşmez. Öneri: app-private SQLite + AES-GCM (anahtar `SecureStorage`'da). → `docs/11` §7.
+**Karar: B, geliştirilmiş haliyle — Kabul edildi; depolama tasarımı koşullu olarak ONAYLANDI.**
+Anahtar + şifreli istek gövdesi uygulama restart'ında korunur; çoklu bekleyen
+işlem desteklenir; kesin başarıda yerel kayıt silinir; offline yazma kuyruğuna
+dönüşmez. App-private SQLite + AES-256-GCM (96-bit nonce, auth tag, AAD; yalnızca
+şifreleme anahtarı `SecureStorage`'da). Mevcut mobil altyapıda yalnızca token
+store/Preferences olduğu için yeni structured store gerekli; gerekçe `docs/11`
+§7.1'de. `Created` otomatik gönderilmez, `SentUnconfirmed` aynı key/gövde ile
+kurtarılır; >24 s için durum sorgusu + `Uncertain`, otomatik yeni UUID **yok**
+(R13 düzeltildi). → `docs/11` §7. **Kodlama onayı ayrıca alınmalı.**
 
 ### 1.11 Uygulama ve test kapsamı
 
@@ -161,7 +182,9 @@ v1.1 işinin nasıl yapılacağını netleştirir.
   - **B)** Önce `/expenses` ve `/cards` ile pilot, sonra genişlet.
   - **C)** Sadece unit test; entegrasyon testi eklenmez (önerilmez).
 
-**Karar: A — Kabul edildi.** Tüm kapsam dahili POST'lar + `docs/11` §4.7 S1–S20 entegrasyon senaryoları zorunlu.
+**Karar: A — Kabul edildi.** Tüm kapsam dahili POST'lar + `docs/11` §4.7
+**S1–S29** entegrasyon senaryoları zorunlu (RFC vektörleri, bağlantı kopması,
+çoklu instance matrisi, dört modül, >24 h mobil akış dâhil).
 
 ### 1.12 Mimari yerleşim
 
@@ -195,7 +218,10 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 - **Öneri:** Silinsin; bunlar doğrulama verisi, ürün verisi değil. Repo etkilenmez.
 - **Seçenekler:** **A)** Silinsin (öneri) · **B)** Kalsın, lokal geliştirmede kullanılır.
 
-**Karar: A — Kabul edildi.** `smoke_20261118@example.com`, `Market` kategorisi ve 125,00 TRY harcama LocalDB'den silinecek (uygulama kodu etkilenmez).
+**Karar: A — Kabul edildi ve UYGULANDI (2026-11-18).**
+`smoke_20261118@example.com`, `Market` kategorisi, 125,00 TRY harcama ve 7 refresh
+token tek transaction'da silindi; doğrulama 0 satır. Diğer kullanıcıların
+"Market" kayıtlarına dokunulmadı (uygulama kodu etkilenmedi).
 
 ### 2.3 `answers-1.txt` git geçmişi
 
@@ -239,18 +265,18 @@ v1.1 işinin nasıl yapılacağını netleştirir.
 ```text
 1.1 Zorunluluk kapsamı: A
 1.2 Anahtar kapsamı:    A
-1.3 Gövde hash:         A
+1.3 Gövde hash:         A (özel canonicalizer REDDEDİLDİ → RFC 8785 kütüphanesi)
 1.4 Saklama yeri:       A (mimari koşulla)
-1.5 TTL/temizlik:       A (küçük eklemeyle)
-1.6 InProgress:         A REDDEDİLDİ → yeni tasarım önerisi, ONAY BEKLİYOR
+1.5 TTL/temizlik:       A (küçük eklemeyle: 24 s + 30 g tombstone)
+1.6 InProgress:         A REDDEDİLDİ → tek transaction tasarımı KOŞULLU ONAYLANDI
 1.7 Auth kapsamı:       A
 1.8 Hata replay:        A
-1.9 Hata kodu:          A
-1.10 Mobil retry:       B (geliştirilmiş; depolama tasarımı ONAY BEKLİYOR)
-1.11 Test kapsamı:      A
-1.12 Mimari yer:        A
-2.1 Windows smoke:      A
-2.2 LocalDB verisi:     A
+1.9 Hata kodu:          A (+ 409 IdempotencyExpired)
+1.10 Mobil retry:       B (geliştirilmiş; depolama KOŞULLU ONAYLANDI, R13 düzeltildi)
+1.11 Test kapsamı:      A (S1–S29)
+1.12 Mimari yer:        A (ADR-0010)
+2.1 Windows smoke:      A (BEKLİYOR — operatör)
+2.2 LocalDB verisi:     A (TAMAMLANDI ✅)
 2.3 Git geçmişi:        A
 2.4 Son CI run:         A
 3. v1.1 öncelik:        A
@@ -262,11 +288,12 @@ Kaynak: `docs/10-karar-bekleyen-konulara-cevap.txt` (yerel, commit edilmez).
 
 ## 5. Bu dokümanın akıbeti
 
-- ✅ Bu dosya **Sürüm 1.1** yapıldı; tüm kararlar yukarıya işlendi.
+- ✅ Bu dosya **Sürüm 1.2** yapıldı; tüm kararlar ve koşullu onaylar yukarıya işlendi.
 - ✅ Kararlar bağlayıcı belgelere işlendi: `docs/05` §2.7, `docs/06` §1.4,
-  `docs/07` §5 görev kartı, `docs/08` §4/§8, `docs/09` teknik borç maddesi.
-- ⏳ Teknik tasarım ve onay bekleyen maddeler: [docs/11](11-idempotency-teknik-tasarim.md).
-- **Kodlama onayı ayrı alınacak.** 1.6 ve 1.10 tasarım onayı olmadan uygulamaya
-  geçilmez.
+  `docs/07` §5.1 görev kartı, `docs/08` §4/§8, `docs/09` teknik borç maddesi.
+- ✅ Altı koşullu onay karşılandı: [docs/11 v1.1](11-idempotency-teknik-tasarim.md)
+  §9.1; dört kritik konu §9.2; kalan riskler §9.4; [ADR-0010](adr/0010-host-owned-idempotent-writes.md).
+- ⏳ **Kodlama onayı ayrı alınacak.** Kullanıcı son tasarımı inceledikten sonra
+  açık onay verecek; o onay gelene kadar uygulamaya geçilmez.
 - Bu dosya kalıcı karar kaynağı değildir; kapatıldığında `docs/05`–`docs/07`
-  esas alınır.
+  ve `docs/11` v1.1 esas alınır.

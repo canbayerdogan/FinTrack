@@ -1,35 +1,45 @@
 # FinTrack — Idempotency Teknik Tasarımı
 
-**Sürüm:** 1.0
+**Sürüm:** 1.1
 **Tarih:** 2026-11-18
-**Durum:** ⏳ Tasarım onayı bekliyor — **kod yazılmadı**
-**Bağlı belgeler:** [Kararlar v1.1](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5
+**Durum:** ✅ Koşullu tasarım onayı alındı — **kodlama onayı BEKLİYOR (kod yazılmadı)**
+**Bağlı belgeler:** [Kararlar v1.2](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5.1
 
-> Bu dosya, `docs/10` için verilen cevapların **teknik tasarım çıktısıdır**.
-> Kullanıcı onayı olmadan uygulamaya geçilmez. Özellikle §4 (çökme/atomiklik),
-> §5 (migration ve modül DbContext'leri) ve §7 (mobil kalıcı kayıt) onay
-> bekleyen tasarım kararlarıdır.
+> Bu dosya, `docs/10` kararlarının teknik tasarımı ve kullanıcının
+> `docs/11-kararlar.txt` ile verdiği **altı koşullu onayın** işlendiği son
+> tasarımdır. Kullanıcı şunu istedi: *"Dört kritik konunun çözüldüğünü göstermeden
+> uygulama görevine geçme."* Bu dört konunun çözümü şu bölümlerdedir:
+>
+> | Kritik konu | Çözüm bölümü |
+> |---|---|
+> | Commit sonucu belirsizliği | §4.2 + §4.2.1 + test S21 |
+> | RFC 8785 uyumluluğu | §3.2 + test S26/S27 |
+> | 24 saatten uzun belirsiz mobil işlem | §7.5 + test S28/S29 |
+> | Çoklu API instance eşzamanlılığı | §4.4.1 + test S4/S22–S24 |
+>
+> **Kodlama onayı ayrıca alınacaktır.** Bu tasarım onaylansa bile kullanıcı açık
+> kodlama onayı vermeden `Idempotency-Key` koduna başlanmaz.
 
 ---
 
-## 1. Kapsam ve onaylanan kararlar
+## 1. Kapsam ve onay durumu
 
-| Madde | Karar | Not / kısıt |
+| Madde | Karar | v1.1 durumu |
 |---|---|---|
 | 1.1 | **A** | Finansal/mutasyon `POST` zorunlu; auth `POST` kapsam dışı |
 | 1.2 | **A** | `userId + method + route template + route değerleri + anahtar`; query string hariç |
-| 1.3 | **A** | Canonical JSON + SHA-256; ham gövde saklanmaz; deterministik kurallar §3 |
-| 1.4 | **A** (mimari koşulla) | Host sahipliğinde `shared.IdempotencyKeys`; modüller tabloya erişmez; modül DbContext/migration düzeni korunur |
-| 1.5 | **A** (küçük eklemeyle) | 24 saat; background job yok; erişimde + sınırlı toplu temizlik (§6) |
-| 1.6 | **Onaylanmadı — tasarım önerisi sunuldu** | 5 dk stale timeout tek başına reddedildi. Çökme penceresi çözülmeden kod yok (§4) |
+| 1.3 | **A** | Kanonik JSON + SHA-256; ham gövde saklanmaz; **RFC 8785 uyumlu kütüphane** (§3.2 — özel uygulama reddedildi) |
+| 1.4 | **A** (mimari koşulla) | Host sahipliğinde `shared.IdempotencyKeys`; modüller tabloya erişmez; şema §5.1'de netleştirildi |
+| 1.5 | **A** (küçük eklemeyle) | 24 saat tam gövde + 30 gün tombstone; sınırlı temizlik, background job yok (§6) |
+| 1.6 | **Koşullu onay** | 5 dk stale timeout reddedildi. Tek transaction, kalıcı `InProgress` yok; 5 zorunlu koşul §4.2'de işlendi |
 | 1.7 | **A** | `register/login/refresh/logout` kapsam dışı; token yanıtları saklanmaz |
 | 1.8 | **A** | Yalnızca 2xx replay; 4xx/5xx kalıcı kayıt olmaz |
 | 1.9 | **A** | `400 ValidationFailed`, alan `idempotencyKey` |
-| 1.10 | **B** (geliştirilmiş) | Uygulama yeniden başlasa da bekleyen işlem korunur; çoklu bekleyen işlem; offline yazma kuyruğu **değil** (§7) |
-| 1.11 | **A** | Tüm kapsam + entegrasyon testleri zorunlu (§4.7) |
-| 1.12 | **A** | Host middleware; modül sınırları korunur |
-| 2.1 | **A** | Windows manuel UI smoke yapılacak (görev kartında doğrulama maddesi) |
-| 2.2 | **A** | LocalDB smoke verileri silinecek |
+| 1.10 | **Koşullu onay** | Kalıcı kayıt + `SentUnconfirmed`/`Created` ayrımı kabul edildi; R13 §7.5'te düzeltildi |
+| 1.11 | **A** | Tüm kapsam + S1–S29 entegrasyon testleri zorunlu (§4.7) |
+| 1.12 | **A** | Host middleware; modül sınırları korunur; ADR-0010 |
+| 2.1 | **A** | Windows manuel UI smoke — **operasyonel görev** (§9.3); henüz yapılmadı |
+| 2.2 | **A** | LocalDB smoke verileri — **operasyonel görev** (§9.3); tamamlandı |
 | 2.3 | **A** | Git geçmişine dokunulmayacak |
 | 2.4 | **A** | Son docs-only CI run'ı dokümanlara eklenmeyecek |
 | 3 | **A** | Idempotency sonrası v1.1 önceliği: parola sıfırlama + e-posta doğrulama |
@@ -51,11 +61,13 @@
 
 **Kapsam dışı:** `/api/v1/auth/*` (register, login, refresh, logout), tüm `GET`,
 `PUT`, `DELETE`, `/api/v1/reports/*` (salt okunur).
+**Ek uç nokta (salt okunur):** `GET /api/v1/idempotency/{key}` — durum sorgusu
+(§7.5); idempotency kaydı oluşturmaz, finansal yazma yapmaz.
 
 > Middleware kapsamı **pozitif liste** ile belirler: yukarıdaki prefix'lerden
 > biriyle başlayan `POST` dahil, `/api/v1/auth` açıkça hariç. Yeni bir mutasyon
 > `POST` eklenirse sözleşme ve bu liste aynı commit'te güncellenir; aksi halde
-> yeni uç nokta korumasız kalır (risk: §4.8 R6).
+> yeni uç nokta korumasız kalır (risk R6, test mimari kuralı).
 
 ---
 
@@ -67,32 +79,31 @@ Mobil (PendingOperationStore)
         ▼
 Host pipeline
   IdempotencyMiddleware  ──► IWriteTransactionScopeFactory.BeginAsync()
-        │                    (ADR-0009: tek DbConnection, Serializable)
+        │                    (ADR-0010: TEK DbConnection, TEK DbTransaction)
         │
         ├─ IdempotencyDbContext  (shared şeması, host sahipliğinde)
-        │       └─ aynı transaction'a UseTransaction(scope.Transaction)
+        │       └─ aynı DbTransaction nesnesi → UseTransaction(scope.Transaction)
         │
         ├─ Modül DbContext'leri  (expenses/inflows/cards/debts)
-        │       └─ aynı transaction'a Enlist(scope)
+        │       └─ aynı DbTransaction nesnesi → Enlist(scope)
         │
-        └─ Endpoint / handler (iş kuralı, SaveChanges)
+        └─ Endpoint / handler (iş kuralı, SaveChanges — commit YOK)
                  │
-                 ▼ 2xx ise yanıtı tamponla → kaydı Completed yap → TEK commit
+                 ▼ 2xx ise yanıtı tamponla → Completed yaz → TEK commit (Host)
 ```
-
-**Sorumluluklar**
 
 | Bileşen | Yer | Görev |
 |---|---|---|
-| `IdempotencyMiddleware` | `FinTrack.Api` (host) | Header doğrulama, kapsam belirleme, gövde hash'leme, transaction açma, yanıt tamponlama, replay |
-| `IIdempotencyScope` | Host `ModuleContracts` | Kullanıcı + method + route template + route değerleri + anahtar'dan hesaplanan `ScopeHash` |
+| `IdempotencyMiddleware` | `FinTrack.Api` (host) | Header doğrulama, kapsam, hash, transaction açma, **tek commit**, yanıt tamponu, replay, TTL/tombstone |
+| `IIdempotencyScope` | Host | `userId + method + route template + route değerleri + key` → `ScopeHash` |
 | `IdempotencyDbContext` | `FinTrack.Api/Idempotency` | `shared.IdempotencyKeys` erişimi; host dışından referans alınmaz |
-| `IIdempotencyStore` | Host | Kayıt arama / ekleme / tamamlama / sınırlı temizlik |
-| `IWriteTransactionScopeAccessor` | `ModuleContracts` | Aktif HOST transaction'ını modül handler/factory'lerine okunur şekilde sunar |
-| `PendingOperationStore` | `FinTrack.Mobile.Core` | Bekleyen işlemin anahtarı + gövdesi + durumu (şifreli, yerel) |
+| `IIdempotencyStore` | Host | Arama / ekleme / tamamlama / tombstone / sınırlı temizlik |
+| `IWriteTransactionScopeAccessor` | `ModuleContracts` | Aktif HOST transaction'ını modüllere **salt okunur** sunar |
+| `IdempotencyStatusEndpoint` | Host | `GET /api/v1/idempotency/{key}` — güvenli, salt okunur durum sorgusu (§7.5) |
+| `PendingOperationStore` | `FinTrack.Mobile.Core` | Anahtar + şifreli gövde + durum (`Created`/`SentUnconfirmed`/`Uncertain`) |
 
-Modüller **Idempotency tablosunu bilmez**; yalnızca zaten var olan
-`IWriteTransactionScope` sözleşmesini kullanırlar (ADR-0009).
+Modüller **Idempotency tablosunu bilmez**; yalnızca `IWriteTransactionScope`
+sözleşmesini kullanır. Modül sahipliği ve DbContext sınırları **değişmez**.
 
 ---
 
@@ -107,131 +118,191 @@ ScopeHash  = SHA256(UTF8(scopeInput))      // 64 karakter lowercase hex
 ```
 
 - `routeTemplate` örn. `/api/v1/loans/{id}/installments/{number}/pay`.
-- `canonicalRouteValues` = route değerlerinin ada göre sıralanmış
-  `ad=değer` çiftleri (deterministik). Farklı `{id}` → farklı kapsam.
-- **Query string girmez.** (Örn. `?page=2` aynı işlem sayılır.)
-- `userId` JWT `sub` claim'inden alınır; gövdeden veya header'dan gelen
+- `canonicalRouteValues` = route değerlerinin ada göre sıralanmış `ad=değer`
+  çiftleri. Farklı `{id}` → farklı kapsam.
+- **Query string girmez.** `userId` JWT `sub` claim'inden gelir; gövde/header
   kullanıcı bilgisine güvenilmez.
 - Benzersizlik: `UNIQUE (ScopeHash, Key)`. Farklı kullanıcıların aynı anahtarı
   kullanması güvenlidir.
 
-### 3.2 Canonical JSON kuralları (öneri — onay bekliyor)
+### 3.2 Kanonik JSON — RFC 8785 (özel uygulama REDDEDİLDİ)
 
-Standart **JCS / RFC 8785** yaklaşımı esas alınır; harici paket eklenmeden
-`System.Text.Json.Nodes` ile aynı sonucu üreten küçük bir canonicalizer önerilir.
-Kural seti:
+Kullanıcı kararı: *"RFC 8785 yalnızca özellik sıralama ve boşluk temizleme
+değildir; sayısal serileştirme ve Unicode davranışı dahil standardın tamamına
+uyulmalı. Bakımı sürdürülen, uyumu doğrulanmış kütüphane tercih edilir."*
 
-1. JSON parse edilir; boşluklar tamamen kaldırılır.
-2. Nesne özellikleri **adlarına göre ordinal (UTF-16 code unit) sıralanır**;
-   iç içe nesneler recursive uygulanır.
-3. Dizilerin **sırası korunur** (anlamsaldır); sıralama yapılmaz.
-4. Sayılar normalize edilir: `decimal` ayrıştırılabilir ise trailing sıfırlar
-   kaldırılır (`1.0` → `1`), aksi halde round-trip (`R`) gösterimi kullanılır.
-   `1e2` ve `100` aynı canonical değerine düşer.
-5. String'ler aynen korunur; kaçışlar canonical writer tarafından normalize
-   edilir (`\u0041` ile `A` aynıdır).
-6. `null` korunur; eksik alan ile `null` **farklıdır** (DTO sözleşmesinde zaten
-   ayrı anlamları var).
-7. Geçersiz JSON veya `application/json` dışı gövde → `400 ValidationFailed`
-   (alan `idempotencyKey` veya `body`).
+Bu nedenle **v1.0'deki dahili canonicalizer önerisi kaldırılmıştır.** Yeni karar:
 
-`RequestHash = SHA256(UTF8(canonicalJson))` → 64 karakter hex. **Ham gövde,
-kişisel veri veya token saklanmaz.** Saklanan yanıt gövdesi yalnızca 2xx DTO'sudur.
+1. **Kütüphane zorunlu.** RFC 8785 uyumu resmî test vektörleriyle doğrulanmış,
+   bakımı sürdürülen bir NuGet paketi kullanılır. Değerlendirme:
+
+   | Paket | Değerlendirme |
+   |---|---|
+   | **`Jcs.Net` 0.1.1** | MIT, **0 bağımlılık**, RFC test vektörleri, ECMAScript number formatting, strict I-JSON → **birincil aday** |
+   | `Universal.Common.Json` 2.0.1 | RFC 8785 + şema/validasyon; ~20,5k indirme; Newtonsoft bağımlılığı, daha geniş kapsam → alternatif |
+   | `MackySoft.Json.Canonicalization` 0.1.0 | Olgunluk/dokümantasyon yetersiz |
+   | `UnambitiousFx.Engram` 1.1.0 | Alternatif; vektör doğrulaması gerekli |
+
+   **Paket gerekçesi:** RFC 8785'in sayı ve Unicode kurallarını kendimiz
+   uygulamak yüksek hata riski taşır; bağımlılık eklemek, yanlış hash'lere göre
+   daha güvenlidir. `Jcs.Net` bağımlılık getirmemesi ve resmî vektörleri
+   kapsaması nedeniyle seçilmiştir.
+
+2. **Kodlamadan önce kapı (spike) koşulu — bloklayıcı.** Paket,
+   uygulamaya alınmadan önce şunları geçmelidir:
+   - RFC 8785 resmî test vektörleri (sayı gösterimi, Unicode, surrogate çiftleri,
+     kaçışlar, iç içe nesne/dizi),
+   - `docs/11` S13 senaryoları,
+   - §3.2.1'deki decimal alan testi.
+
+   Başarısız olursa **"RFC 8785 uyumlu" ifadesi kullanılmaz**; desteklenen JSON
+   kapsamı daraltılıp dokümante edilir ve kullanıcıya geri gelinir.
+
+3. **Uyum iddiası:** Yalnızca yukarıdaki kapı geçildiğinde `docs/05`/`docs/06`'daki
+   "RFC 8785 tabanlı kanonik JSON" ifadesi geçerli olur. Aksi halde ifade
+   "kanonik JSON (kısıtlı kapsam)" olarak düzeltilir.
+
+#### 3.2.1 `decimal` / IEEE 754 sayı riski (zorunlu doğrulama)
+
+RFC 8785 sayıları **IEEE 754 double** olarak serileştirir. Finansal tutarlar ise
+`decimal(19,4)` (`Money`) tutulur. Büyük değerlerde iki farklı decimal aynı
+double'a, dolayısıyla aynı `RequestHash`'a düşebilir; bu durumda farklı bir tutar
+"aynı gövde" sanılarak ilk yanıt replay edilir.
+
+**Karar — desteklenen sayı alanı:**
+
+- İstek gövdesindeki tüm para alanları için **mutlak değer sınırı** uygulanır:
+  `|tutar| × 10^4 < 2^53` → yaklaşık **900.719.925.474,09 TRY**. Bu sınır
+  kişisel finans alanını fazlasıyla kapsar.
+- Sınır dışı veya sonlu olmayan sayı (`NaN`, `Infinity`) → `400 ValidationFailed`.
+- `Money` zaten 4 ondalık basamağa yuvarlar; canonicalizer yalnızca doğrulanmış
+  alana uygulanır.
+- S27 testi sınırın hemen altındaki iki farklı decimal'in **farklı hash**
+  ürettiğini (veya sınır dışının `400` döndüğünü) doğrular.
+- Gerekirse ek önlem: para alanları DTO'da **string** olarak taşınır — ancak bu
+  `docs/06` §1.1'deki `number` sözleşmesini değiştireceğinden **ayrı onay ister**;
+  v1.1'de uygulanmaz.
+
+`RequestHash = SHA256(UTF8(canonicalJson))` → 64 karakter hex. Ham gövde, kişisel
+veri veya token saklanmaz.
 
 **Riskler**
-- **R1 — Sayı yuvarlama farkları:** `decimal` ve `double` sınırlarında farklı
-  canonical sonuç doğabilir. Azaltma: para alanları zaten `decimal`; test
-  vektörleri (§4.7 S13) zorunlu.
-- **R2 — Yeni DTO alanları:** canonicalizer tüm alanları gördüğü için yeni alan
-  eklemek hash'ı değiştirir; bu beklenir (aynı anahtar + farklı gövde → 409).
-- **R3 — Paket tercihi:** Harici JCS kütüphanesi kullanılırsa ADR gerekir; v1.1
-  için dahili uygulama önerilir.
+
+| # | Risk | Azaltma |
+|---|---|---|
+| R1 | Sayı yuvarlama farkları | §3.2.1 alan sınırı + S27 + resmî vektörler (S26) |
+| R2 | Yeni DTO alanları hash'ı değiştirir | Beklenen davranış; aynı key + farklı gövde → `409 IdempotencyKeyReused` |
+| R3 | Uygun paket bulunamaması | Kapsam daraltılır, "RFC 8785 uyumlu" denmez, kullanıcıya dönülür |
 
 ---
 
-## 4. Çökme, atomiklik ve `InProgress` (1.6) — **onay bekleyen ana tasarım**
+## 4. Çökme, atomiklik ve `InProgress` (1.6)
 
 ### 4.1 Neden "5 dk stale timeout" reddedildi
-
-Kullanıcının işaret ettiği pencere gerçektir:
 
 ```text
 handler SaveChanges() ── COMMIT ── [ÇÖKME] ── idempotency "Completed" yazılamadı
 ```
 
-Bu durumda kalıcı bir `InProgress` kaydı görünür. 5 dakika sonra otomatik
-yeniden çalıştırma, **finansal kaydı ikinci kez oluşturur**. Dolayısıyla
-"stale InProgress → yeniden dene" kuralı güvenli değildir.
+Bu pencerede kalıcı `InProgress` satırı görünür; 5 dk sonra otomatik yeniden
+çalıştırma finansal kaydı **ikinci kez** oluşturur. Bu yüzden stale-lock ile
+otomatik yeniden çalıştırma yasaktır.
 
-### 4.2 Önerilen karar: idempotency kaydı ile iş kaydı **tek transaction'da** commit edilir
+### 4.2 Onaylanan tasarım ve zorunlu koşullar
 
-ADR-0009 zaten tek DB / tek `DbConnection` / açık `Serializable` transaction
-altyapısını sağlıyor. Bu altyapı v1.1'de **tüm mutasyon POST'larına**
-genişletilir:
+ADR-0009 altyapısı **ADR-0010** ile tüm mutasyon POST'larına genişletilir:
 
-1. Middleware kapsam dahili isteği yakalar, header/gövdeyi doğrular.
+1. Middleware kapsamı yakalar; header/gövdeyi doğrular.
 2. `IWriteTransactionScopeFactory.BeginAsync()` ile **tek transaction** açılır
-   (`IWriteConnectionProvider.Connection` üzerinde, `Serializable`).
-3. `IWriteTransactionScopeAccessor.Current` bu scope'u ayarlar.
-4. `IdempotencyDbContext` ve ilgili modül DbContext'leri **aynı transaction'a**
-   katılır (`Database.UseTransaction(scope.Transaction)`).
-5. Endpoint çalışır; modül `SaveChangesAsync` çağrıları yapılır ama **commit
-   yapılmaz**.
-6. Yanıt 2xx ise: durum kodu + izin verilen başlıklar (`Location`) + gövde
-   tamponlanır; idempotency kaydı `Completed` olarak yazılır.
-7. **`scope.CommitAsync()` tek seferde çağrılır.** Finansal kayıt ve replay
-   kaydı birlikte görünür olur.
-8. 4xx/5xx/istisna ise scope dispose → rollback; replay kaydı oluşmaz.
+   (`IWriteConnectionProvider.Connection`, `Serializable`).
+3. `IWriteTransactionScopeAccessor.Current` scope'u ayarlar.
+4. `IdempotencyDbContext` ve modül DbContext'leri **aynı fiziksel `DbConnection`
+   ve aynı `DbTransaction` nesnesine** katılır:
+   `Database.UseTransaction(scope.Transaction)` — kopya/ikinci transaction yok.
+5. Endpoint çalışır; modül `SaveChangesAsync` çağrıları **commit etmez**.
+6. Yanıt 2xx ise durum kodu, `Content-Type`, allowlist başlıkları ve gövde
+   tamponlanır; kayıt `Completed` olarak yazılır.
+7. **`scope.CommitAsync()` tek sahip Host middleware'de, tek seferde çağrılır.**
+8. 4xx/5xx/istisna → scope dispose → rollback; replay kaydı oluşmaz.
 
-**Sonuç:** Kalıcı `InProgress` satırı **hiç oluşmaz**. `InProgress` yalnızca
-süreç içindeki geçici bir durumdur; `409 IdempotencyInProgress` yalnızca aynı
-anahtarlı istek hâlüyle işlenirken döner. Stale lock kurtarma gerekmez.
+**Kullanıcının beş zorunlu koşulunun karşılanması:**
 
-**Yeni hata kodu önerilmiyor.** Mevcut üç kodun anlamı netleştirilir:
+| # | Koşul | Karşılama |
+|---|---|---|
+| 1 | Aynı fiziksel bağlantı + aynı `DbTransaction` nesnesi | §4.2 adım 2–4; `UseTransaction(scope.Transaction)`; ADR-0010 kural 1–2; mimari testi |
+| 2 | Handler `SaveChanges` commit etmez | §4.2 adım 5; `IUnitOfWork.SaveChangesAsync` yalnızca veri yazar; commit yalnızca middleware'de |
+| 3 | Commit'in tek sahibi Host middleware | §4.2 adım 7; modül factory'leri host scope varken no-op (§4.5) |
+| 4 | Commit sonucu belirsizse aynı key ile retry güvenli | §4.2.1 + benzersiz index + S21 |
+| 5 | Commit sırasında bağlantı kopması ayrı test | S21 (test hook: `CommitAsync` içinde bağlantı kopar) |
 
-| Kod | Yeni kesin anlamı |
+**Sonuç:** Kalıcı `InProgress` satırı hiç oluşmaz. `InProgress` yalnızca
+transaction içi geçici durumdur; dışarıdan hiçbir zaman okunamaz (§5.1 CHECK +
+test). `409 IdempotencyInProgress` yalnızca aynı anahtar o anda işlenirken döner.
+
+**Hata kodları:**
+
+| Kod | Kesin anlamı |
 |---|---|
-| `409 IdempotencyInProgress` | Aynı kapsam+anahtar şu anda işleniyor; tekrar dene |
-| `409 IdempotencyKeyReused` | Tamamlanmış kayıt var ama gövde hash'ı farklı |
-| `400 ValidationFailed` | Header eksik / UUID değil / gövde JSON değil |
+| `409 IdempotencyInProgress` | Aynı kapsam+anahtar şu anda işleniyor; güvenle tekrar dene |
+| `409 IdempotencyKeyReused` | Tamamlanmış kayıt var ama `RequestHash` farklı |
+| `409 IdempotencyExpired` | Tam gövde TTL'si (24 s) doldu; **yeni işlem otomatik açılmaz**, durum sorgusu kullanılır (§7.5) |
+| `400 ValidationFailed` | Header eksik / UUID değil / gövde JSON değil / sayı alanı sınır dışı |
+
+### 4.2.1 Commit sonucu belirsizliği — çözüm
+
+Bağlantı kopması veya komut timeout'u, `COMMIT`'in veritabanına ulaşıp ulaşmadığını
+belirsiz bırakabilir. Çözüm **tek anahtar + benzersiz index + single commit**'tir:
+
+| Commit sonucu | Veritabanı durumu | Aynı key ile retry | Finansal kayıt sayısı |
+|---|---|---|---|
+| Kesin başarı | `Completed` + iş kaydı birlikte var | Replay (2xx + gövde) | 1 |
+| Kesin başarısızlık | Rollback; hiçbir kayıt yok | Aynı key ile yeni execution | 1 |
+| **Belirsiz** (kopma/timeout) | Commit olmuş olabilir ya da olmamış | Sunucu aynı key'i arar: `Completed` bulursa replay, bulamazsa tek execution | **1 (asla 2)** |
+
+Kural: **Belirsiz sonuçta istemci yeni UUID üretmez** (§7.5). Aynı key ile
+tekrar denemek güvenlidir çünkü `UNIQUE (ScopeHash, Key)` ikinci finansal kaydı
+fiziksel olarak engeller. S21 bu senaryoyu test hook ile doğrular.
 
 ### 4.3 Akış diyagramı
 
 ```mermaid
 sequenceDiagram
     participant C as İstemci (aynı key)
-    participant M as IdempotencyMiddleware
+    participant M as IdempotencyMiddleware (Host)
     participant S as IdempotencyDbContext (shared)
     participant H as Endpoint + modül DbContext
     participant D as SQL Server (tek DB)
 
     C->>M: POST + Idempotency-Key + body
-    M->>M: Kapsam + hash + UUID doğrulama
+    M->>M: Kapsam + RFC8785 hash + UUID doğrulama
     alt Kapsam dışı / auth / GET
         M->>H: Doğrudan next (idempotency yok)
     else Kapsam dahili
-        M->>D: BEGIN TRAN (Serializable, ADR-0009)
+        M->>D: BEGIN TRAN (Serializable, tek DbConnection/DbTransaction)
         M->>S: SELECT by (ScopeHash, Key)
-        alt Completed + aynı hash
-            S-->>M: Status + headers + body
+        alt Completed + aynı hash (24s içi)
+            S-->>M: Status + Content-Type + allowlist + body
             M->>D: ROLLBACK (salt okuma)
             M-->>C: 2xx replay (yeni kayıt YOK)
+        else Tombstone (24s–30g) veya Completed ama gövde süresi dolmuş
+            M->>D: ROLLBACK
+            M-->>C: 409 IdempotencyExpired (durum sorgusuna yönlendir)
         else Completed + farklı hash
             M->>D: ROLLBACK
             M-->>C: 409 IdempotencyKeyReused
-        else Aynı işlem sürüyor (in-memory lock)
+        else Aynı işlem sürüyor (aynı process / kilitli satır)
             M-->>C: 409 IdempotencyInProgress
-        else Kayıt yok / süresi dolmuş
-            M->>S: INSERT (ScopeHash, Key, hash, CreatedAt, ExpiresAt)
+        else Kayıt yok
+            M->>S: INSERT (InProgress, ScopeHash, Key, hash, CreatedAt, ExpiresAt)
             M->>H: next(context) — SaveChanges (commit YOK)
             alt 2xx
-                H-->>M: Status 201/200 + Location + DTO
-                M->>S: UPDATE → Completed + response
-                M->>D: COMMIT  ← finansal kayıt + replay kaydı BİRLİKTE
+                H-->>M: 200/201 + Location + DTO
+                M->>S: UPDATE → Completed + response metadata
+                M->>D: COMMIT (TEK sahip: Host) ← finansal + replay BİRLİKTE
                 M-->>C: 2xx
-            else 4xx / 5xx / exception
-                M->>D: ROLLBACK
-                M-->>C: Hata (replay kaydı YOK)
+            else 4xx / 5xx / exception / bağlantı kopması
+                M->>D: ROLLBACK (veya belirsiz → aynı key ile replay güvenli)
+                M-->>C: Hata
             end
         end
     end
@@ -242,239 +313,402 @@ sequenceDiagram
 | # | Pencere | Sonuç | Güvenli mi? |
 |---|---|---|---|
 | W1 | Header/gövde doğrulanamadı | `400`, transaction açılmadı | ✅ |
-| W2 | Transaction açıldı, endpoint commit öncesi çöktü | SQL connection kopunca rollback; key kaydı da yok | ✅ yeniden denenebilir |
-| W3 | `SaveChanges` sonrası, `Completed` yazılmadan çökme | Her ikisi de **uncommitted** → ikisi de rollback | ✅ çift kayıt yok |
-| W4 | `CommitAsync` sonrası, yanıt istemciye gitmeden çökme | Kayıt `Completed` + yanıt gövdesi DB'de | ✅ replay aynı 201 + `Location` döner |
-| W5 | Aynı işlem sürerken ikinci istek (aynı process) | `409 IdempotencyInProgress` | ✅ |
-| W6 | İkinci istek başka instance'ta | Unique index'te bekler; ilk commit olunca replay / 409 Reused | ✅ (gecikme riski: R5) |
-| W7 | 4xx döndü, istemci aynı key ile tekrar denedi | Rollback olduğu için kayıt yok; istek normal çalışır | ✅ |
-| W8 | Süresi dolmuş kayıt | Erişimde silinir, yeni işlem gibi çalışır | ✅ (TTL sözleşmesi: 24 s) |
+| W2 | Transaction açıldı, endpoint commit öncesi çöktü | Connection kopunca rollback; key kaydı da yok | ✅ yeniden denenebilir |
+| W3 | `SaveChanges` sonrası, `Completed` yazılmadan çökme | İkisi de uncommitted → ikisi de rollback | ✅ çift kayıt yok |
+| W4 | Commit sonrası, yanıt yazılmadan çökme | `Completed` + gövde DB'de | ✅ replay aynı 201 + `Location` |
+| W4b | **Commit sırasında bağlantı kopması** | Commit ulaşmış olabilir (§4.2.1) | ✅ aynı key ile retry → 1 kayıt (S21) |
+| W5 | Aynı process'te eşzamanlı aynı istek | `409 IdempotencyInProgress` | ✅ |
+| W6 | İkinci istek başka instance'ta | Unique index arbitre; ayrıntı §4.4.1 | ✅ asla 2. kayıt yok |
+| W7 | 4xx sonrası aynı key ile retry | Rollback → kayıt yok; normal çalışır | ✅ |
+| W8 | 24 s TTL dolması | Tam gövde → tombstone; `409 IdempotencyExpired` | ✅ otomatik yeni UUID yok (§7.5) |
+| W9 | 30 g sonrası tombstone silinmesi | Durum sorgusu `404` → kullanıcıya "sonuç bilinmiyor" | ✅ otomatik yeni işlem yok |
 
-> **Kritik not:** W8'de 24 saat sonra aynı anahtarın tekrar kullanılması
-> "yeni istek" sayılır. Mobil istemci kesin başarıda bekleyen kaydı siler,
-> dolayısıyla anahtarı 24 saat sonra yeniden kullanmaz (§7).
+### 4.4.1 Çoklu API instance eşzamanlılığı (W6 — kesinleştirildi)
 
-### 4.5 Modül DbContext'leri ile çalışma (ADR-0009 genişletmesi)
+Hakem **dağıtık kilit değil, veritabanındaki `UNIQUE (ScopeHash, Key)`**
+indeksidir. İki instance aynı key'i aynı anda gönderdiğinde:
 
-| Modül | Mevcut durum | v1.1'deki değişiklik |
+1. Instance A transaction'ı açar ve satırı INSERT eder → anahtarda kilit tutar.
+2. Instance B aynı satırı INSERT etmeye çalışır ve **bloklanır**.
+
+| A'nın sonucu | B'nin davranışı | Finansal kayıt |
 |---|---|---|
-| Expenses | Kendi `ITransactionScopeFactory`'si (`db.Database.BeginTransactionAsync`) var; `Enlist` yok | `IUnitOfWork.Enlist(IWriteTransactionScope?)` eklenir; handler'lar host scope'unu kullanır; yerel `BeginSerializableAsync` host scope varken **no-op wrapper** döner |
-| CashInflows | `Enlist` var; `BeginAsync()` çağrıları var | `BeginAsync` host scope varken no-op wrapper döner; `Enlist(accessor.Current)` kullanılır |
-| CreditCards | `Enlist` var; `BeginAsync()` çağrıları var | Aynı |
-| Debts | `Enlist` var; `BeginAsync()` çağrıları var | Aynı |
-| Reporting | Salt okunur | Değişiklik yok |
-| Identity | Kapsam dışı | Değişiklik yok |
+| **Commit** | B `2601/2627` unique ihlali alır → satırı yeniden okur → aynı `RequestHash` ise **replay 2xx**, farklıysa `409 IdempotencyKeyReused` | 1 |
+| **Rollback** (4xx/5xx/istisna) | B'nin INSERT'i başarılı olur; istek normal çalışır | 1 |
+| **Deadlock kurbanı (1205)** | A rollback olur, B devam eder; A istemcisi aynı key ile tekrar dener → replay | 1 |
+| **Lock timeout (1222 / command timeout)** | B INSERT edemez; `409 IdempotencyInProgress` döner (veya kısa süre sonra güvenli retry). **Asla yeni finansal kayıt oluşturmaz** | 1 |
 
-`IWriteTransactionScopeFactory.BeginAsync()` davranışı:
+**Garanti:** İkinci istek, sonuç ne olursa olsun **ikinci bir finansal kayıt
+oluşturamaz**. İlk transaction'ın commit / rollback / deadlock / lock timeout
+senaryoları ayrı test edilir (S4, S22, S23, S24). Dağıtık kilit v1.1 kapsamı
+dışıdır; gerekirse ADR gerekir.
 
-- `IWriteTransactionScopeAccessor.Current != null` → aynı `Transaction`'ı taşıyan
-  **no-op wrapper** (Commit/Dispose etkisiz) döner; handler kendi `await using`
-  bloğunu bozmadan çalışmaya devam eder.
-- `Current == null` → mevcut davranış (yeni transaction; örn. migration dışı
-  arka plan çağrıları).
+### 4.5 Modül DbContext'leri ile çalışma (ADR-0010)
 
-Böylece handler iş mantığı değişmez; yalnızca transaction'ın **sahibi** host
-olur ve commit tek noktada yapılır.
+| Modül | Mevcut durum | v1.1 davranışı |
+|---|---|---|
+| Expenses | Kendi `ITransactionScopeFactory`'si var; `Enlist` yok | `IUnitOfWork.Enlist(IWriteTransactionScope?)` eklenir; host scope varken yerel factory **no-op** |
+| CashInflows | `Enlist` + `BeginAsync()` var | Host scope varken no-op; `Enlist(accessor.Current)` |
+| CreditCards | `Enlist` + `BeginAsync()` var | Aynı |
+| Debts | `Enlist` + `BeginAsync()` var | Aynı |
+| Reporting / Identity | Salt okunur / kapsam dışı | Değişiklik yok |
+
+`IWriteTransactionScopeFactory.BeginAsync()` kuralları:
+
+- **Host transaction VARSA:** modülün kendi transaction'ını açması **engellenir**.
+  Aynı `Transaction`'ı taşıyan **no-op wrapper** döner; `CommitAsync`/`DisposeAsync`
+  etkisizdir. Handler'ın `await using` bloğu bozulmadan çalışır. Mimari testi,
+  kapsam dahili handler'larda `BeginTransactionAsync` çağrısı olmadığını zorunlu
+  kılar (koşul 2 ve 3).
+- **Host transaction YOKSA:** **mevcut modül davranışı korunur** — modül kendi
+  transaction'ını açar ve commit eder (ör. migration dışı arka plan çağrıları,
+  modül birim testleri).
+- Modül sınırları, DbContext sahipliği ve şemalar **değişmez**; hiçbir modül
+  `IdempotencyDbContext`'e referans vermez.
+
+Dört modül için entegrasyon testi zorunludur: **S25** (Expenses, CashInflows,
+CreditCards, Debts).
 
 ### 4.6 Riskler ve azaltmalar
 
 | # | Risk | Azaltma |
 |---|---|---|
-| R1 | Uzun transaction → kilit süresi artışı | Transaction yalnızca mutasyon POST'ları kapsar; handler içinde dış I/O yok; command timeout yapılandırılır |
-| R2 | `Serializable` deadlock (SQL 1205) | Rollback + aynı key/body ile sınırlı yeniden deneme; test S19 |
-| R3 | Yanıt gövdesi tamponu büyür | POST DTO'ları küçük; 64 KB üst sınır, aşımı testte hata sayılır; `Location` allowlist'i |
-| R4 | Modül handler'ı kendi transaction'ını açarsa çift transaction hatası | §4.5 no-op wrapper + mimari testi: kapsam dahili handler'da `BeginTransactionAsync` çağrısı yok |
-| R5 | İkinci instance unique index'te bloklanır | Kısa lock timeout + istemciye `409 InProgress` dönüşü; dağıtık kilit v1.1 dışı, ADR gerekir |
-| R6 | Yeni mutasyon POST listeye eklenmez | Mimari testi: tüm `MapPost` endpoint'leri pozitif listede ya da `/api/v1/auth` olmalı |
-| R7 | Idempotency kaydı yazılır ama modül `SaveChanges` yapmaz | Tek commit + test S18 (cross-module atomiklik) |
+| R1 | Uzun transaction → kilit süresi | Yalnızca mutasyon POST; handler'da dış I/O yok; command timeout |
+| R2 | `Serializable` deadlock (1205) | Rollback + aynı key/body ile sınırlı retry; S19, S22, S24 |
+| R3 | Yanıt tamponu büyümesi | 64 KB üst sınır; `Location` allowlist'i; S20 |
+| R4 | Modül ikinci transaction açarsa | §4.5 no-op + mimari testi (S25 kapsamında) |
+| R5 | İki instance bloklanması | §4.4.1 unique index + kısa lock timeout; `409 InProgress`; dağıtık kilit yok |
+| R6 | Yeni mutasyon POST listeye eklenmez | Mimari testi: tüm `MapPost` ya pozitif listede ya `/api/v1/auth` |
+| R7 | Idempotency yazılır, modül `SaveChanges` yapmaz | Tek commit + S18 |
+| R14 | RFC 8785 / double–decimal çakışması | §3.2 kapı + §3.2.1 alan sınırı + S26/S27 |
+| R15 | Tombstone saklama süresi (KVKK) | 30 gün, gövdesiz, yalnızca hash/durum; §6 |
 
 ### 4.7 Test senaryoları (entegrasyon zorunlu — 1.11)
 
 | # | Senaryo | Beklenen |
 |---|---|---|
-| S1 | Aynı key + aynı gövde iki kez | Aynı status/gövde/`Location`; veritabanında **1** finansal kayıt |
+| S1 | Aynı key + aynı gövde iki kez | Aynı status/gövde/`Location`; **1** finansal kayıt |
 | S2 | Aynı key + farklı gövde | `409 IdempotencyKeyReused`; yeni kayıt yok |
 | S3 | Aynı process'te eşzamanlı aynı istek | Biri 2xx, diğeri `409 IdempotencyInProgress`; 1 kayıt |
-| S4 | İki app instance, aynı key | Bekleme sonrası replay; 1 kayıt |
-| S5 | Test hook: `SaveChanges` sonrası, commit öncesi çökme | Rollback; retry ile tam 1 kayıt |
-| S6 | Test hook: commit sonrası, yanıt yazılmadan çökme | Retry aynı 201 + `Location`; 1 kayıt |
-| S7 | Doğrulama hatası (4xx) + aynı key ile retry | İlkinde kayıt yok; ikincisinde 1 kayıt |
-| S8 | Süresi dolmuş kayıt | Eski kayıt temizlenir; istek yeni gibi çalışır |
-| S9 | Farklı kullanıcı, aynı key | İkisi de başarılı; kendi kayıtları |
-| S10 | Aynı key, farklı route template | İkisi de başarılı (kapsam ayrı) |
-| S11 | Aynı key, farklı route değeri (`{id}`) | İkisi de başarılı |
+| S4 | İki app instance, aynı key | §4.4.1; 1 kayıt |
+| S5 | Hook: `SaveChanges` sonrası, commit öncesi çökme | Rollback; retry ile 1 kayıt |
+| S6 | Hook: commit sonrası, yanıt yazılmadan çökme | Retry aynı 201 + `Location`; 1 kayıt |
+| S7 | 4xx + aynı key ile retry | İlkinde kayıt yok; ikincisinde 1 kayıt |
+| S8 | 24 s TTL dolması | Tam gövde tombstone'a döner; POST → `409 IdempotencyExpired` |
+| S9 | Farklı kullanıcı, aynı key | İkisi başarılı; kendi kayıtları |
+| S10 | Aynı key, farklı route template | İkisi başarılı (kapsam ayrı) |
+| S11 | Aynı key, farklı route değeri | İkisi başarılı |
 | S12 | Aynı key, farklı query string | Replay; yeni kayıt yok |
-| S13 | Canonical JSON: özellik sırası / iç içe nesne / sayı (`1.0` vs `1`) / dizi sırası | Aynı hash veya farklı hash beklentisi karşılanır |
-| S14 | Header yok / geçersiz UUID / bozuk JSON | `400 ValidationFailed`, alan `idempotencyKey` |
-| S15 | `/api/v1/auth/login` + key | Header yok sayılır, idempotency kaydı oluşmaz |
-| S16 | Mobil restart: `SentUnconfirmed` kayıt aynı key/body ile yeniden gönderilir | Replay; 1 kayıt |
-| S17 | 1500 süresi dolmuş kayıt + tetiklenen temizlik | En fazla 1000 satır silinir; uzun kilit yok |
-| S18 | Nakit avans + para girişi (ADR-0009) idempotency altında | Commit öncesi çökme → ikisi de yok; sonrası → ikisi de var |
-| S19 | SQL 1205 deadlock sonrası aynı key ile retry | Tam 1 kayıt |
-| S20 | 64 KB üstü 2xx yanıt | Testte hata/uyarı; replay kaydı oluşmaz veya sözleşme ihlali raporlanır |
+| S13 | Kanonik JSON: özellik sırası / iç içe nesne / `1.0` vs `1` / dizi sırası / Unicode | Beklenen hash eşitliği/farkı |
+| S14 | Header yok / geçersiz UUID / bozuk JSON / sınır dışı sayı | `400 ValidationFailed` |
+| S15 | `/api/v1/auth/login` + key | Header yok sayılır; kayıt oluşmaz |
+| S16 | Mobil restart: `SentUnconfirmed` aynı key/body ile gönderilir | Replay; 1 kayıt |
+| S17 | 1500 süresi dolmuş kayıt + temizlik | En fazla 1000 satır silinir; uzun kilit yok |
+| S18 | Nakit avans + para girişi, idempotency altında | Commit öncesi çökme → ikisi yok; sonrası → ikisi var |
+| S19 | SQL 1205 deadlock + aynı key retry | Tam 1 kayıt |
+| S20 | 64 KB üstü 2xx yanıt | Sözleşme ihlali raporlanır; kayıt oluşmaz |
+| **S21** | **Hook: `CommitAsync` içinde bağlantı kopması** | Belirsiz sonuç; aynı key retry → **1** kayıt (§4.2.1) |
+| **S22** | **İlk transaction deadlock (1205) / rollback ayrımı** | Her durumda 1 kayıt; ikinci istek replay veya normal execution |
+| **S23** | **Lock timeout (1222 / command timeout)** | `409 IdempotencyInProgress`; 2. finansal kayıt yok |
+| **S24** | **İki instance × {commit, rollback, deadlock, lock timeout} matrisi** | §4.4.1 tablosunun tamamı doğrulanır |
+| **S25** | **Expenses / CashInflows / CreditCards / Debts entegrasyonu** | Dördü de host scope'unda `Enlist`; host yokken eski davranış |
+| **S26** | **RFC 8785 resmî test vektörleri** | Kütüphane kapı koşulu geçer (§3.2) |
+| **S27** | **decimal sınırı (§3.2.1)** | Farklı hash veya sınır dışı `400` |
+| **S28** | **Durum sorgusu + tombstone** | `GET /idempotency/{key}` → 200 (Completed/tombstone) / 404; gövde sızdırılmaz |
+| **S29** | **>24 h belirsiz mobil kayıt** | Otomatik yeni UUID **yok**; `Uncertain`; kullanıcıya "sonuç bilinmiyor" |
 
 ---
 
 ## 5. Saklama, migration ve host sahipliği (1.4)
 
-### 5.1 Şema (öneri)
+### 5.1 `shared.IdempotencyKeys` şeması (netleştirildi)
 
-`shared.IdempotencyKeys`
-
-| Kolon | Tip | Not |
+| Kolon | Tip | Not / kısıt |
 |---|---|---|
 | `Id` | `bigint IDENTITY` | PK |
 | `ScopeHash` | `char(64)` | §3.1; userId dahil |
 | `Key` | `nvarchar(36)` | UUID `D` formatı, normalize |
-| `RequestHash` | `char(64)` | canonical JSON SHA-256 |
-| `Status` | `tinyint` | Yalnızca `Completed` (2) kalıcı yazılır; `InProgress` (1) geçicidir |
-| `ResponseStatusCode` | `int` | 2xx |
-| `ResponseHeaders` | `nvarchar(max)` | Yalnızca allowlist: `Location` |
-| `ResponseBody` | `nvarchar(max)` | 2xx JSON DTO |
-| `CreatedAtUtc` | `datetime2` | |
-| `CompletedAtUtc` | `datetime2` | |
-| `ExpiresAtUtc` | `datetime2` | `CreatedAtUtc + 24h` |
+| `RequestHash` | `char(64)` | RFC 8785 kanonik JSON SHA-256 (§3.2) |
+| `Status` | `tinyint NOT NULL` | `1=InProgress` (yalnızca transaction içi, **asla commit edilmez**), `2=Completed`, `3=Tombstone` |
+| `RequestContentType` | `nvarchar(100) NOT NULL` | Yalnızca `application/json` kabul edilir |
+| `ResponseStatusCode` | `int NULL` | Yalnızca 2xx |
+| `ResponseContentType` | `nvarchar(100) NULL` | Replay için `application/json; charset=utf-8` |
+| `ResponseHeaders` | `nvarchar(2000) NULL` | **Allowlist: yalnızca `Location`**; `Set-Cookie`, token başlıkları DAİMA dışarıda |
+| `ResponseBody` | `nvarchar(max) NULL` | 2xx finansal DTO; `Status=3` ise **NULL** |
+| `CreatedAtUtc` | `datetime2 NOT NULL` | |
+| `CompletedAtUtc` | `datetime2 NULL` | |
+| `ExpiresAtUtc` | `datetime2 NOT NULL` | `CreatedAtUtc + 24 s` (tam gövde TTL'si) |
+| `TombstoneExpiresAtUtc` | `datetime2 NOT NULL` | `CreatedAtUtc + 30 g` (gövdesiz durum kaydı) |
 
-İndeksler:
-- `UNIQUE (ScopeHash, Key)` — replay ve çakışma tespiti.
-- `IX (ExpiresAtUtc)` — sınırlı temizlik.
+**Kısıtlar**
 
-`RequestHash` ile `ResponseBody` birlikte saklanır; token/auth yanıtı asla
-yazılmaz (auth kapsam dışı).
+- `UNIQUE (ScopeHash, Key)` — replay, çakışma ve çoklu instance arbitri.
+- `IX (ExpiresAtUtc)`, `IX (TombstoneExpiresAtUtc)` — sınırlı temizlik.
+- `CK_Status`: `Status IN (1,2,3)`.
+- `CK_Completed`: `Status <> 2 OR (ResponseStatusCode BETWEEN 200 AND 299 AND ResponseBody IS NOT NULL AND ResponseContentType IS NOT NULL)`.
+- `CK_Tombstone`: `Status <> 3 OR (ResponseBody IS NULL AND ResponseHeaders IS NULL)`.
+- `CK_2xx`: `ResponseStatusCode IS NULL OR ResponseStatusCode BETWEEN 200 AND 299` → 4xx/5xx asla saklanmaz.
+- 64 KB gövde sınırı **middleware'de** zorunlu kılınır (S20); `nvarchar(max)`
+  üzerinde DB CHECK uygulanmaz.
+- **İnvariant:** Hiçbir commit edilmiş satır `Status=1` olamaz; middleware + S5/S25
+  ile doğrulanır.
+
+**HTTP metadata ve replay:** Yanıt için durum kodu, `Content-Type` ve yalnızca
+`Location` başlığı saklanır. Diğer başlıklar (`Date`, `Server`, tracing,
+`WWW-Authenticate` vb.) istemciye **canlı** döner, replay kaydına girmez.
+İstek tarafında `Content-Type` doğrulanır; `application/json` dışı gövde `400`.
+
+**Finansal/kişisel veri koruması:**
+
+- `ResponseBody` yalnızca 2xx finansal DTO içerir; **auth/token yanıtı hiçbir
+  koşulda yazılmaz** (auth kapsam dışı, S15).
+- Kart numarası/CVV/SKT zaten hiç saklanmaz (`docs/06` karar 14).
+- Replay gövdesi loglara, trace'lere veya hata yanıtlarına **yazılmaz**.
+- Okuma erişimi yalnızca host middleware/endpoint rolündedir; modüller ve genel
+  sorgular tabloyu okuyamaz.
+- 24 saatte gövde silinir → tombstone (yalnızca hash + durum + zaman).
+- Dağıtımda SQL Server TDE önerilir (uygulama kodu kapsamı dışı, operasyonel
+  karar).
 
 ### 5.2 Migration mekanizması
 
-- `IdempotencyDbContext` ve migration dosyaları **host projesinde**
-  (`src/Host/FinTrack.Api/Idempotency/`) bulunur. Yeni proje **açılmaz**.
-- Migration, modüllerle aynı desende `IDesignTimeDbContextFactory` ile
-  üretilir; connection string host config'inden gelir.
-- Runtime DI kaydı modülleriyle aynıdır:
-  `UseFinTrackSqlServer(options, IWriteConnectionProvider.Connection)` — böylece
-  aynı connection/transaction'a katılır.
-- `Program.cs` migration bloğunda sıra:
-  `identity` → **`idempotency`** → modül migration'ları (`IModuleMigration`).
-- Modül DbContext'lerinin kendi şemaları (expenses/inflows/cards/debts)
-  **değişmez**; idempotency tablosuna hiçbir modül referans vermez.
+- `IdempotencyDbContext` ve migration'lar **host projesinde**
+  (`src/Host/FinTrack.Api/Idempotency/`) bulunur; yeni proje açılmaz.
+- Design-time factory modül deseniyle aynı; connection string host config'inden.
+- Runtime DI: `UseFinTrackSqlServer(options, IWriteConnectionProvider.Connection)`
+  → aynı connection/transaction (ADR-0010).
+- `Program.cs` sırası: `identity` → **`idempotency`** → modül migration'ları.
+- Modül DbContext/şemaları değişmez; hiçbir modül tabloya referans vermez.
 
-**Risk R8:** Host migration'ı modüllerden önce uygulanır; ilk açılışta
-`shared` şeması oluşur. Migration bazı ortamlarda `CREATE SCHEMA` gerektirebilir;
-design-time factory ve `--migrate` yolu test edilir.
+**Risk R8:** İlk açılışta `shared` şeması oluşmalı; design-time factory ve
+`--migrate` yolu test edilir.
 
 ---
 
-## 6. TTL ve temizlik (1.5)
+## 6. TTL, tombstone ve temizlik (1.5)
 
-- `ExpiresAtUtc = CreatedAtUtc + 24 saat`.
-- Erişimde: kayıt bulunup `ExpiresAtUtc < nowUtc` ise **aynı transaction'da**
-  silinir ve istek yeni gibi işlenir (W8).
-- Periyodik background job **yok**. Bunun yerine kapsam dahili bir istek
-  geldiğinde, en fazla **saatte bir** ve **en fazla 1000 satır** silen
-  `DELETE TOP (1000) FROM shared.IdempotencyKeys WHERE ExpiresAtUtc < @now`
-  çalıştırılır. Bu çağrı istek transaction'ının dışında, kısa ayrı bir
-  transaction ile yapılır (kilit süresini uzatmaz).
-- Temizlik hatası isteği **bloklamaz**; loglanır (Serilog).
-- Süresi dolmuş anahtarın tekrar kullanımı replay garantisi vermez; istemci
-  sözleşmesi bunu yasaklar (§7).
+| Faz | Yaş | Saklanan | POST retry davranışı |
+|---|---|---|---|
+| Tam replay | 0–24 s | Status=2, gövde + `Content-Type` + `Location` | 2xx replay |
+| Tombstone | 24 s – 30 g | Status=3, yalnızca `ScopeHash`, `Key`, `RequestHash`, durum, zamanlar | `409 IdempotencyExpired` + durum sorgusu (§7.5) |
+| Silme | 30 g+ | Hiçbir şey | Durum sorgusu `404` → "sonuç bilinmiyor" |
+
+- Erişimde `ExpiresAtUtc < now` ise gövde/header'lar silinir, `Status=3` yapılır
+  (aynı transaction içinde). Bu, W8'in "yeni istek gibi davran" kuralını
+  **değiştirir**: artık aynı key asla sessizce yeni işlem açmaz.
+- Background job **yok**. Kapsam dahili istekte, en fazla **saatte bir** ve
+  **en fazla 1000 satır**: önce süresi dolmuş tam kayıtlar tombstone'a, sonra 30 g
+  aşan tombstone'lar silinir. İstek transaction'ının dışında kısa transaction.
+- Temizlik hatası isteği bloklamaz; loglanır.
+- **24 s sunucu TTL ile mobil yaşam döngüsü uyumu (koşul 7):** Mobil, kurtarma
+  denemelerini 24 s **öncesinde** yoğunlaştırır (§7.5); 24 s sonrası tombstone
+  penceresinde durum sorgusu kullanır; 30 g sonrası belirsizliği kullanıcıya
+  açıkça bildirir. Otomatik yeni UUID yoktur.
 
 ---
 
-## 7. Mobil bekleyen işlem deposu (1.10) — **onay bekleyen tasarım**
+## 7. Mobil bekleyen işlem deposu (1.10)
 
-### 7.1 Karar
+### 7.1 Depolama kararı ve mevcut altyapı kontrolü
 
-`SecureStorage` **veri deposu olarak kullanılmaz** (Android'de küçük kotası var,
-büyük JSON gövdelere uygun değil). Bunun yerine:
+Kullanıcı koşulu: *"Mevcut projede kullanılabilecek yerel veri erişim altyapısı
+varsa öncelikle incelenmeli; gereksiz ikinci bir altyapı oluşturulmasın."*
 
-- **App-private SQLite** (`Microsoft.Data.Sqlite` — yeni paket, gerekçe: tek
-  dosya, platformlar arası, işlem destekli).
-- Gövde `AES-GCM` ile şifrelenir; **anahtar** platform güvenli deposunda
-  (`SecureStorage` → Android Keystore / iOS Keychain / Windows DPAPI) tutulur.
-- Yeni paket için ADR/görev kartı gerekçesi: hassas finansal gövdenin cihazda
-  düz metin tutulmaması. (SQLCipher alternatifi: native bağımlılık → reddedildi.)
+**İnceleme sonucu (2026-11-18):** Mobil projede yalnızca
+`SecureStorageTokenStore` (`SecureStorage` → access/refresh token) ve
+`Preferences` (`api_base_url`) var. **SQLite veya başka bir structured store
+yok.** Bu nedenle ikinci bir altyapı değil, **ilk** structured store eklenir:
 
-### 7.2 Kayıt modeli
+- **App-private SQLite** (`Microsoft.Data.Sqlite` — yeni paket). Gerekçe: tek
+  dosya, platformlar arası, transactional; hassas gövde düz metin tutulmaz.
+  SQLCipher alternatifi native bağımlılık nedeniyle reddedildi.
+- `SecureStorage` **yalnızca şifreleme anahtarı** için kullanılır (veri deposu
+  değil). Mevcut token depolamasıyla aynı platform mekanizması paylaşılır;
+  ayrı bir güvenlik altyapısı kurulmaz.
+- Yeni paket kararı ve gerekçesi bu bölümde dokümantedir.
+
+### 7.2 Güvenlik koşulları
+
+| # | Koşul | Tasarım |
+|---|---|---|
+| 1 | AES-256-GCM, 96-bit nonce | `AesGcm` ile 32 bayt anahtar, **12 bayt (96-bit)** nonce |
+| 2 | Nonce tekrarı yok | Her kayıt/yazma için `RandomNumberGenerator` ile yeni nonce; aynı anahtarla asla tekrar kullanılmaz; PK çakışması dahil yeniden yazımda yeni nonce |
+| 3 | Authentication tag zorunlu | 16 bayt tag saklanır; doğrulama olmadan gövde teslim edilmez |
+| 4 | AAD | `AAD = UTF8(key UUID + "\n" + method + "\n" + route)` — işlem UUID'si, method ve route kapsanır; değişirse decrypt başarısız olur |
+| 5 | Decrypt hatası / anahtar kaybı | **Otomatik yeni işlem oluşturulmaz.** Kayıt silinmez; `Uncertain` işaretlenir, kullanıcıya "sonuç doğrulanamıyor" gösterilir; sunucu replay'i korunur |
+| 6 | Logout | Bekleyen kayıtlar silinmez; otomatik kurtarma, yalnızca aynı kullanıcı yeniden giriş yaptığında aktif olur |
+| 7 | Kullanıcı değişimi | Kayıtlar `UserIdKey` ile ayrılır; başka kullanıcının kaydı görünmez/gönderilmez; anahtar kullanıcı bazlıdır |
+| 8 | Cihaz yedeklemesi / geri yükleme | Donanım anahtarı (Android Keystore / iOS Keychain) yedeklenmez → decrypt hatası → madde 5 uygulanır; otomatik yeni işlem yok |
+
+### 7.3 Kayıt modeli
 
 ```text
 PendingOperations
-  Key            TEXT PK        -- UUID
-  Method         TEXT           -- daima POST
-  Route          TEXT           -- /api/v1/expenses vb.
-  BodyCipher     BLOB           -- AES-GCM(canonical istek gövdesi)
-  Nonce          BLOB
-  CreatedAtUtc   TEXT
-  State          TEXT           -- Created | SentUnconfirmed
-  AttemptCount   INT
-  LastError      TEXT (nullable)
+  Key               TEXT PK        -- UUID v4
+  UserIdKey         TEXT           -- yerel kullanıcı anahtarı (izolasyon)
+  Method            TEXT           -- daima POST
+  Route             TEXT           -- /api/v1/expenses vb.
+  BodyCipher        BLOB           -- AES-256-GCM(canonical istek gövdesi)
+  Nonce             BLOB           -- 12 bayt, benzersiz
+  Tag               BLOB           -- 16 bayt auth tag
+  CreatedAtUtc      TEXT
+  State             TEXT           -- Created | SentUnconfirmed | Uncertain
+  AttemptCount      INT
+  LastError         TEXT (nullable)
+  TombstoneCheckedAtUtc TEXT (nullable)
 ```
 
 `Location`/yanıt gövdesi saklanmaz; sunucu replay eder. En fazla 50 bekleyen
-işlem; aşımda en eskisi uyarıyla silinir. Tek bir gövde için 64 KB üst sınır.
+işlem; aşımda en eskisi uyarıyla silinir. Tek gövde için 64 KB üst sınır.
 
-### 7.3 Durum makinesi
+### 7.4 Durum makinesi
 
 ```text
 [Kullanıcı aksiyonu]
-   → UUID üret + kayıt (State=Created) + gövdeyi şifrele
-   → handler isteği AĞA VERMEDEN ÖNCE State=SentUnconfirmed yap
-   → 2xx                     → kaydı SİL (kesin başarı)
-   → 409 KeyReused / 4xx     → kaydı SİL + hatayı göster
-   → 409 InProgress          → kaydı koru, üstel geri çekilme ile tekrar dene
-   → timeout / 5xx / ağ hatası → kaydı koru (SentUnconfirmed)
-   → uygulama yeniden açıldı → YALNIZCA SentUnconfirmed kayıtları, sınırlı
-                                deneme (max 3) ile aynı key + aynı gövdeyle gönder
+  → UUID üret + şifreli kayıt (State=Created)
+  → isteği AĞA VERMEDEN ÖNCE State=SentUnconfirmed
+  → 2xx                       → kaydı SİL (kesin başarı)
+  → 409 KeyReused / 400/409   → kaydı SİL + hatayı göster
+  → 409 Expired / InProgress  → kaydı koru → DURUM SORGUSU (§7.5)
+  → timeout / 5xx / ağ hatası → kaydı koru (SentUnconfirmed)
+  → 23. saate yakın           → son replay denemesi (tam gövde hâlâ mevcut)
+  → 24 s+                     → durum sorgusu; gövde yoksa Uncertain
+  → decrypt hatası / 30 s+    → Uncertain (otomatik yeni işlem YOK)
 ```
 
-- `Created` (ağa hiç çıkmamış) kayıtlar **otomatik gönderilmez**; kullanıcı
-  "Tekrar dene / Vazgeç" seçer. Böylece offline yazma kuyruğuna dönüşmez.
-- `AuthHandler`: mevcut GET/HEAD/OPTIONS retry korunur. `POST` retry **yalnızca**
-  isteğe eklenmiş pending-operation anahtarı varsa ve state
-  `SentUnconfirmed` ise yapılır. Auth `POST`'ları bu kayda sahip olmadığı için
-  retry edilmez. `PUT` retry kapalı kalır.
-- Aynı isteğin gövdesi her denemede **aynı baytlardan** yeniden okunur
-  (şifreli kayıttan çözülür); istemci serileştirme farkı oluşmaz.
+- `Created` (ağa hiç çıkmamış) **otomatik gönderilmez**; kullanıcı
+  "Tekrar dene / Vazgeç" seçer. Offline yazma kuyruğu **oluşmaz**.
+- `SentUnconfirmed`, uygulama yeniden açıldığında **aynı key + aynı gövde** ile,
+  sınırlı deneme (max 3) ve üstel geri çekilme ile kurtarılır.
+- `AuthHandler`: mevcut GET/HEAD/OPTIONS retry korunur. POST retry yalnızca
+  pending-operation anahtarı varsa ve state `SentUnconfirmed` ise yapılır; auth
+  POST'ları kayda sahip olmadığı için retry edilmez; `PUT` retry kapalı kalır.
+- Gövde her denemede **aynı baytlardan** yeniden okunur; istemci serileştirme
+  farkı oluşmaz.
 
-### 7.4 Riskler
+### 7.5 >24 saat belirsiz işlem (R13 düzeltildi) — çözüm
+
+Kullanıcı kararı: *"24 saatten uzun süredir sonucu belirsiz kayıtlar için yeni
+UUID ile yeni işlem oluşturulması güvenli değil."*
+
+**Değerlendirilen seçenekler:**
+
+| Seçenek | Karar |
+|---|---|
+| TTL dolunca otomatik yeni UUID | ❌ Reddedildi — çift finansal kayıt riski |
+| Körce aynı key ile replay (24 s+) | ❌ Reddedildi — sunucu tombstone döner (`409 Expired`), yeni kayıt yok |
+| **Sunucuda güvenli durum sorgusu** | ✅ **Seçildi** — `GET /api/v1/idempotency/{key}` |
+| **Gövdesiz tombstone (30 gün)** | ✅ **Seçildi** — durum sorgusunun 24 s sonrasında da çalışmasını sağlar |
+| Belirsiz kaydı silip "tamamlandı" saymak | ❌ Reddedildi — doğrulanmamış sonuç |
+
+**Durum sorgusu sözleşmesi** (`GET /api/v1/idempotency/{key}`, auth zorunlu):
+
+- Kapsam `userId + key` (JWT `sub`); başka kullanıcının durumu görülemez.
+- `200` + `{ "status": "Completed", "completedAtUtc": "...", "hasBody": false|true }`
+  — `hasBody` yalnızca 24 s içinde `true`; gövde **döndürülmez**, sorgu salt
+  okunurdur.
+- `200` + `{ "status": "InProgress", ... }` — yalnızca transaction içi geçici
+  durum; nadiren gözlemlenir.
+- `404` — kayıt hiç oluşmamış veya 30 günü aşmış. **Bu durumda otomatik yeni
+  işlem açılmaz.**
+
+**Mobil akış:**
+
+1. 24 s içinde belirsizlik → aynı key/gövde ile replay (tam yanıt döner).
+2. 24 s–30 g → durum sorgusu. `Completed` → kesin başarı, yerel kayıt silinir,
+   kullanıcı kayıtları yeniler. `InProgress` → beklenir. `404` → adım 3.
+3. 30 g+ / decrypt hatası → kayıt `Uncertain` olur; kullanıcıya **"işlemin kesin
+   sonucu bilinmiyor; kayıtlarını kontrol et"** mesajı gösterilir. Yeni işlem
+   yalnızca kullanıcının **açık, bilinçli** hareketiyle **yeni bir UUID** ile
+   oluşturulabilir — otomatik değil (S29).
+4. Hiçbir adımda çevrimdışı yazma kuyruğu oluşmaz.
+
+> **Not:** `409 IdempotencyExpired` yeni bir hata kodudur; `docs/06` §1.3'e
+> eklenmiştir. Amacı, istemciyi kör replay yerine güvenli durum sorgusuna
+> yönlendirmektir.
+
+### 7.6 Riskler
 
 | # | Risk | Azaltma |
 |---|---|---|
-| R9 | Şifreleme anahtarı kaybolursa bekleyen kayıtlar okunamaz | Decrypt hatası → kaydı sil + kullanıcıya bilgi ver; sunucu kaydı etkilenmez (replay sunucuda) |
-| R10 | Çoklu bekleyen işlem + aynı UUID | UUID v4; PK çakışması durumunda yeni UUID üret |
-| R11 | Gövde boyutu kotası | 64 KB sınır; aşımda işlem reddedilir |
-| R12 | "Offline kuyruğa dönüşme" | Yalnızca `SentUnconfirmed` otomatik; `Created` kullanıcı onayı bekler |
-| R13 | 24 s TTL'den sonra replay imkânsız | Kayıt 24 s içinde temizlenir; başarıda anında silinir; uzun süre çevrimdışı kalan kayıt kullanıcıya "kesin sonuç yok" olarak gösterilir ve yeni anahtarla yeni işlem açılır |
+| R9 | Anahtar kaybı / decrypt hatası | Kayıt silinmez, `Uncertain`; otomatik yeni işlem yok (§7.2/§7.5) |
+| R10 | UUID çakışması | UUID v4; çakışmada yeni UUID (yerel kayıt için) |
+| R11 | Gövde kotası | 64 KB sınır |
+| R12 | Offline kuyruğa dönüşme | Yalnızca `SentUnconfirmed` otomatik; `Created` kullanıcı onayı |
+| R13 | 24 s+ belirsiz işlem | §7.5: durum sorgusu + tombstone + `Uncertain`; otomatik yeni UUID yok |
+| R16 | 30 g sonra durum sorgusu `404` | Kullanıcıya "sonuç bilinmiyor"; bilinçli yeni işlem |
+| R17 | AAD uyumsuzluğu | AAD sabit kural; key/method/route değişirse decrypt başarısız → `Uncertain` |
+| R18 | Nonce tekrarı | RNG + her yazmada yeni nonce; testte tekrar aranır |
+| R19 | Kullanıcı değişiminde sızıntı | `UserIdKey` izolasyonu; başka kullanıcı kaydı okunamaz |
 
 ---
 
 ## 8. Uygulama sırası (kod onayı sonrası)
 
-1. `docs/05` §2.7, `docs/06` §1.4 güncellenmiş sözleşmeyi temel al.
-2. Host: `IdempotencyDbContext` + migration + `IIdempotencyStore` + DI.
-3. `IWriteTransactionScopeAccessor` + factory no-op wrapper (ADR-0009 genişletmesi).
-4. Middleware: kapsam, hash, kilit, yanıt tamponu, replay, temizlik tetiği.
-5. Modül `Enlist(scope)` uyumları (Expenses dâhil) — iş mantığı değişmez.
-6. Entegrasyon testleri S1–S20 (Testcontainers MSSQL).
-7. Mobil: `PendingOperationStore` + şifreleme + `AuthHandler` POST retry.
-8. Mobil restart testi (S16) + Windows manuel smoke (2.1).
-9. LocalDB smoke verilerinin temizliği (2.2).
-10. CI (335/335 + yeni testler) yeşili, doküman sürümleri, DoD.
+0. **Kapı:** §3.2 RFC 8785 paket spike'ı + S26/S27 geçer; ADR-0010 onaylı.
+1. Host: `IdempotencyDbContext` + `shared` migration + `IIdempotencyStore` + DI.
+2. `IWriteTransactionScopeAccessor` + no-op wrapper (ADR-0010); modül `Enlist`
+   uyumları (Expenses dâhil) — iş mantığı değişmez.
+3. Middleware: kapsam, hash, kilit, yanıt tamponu, **tek commit**, replay,
+   tombstone, temizlik tetiği.
+4. `GET /api/v1/idempotency/{key}` durum sorgusu + `409 IdempotencyExpired`.
+5. S1–S29 entegrasyon testleri (Testcontainers MSSQL), W6 matrisi, bağlantı
+   kopması hook'u, dört modül testi.
+6. Mobil: `PendingOperationStore` (SQLite + AES-256-GCM), AAD, `Uncertain` durumu,
+   durum sorgusu entegrasyonu, `AuthHandler` POST retry.
+7. Mobil restart testi (S16), >24 h testi (S29), Windows manuel UI smoke (§9.3).
+8. CI yeşili, doküman sürümleri, DoD.
+
+**Operasyonel (koddan bağımsız):** LocalDB temizliği tamamlandı (§9.3);
+Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 
 ---
 
-## 9. Onay bekleyen maddeler (kodlamadan önce kapatılacak)
+## 9. Onay durumu, kritik konular ve kalan riskler
 
-1. **§4.2** — "Kalıcı `InProgress` yok, tek transaction, stale timeout yok"
-   tasarımı onaylıyor musunuz? (1.6 maddesinin kapanışı)
-2. **§4.5** — ADR-0009'un tüm mutasyon POST'larına genişletilmesi ve
-   Expenses'in `Enlist` eklemesi kabul ediliyor mu?
-3. **§3.2** — JCS/RFC 8785 tabanlı dahili canonicalizer kuralları yeterli mi?
-4. **§5.1** — `shared.IdempotencyKeys` şeması ve unique index kabul ediliyor mu?
-5. **§7.1** — SQLite + AES-GCM + `SecureStorage`'da yalnızca anahtar yaklaşımı
-   ve yeni `Microsoft.Data.Sqlite` paketi onaylıyor mu?
-6. **§7.3** — `SentUnconfirmed` otomatik kurtarma, `Created` kullanıcı onayı
-   kuralı onaylıyor mu?
+### 9.1 Altı onay maddesinin güncel durumu
 
-> Bu sorular "karar değişikliği" değil; **tasarım onayı** isteğidir. Cevap
-> gelmeden `docs/11` v1.0 kalır, kod yazılmaz.
+| # | Madde | Kullanıcı kararı | v1.1 durumu |
+|---|---|---|---|
+| 1 | §4.2 Tek transaction, kalıcı `InProgress` yok | **Koşullu onay** | ✅ 5 koşul §4.2 tablosunda karşılandı; belirsiz commit §4.2.1, bağlantı kopması S21 |
+| 2 | §4.5 ADR-0009 genişletmesi + Expenses `Enlist` | **Koşullu onay** | ✅ **ADR-0010** yazıldı; ADR-0009 reference güncellendi; host var/no-op, host yok/eski davranış; S25 dört modül |
+| 3 | §3.2 Kanonik JSON | **Özel uygulama reddedildi** | ✅ RFC 8785 uyumlu kütüphane (`Jcs.Net` 0.1.1 birincil aday) + kapı koşulu + S26/S27; "uyumlu" iddiası kapıya bağlı |
+| 4 | §5.1 `shared.IdempotencyKeys` | **Koşullu onay** | ✅ §5.1: metadata, `Location` allowlist'i, 64 KB, yalnızca 2xx, veri koruması, TTL/tombstone, Status + CHECK kısıtları, auth yasak |
+| 5 | §7.1 SQLite + AES-GCM | **Koşullu onay** | ✅ §7.1–7.2: mevcut altyapı incelendi (yalnızca token store/Preferences); AES-256-GCM/96-bit nonce/tag/AAD; logout, kullanıcı değişimi, yedekleme; decrypt hatasında otomatik işlem yok |
+| 6 | §7.3 `SentUnconfirmed`/`Created` + R13 | **Temel kabul, R13 şartsız düzeltildi** | ✅ §7.5: otomatik yeni UUID yok, durum sorgusu + 30 g tombstone, `Uncertain`, kullanıcıya açık mesaj, offline kuyruk yok (S28/S29) |
+
+### 9.2 Dört kritik konunun çözümü
+
+| # | Konu | Çözüldüğü yer | Doğrulama |
+|---|---|---|---|
+| 1 | Commit sonucu belirsizliği | §4.2.1 — aynı key + unique index; belirsiz sonuçta retry güvenli, yeni UUID yok | S5, S6, **S21** |
+| 2 | RFC 8785 uyumluluğu | §3.2 — uyumu doğrulanmış kütüphane zorunlu; kapı geçilmezse "uyumlu" denmez; decimal sınırı | **S26, S27**, S13 |
+| 3 | >24 h belirsiz mobil işlem | §7.5 — durum sorgusu + gövdesiz tombstone + `Uncertain`; otomatik yeni işlem yok | **S28, S29**, S16 |
+| 4 | Çoklu API instance eşzamanlılığı | §4.4.1 — `UNIQUE` indeks hakem; commit/rollback/deadlock/lock timeout ayrımı; 2. kayıt imkânsız | S4, **S22, S23, S24** |
+
+### 9.3 Operasyonel görevler (koddan bağımsız)
+
+| Görev | Durum |
+|---|---|
+| LocalDB smoke verisi temizliği (karar 2.2-A) | ✅ **Tamamlandı (2026-11-18).** `smoke_20261118@example.com` kullanıcısı, `Market` kategorisi, 125,00 TRY harcama ve 7 refresh token tek transaction'da silindi; doğrulama: 0 satır. Diğer kullanıcıların "Market" kayıtlarına dokunulmadı. |
+| Windows manuel UI smoke (karar 2.1-A) | ⏳ **Bekliyor.** `giriş → harcama → kart → rapor` akışı Windows hedefinde operatör tarafından yapılacak. Bu oturumda GUI etkileşimi mümkün olmadı; V11-T01 doğrulama maddesi olarak açık kaldı. |
+
+### 9.4 Kalan riskler / dikkat gerektiren noktalar
+
+| # | Risk | Etki | Azaltma / not |
+|---|---|---|---|
+| K1 | RFC 8785 paketinin kapıyı geçememesi | Kodlama kapısı kapanır | §3.2: kapsam daraltılır, uyum iddiası geri çekilir, kullanıcıya dönülür |
+| K2 | Decimal sınırı (900 trilyon) üzeri tutar | Farklı tutar aynı hash'a düşebilir | §3.2.1 doğrulama + S27; string DTO alternatifi ayrı onay ister |
+| K3 | Tombstone 30 gün KVKK saklama süresi | Kişisel veri tartışması | Gövdesiz, yalnızca hash/durum; 30 gün; operasyonel onay önerilir |
+| K4 | Yeni `409 IdempotencyExpired` kodu | İstemci sözleşmesi genişler | `docs/06` §1.3 güncellendi; mobil durum sorgusu zorunlu |
+| K5 | Windows manuel smoke yapılmadı | DoD eksik | §9.3; kod onayından önce/sonra operatör tamamlar |
+| K6 | Dağıtık kilit yok | Yüksek eşzamanlılıkta gecikme | §4.4.1 lock timeout → `409 InProgress`; gerekirse yeni ADR |
+| K7 | `Microsoft.Data.Sqlite` yeni bağımlılığı | Paket yönetimi | §7.1 gerekçe; mevcut structured store olmadığı için tek altyapı |
+
+> **Kodlama onayı:** Altı koşullu onayın tamamı ve dört kritik konu bu sürümde
+> kapatılmıştır. Kullanıcı, bu son tasarımı inceledikten sonra **ayrıca açık
+> kodlama onayı** verecektir. O onay gelene kadar `docs/11` v1.1 referans alınır,
+> **kod yazılmaz**.
 
 ---
 
@@ -482,4 +716,5 @@ işlem; aşımda en eskisi uyarıyla silinir. Tek bir gövde için 64 KB üst s�
 
 | Sürüm | Tarih | Değişiklik |
 |---|---|---|
-| 1.0 | 2026-11-18 | `docs/10` cevapları işlendi; 1.4/1.6/1.10 teknik tasarımı, çökme akış diyagramı, test senaryoları ve görev kartı referansı eklendi; tasarım onayı bekliyor |
+| 1.0 | 2026-11-18 | `docs/10` cevapları işlendi; 1.4/1.6/1.10 teknik tasarımı, çökme akış diyagramı, S1–S20 testleri |
+| 1.1 | 2026-11-18 | `docs/11-kararlar.txt` koşulları işlendi: §4.2 beş zorunlu koşul + §4.2.1 belirsiz commit; ADR-0010 + §4.5 dört modül/host scope kuralları; §3.2 özel canonicalizer reddedilip RFC 8785 kütüphanesi + decimal sınırı; §5.1 şema/metadata/kısıtlar/veri koruması; §7.2 AES-256-GCM güvenlik koşulları; §7.5 R13 düzeltildi (durum sorgusu + tombstone + `Uncertain`); §4.4.1 çoklu instance matrisi; S21–S29 eklendi; LocalDB temizliği tamamlandı, Windows smoke bekliyor |
