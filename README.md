@@ -58,8 +58,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.2](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.4](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.14](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.5](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.13](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v2.6](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.14](docs/09-todo.md) | ✅ |
 
 ## Mevcut durum
 
@@ -134,7 +134,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   GitHub Actions CI (`.github/workflows/ci.yml`) Slice 9 build + testlerini
   doğruladı: run `44189257561` yeşil (Android + Windows hedefleri, Java 17 +
   `dotnet workload restore`; 335/335; Slice 8 run `44156632893`, Slice 7 run
-  `44150709461` idi).
+  `44150709461` idi). CI workflow'ü Node 24 action sürümleri ve sabit
+  `ubuntu-24.04` görüntüsü kullanır (2026-11-18 bakımı; `actionlint` temiz).
 - **Sıradaki:** Android emülatörü/SDK kurulduğunda manuel uçtan uca smoke yap
   (giriş → harcama → kart → rapor). v1 dilimleri (0–9) kod tarafında tamamlandı
   ve CI'da yeşil.

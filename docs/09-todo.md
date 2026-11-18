@@ -1,6 +1,6 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.13
+**Sürüm:** 1.14
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Durum notu v2.3](08-durum-ve-devam-notu.md) · [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md)
 
@@ -308,6 +308,9 @@ dotnet test FinTrack.slnx --nologo -v q
 ### Teknik borç / ertelenen
 
 - [ ] `Idempotency-Key` (tüm POST) — ayrı görev
+- [x] CI bakımı — action'lar Node 24 major sürümlerine yükseltildi
+      (`checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6`,
+      `upload-artifact@v7`); runner `ubuntu-24.04` sabitlendi; `actionlint` 0 hata
 - [x] Sürüm kontrolü (git) — başlatıldı
 - [x] CI — GitHub Actions (`.github/workflows/ci.yml`); uzak depo
       [`canbayerdogan/FinTrack`](https://github.com/canbayerdogan/FinTrack),
@@ -366,3 +369,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.11 | 2026-11-17 | Slice 7 tamamlandı; 31 modül + 8 entegrasyon testi eklendi, toplam 300/300, CI run `44150709461` yeşil, migration senkron; aktif dilim Slice 8 |
 | 1.12 | 2026-11-17 | Slice 8 tamamlandı; 10 modül + 7 entegrasyon testi eklendi, toplam 320/320, CI run `44156632893` yeşil; Reporting salt okunur, DbContext/migration yok, `_status` kaldırıldı; aktif dilim Slice 9 |
 | 1.13 | 2026-11-18 | Slice 9 tamamlandı; MAUI iş yükleri kuruldu, 3 proje + 15 test eklendi, toplam 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil; emülatör smoke'u kaldı |
+| 1.14 | 2026-11-18 | CI bakımı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` ile workflow doğrulandı |

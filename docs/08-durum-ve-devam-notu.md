@@ -1,6 +1,6 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.5
+**Sürüm:** 2.6
 **Tarih:** 2026-11-18
 **Bağlı belgeler:** [Yol haritası v1.13](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.4](06-api-sozlesmeleri.md) · [Teknik Mimari v1.2](03-mimari.md) · [İş Kuralları v1.4](05-is-kurallari.md) · ADR-0001…0009
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
@@ -85,6 +85,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | Entegrasyon testleri | `dotnet test tests/FinTrack.Api.IntegrationTests` | ✅ 72/72 (CI run `44156632893`; yerel daemon kapalı) |
 | Android derlemesi | `dotnet build src/Mobile/FinTrack.Mobile -f net10.0-android` (CI Ubuntu, Java 17) | ✅ Yerel SDK/JDK yok; CI run `44189257561` ile derlendi |
 | CI | GitHub Actions `build-test` | ✅ run `44189257561` yeşil (335/335; Android + Windows); önceki: `44156632893` (320/320) |
+| CI workflow lint | `actionlint` v1.7.12 — `.github/workflows/ci.yml` | ✅ 0 hata (Node 24 action'ları + `ubuntu-24.04`) |
 | Migration | `dotnet ef migrations has-pending-model-changes --context DebtsDbContext ...` | ✅ "No changes have been made to the model since the last migration." (Slice 9'da DbContext/entity/migration yok) |
 
 **Test dağılımı (335 = 263 birim + 72 entegrasyon):**
@@ -278,7 +279,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 - **Docker zorunlu (yerel):** Entegrasyon testleri Docker Desktop motoru kapalıyken
   `DockerUnavailableException` ile toplu başarısız olur (50 test); hata koda değil
   ortama aittir. Testten önce `docker info` çalıştığını doğrula. GitHub Actions
-  `ubuntu-latest` imajında Docker hazır gelir.
+  `ubuntu-24.04` imajında Docker hazır gelir.
 - **Ekstre türetimi:** `ComputedDebtAtPeriodEnd` ve `CarriedOverAmount` saklanmaz;
   her okumada `CardDebtService` + `ICardPaymentQueries` ile hesaplanır. Devreden
   borç aralığı `(önceki.PeriodEnd, mevcut.PeriodEnd]`; önceki aktif ekstre yoksa `0`.
@@ -660,10 +661,11 @@ restore`) yeşil. Release XAML `XC0022` uyarıları `x:DataType` ile temizlendi.
    `AuthHandler` testiyle birlikte düzelt.
 2. **Windows manuel UI smoke (opsiyonel):** Build 0/0 ama uygulama elle açılıp
    denmedi; aynı akış Windows hedefinde denenebilir.
-3. **CI bakımı (bloker değil):** Run `44190582258` annotasyonları — Node 20
-   deprecated (actions v4, Node 24'e zorlanıyor), `actions/setup-java@v4`
-   deprecated → v5, `ubuntu-latest` 19 Ekim 2026 sonrası Ubuntu 26'ya geçiyor.
-   Ayrı bakım görevi olarak planla; Slice 9 kapsamı dışı.
+3. **CI bakımı ✅ (2026-11-18):** Run `44190582258` annotasyonları giderildi —
+   `checkout@v7`, `setup-dotnet@v6`, `cache@v6`, `setup-java@v6` ve
+   `upload-artifact@v7` (hepsi Node 24); runner `ubuntu-latest` yerine
+   `ubuntu-24.04` sabitlendi. `actionlint` v1.7.12 ile 0 hata. Push sonrası yeni
+   CI run'ı doğrulanacak.
 4. **Ertelenen kapsam:** `Idempotency-Key` (`docs/06` §1.4 / `docs/07` Slice 2);
    okuma önbelleği opsiyoneldi, eklenmedi; bildirim / biyometrik giriş / çoklu
    cihaz oturum ekranı v1 dışı.
@@ -701,3 +703,4 @@ Android doğrulaması CI run'ında (yerel SDK yok).
 | 2.3 | 2026-11-17 | Slice 8 tamamlandı: 3 salt okunur rapor uç noktası, veri erişimi yalnızca `ModuleContracts`, Reporting DbContext/migration yok, `_status` kaldırıldı; 10 modül + 7 entegrasyon testi, toplam 320/320, CI run `44156632893` yeşil |
 | 2.4 | 2026-11-18 | Slice 9 tamamlandı: MAUI iş yükleri (Android + Windows), Core/Mobile/Tests projeleri, Shell + MVVM, SecureStorage + 401 refresh (POST retry yok), v1 ekranları; 15 mobile testiyle 263 birim/mimari + 72 entegrasyon = 335; Windows Debug/Release 0/0; Android CI run `44189257561` yeşil |
 | 2.5 | 2026-11-18 | Oturum devri notu eklendi (§8.3): depo/CI durumu, kalan manuel smoke, CI bakım uyarıları ve yeniden doğrulama komutları |
+| 2.6 | 2026-11-18 | CI bakımı tamamlandı: GitHub action'ları Node 24 major sürümlerine yükseltildi, runner `ubuntu-24.04` sabitlendi, `actionlint` doğrulaması eklendi |
