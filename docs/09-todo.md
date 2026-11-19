@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.23
+**Sürüm:** 1.24
 **Tarih:** 2026-11-19
-**Bağlı belgeler:** [Durum notu v2.13](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
+**Bağlı belgeler:** [Durum notu v2.14](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -35,8 +35,8 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 görev kartı **V11-T01 — Idempotency-Key**: kararlar + altı koşullu tasarım onayı + açık kodlama onayı tamam; **uygulandı** (`docs/11` v1.3, ADR-0010; `docs/07` §5.1) |
-| Son doğrulama | **435/435** yerel: 222 modül + 77 API birim + 10 mimari + 31 mobil + 95 entegrasyon; host build 0/0 (`docs/11` §9.5) · 2026-11-19 · V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; push sonrası CI sonucu kontrol edilecek (`docs/08` §8.5) |
-| Sıradaki adım | Kod tarafında bekleyen iş yok: CI sonucunu kontrol et, **Windows manuel UI smoke (2.1-A) ve MAUI head build** operatör tarafından tamamlanacak (`docs/08` §8.5, `docs/11` §9.3/§9.5). LocalDB temizliği (2.2-A) ✅ tamamlandı |
+| Son doğrulama | **435/435** yerel: 222 modül + 77 API birim + 10 mimari + 31 mobil + 95 entegrasyon; host build 0/0 (`docs/11` §9.5) · 2026-11-19 · V11-T01 kodu `5e614c7` push sonrası CI **yeşil** (run `44413433056`); Android MAUI head build JDK 17 ile yerelde 0/0 (`docs/08` §8.5) |
+| Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak (`docs/08` §8.5, `docs/11` §9.3/§9.5). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
 
@@ -401,3 +401,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.21 | 2026-11-18 | Altı koşullu onay işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, LocalDB temizliği ✅ tamamlandı; Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
 | 1.22 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency + ADR-0010 modül uyumları + durum sorgusu + mobil pending operations; 435/435 test, son doğrulama ve teknik borç maddesi güncellendi. S19 gerçek SQL 1205 enjeksiyonu hook tabanlı arbit ile örtüldü (`docs/11` §4.7); Windows smoke/MAUI head build operatörde |
 | 1.23 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; sürüm başlıkları ve "henüz commit edilmedi" notları güncellendi, oturum devri kaydı `docs/08` §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
+| 1.24 | 2026-11-19 | CI run `44413433056` yeşil doğrulandı; Android MAUI head build JDK 17 ile 0/0; `PendingOperationRecoveryTests` zaman bağımlılığı giderildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |

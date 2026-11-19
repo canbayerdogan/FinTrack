@@ -126,11 +126,10 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   host build 0 uyarı/0 hata. Ayrıntı: `docs/11` §9.5. Önceki yeşil CI run'ları
   `44365407221` (CI bakımı), `44366617692` (dokümanlar), `44379256250`
   (Android düzeltmeleri; Slice 9 run `44189257561`); V11-T01 kodu `5e614c7`
-  ile commit edilip `origin/main`'e push edildi (2026-11-19). Push sonrası CI
-  doğrulaması kontrol edilecek; kaldığımız yer `docs/08` §8.5'te.
-  Windows MAUI head hedefi bu oturumda yerel Java SDK yapılandırması nedeniyle
-  derlenemedi; `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip
-  test edildi. Windows manuel UI smoke operatör görevidir.
+  için CI run `44413433056` **yeşil** (2026-11-18). Android MAUI head build
+  JDK 17 ile yerelde 0 uyarı/0 hata doğrulandı; `FinTrack.Mobile.Core` ve
+  `FinTrack.Mobile.Tests` de yeşil. Kaldığımız yer `docs/08` §8.5'te; Windows
+  manuel UI smoke operatör görevidir.
 - **Dokümanlar:** ✅ 01–11 + ADR-0010 tamam; `docs/02` §5 açık kararları ve kart
   alışverişi sahipliği (ADR-0008) kapandı. ADR-0009 (modüller arası atomik yazma)
   kabul edildi; ADR-0010 (v1.1 idempotent yazmalarda host sahipliğinde transaction)
@@ -162,9 +161,10 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   [docs/07 §5.1](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md)'de. Açık
   kodlama onayı alındı; uygulama ve 435/435 doğrulama `docs/11` §9.5'te. Dört
   kritik konunun çözümü `docs/11` §9.2'de; kalan riskler §9.4. LocalDB smoke
-  temizliği ✅ tamamlandı; **Windows manuel UI smoke ve MAUI head build operatör
-  görevleri bekliyor.** Oturum devri kaydı `docs/08` §8.5'te; geri dönünce önce
-  `docs/09` §2 ve `docs/08` §8.5 okunur. Idempotency sonrası v1.1 önceliği:
+  temizliği ✅ tamamlandı; CI run `44413433056` (`5e614c7`) yeşil; Android MAUI
+  head build JDK 17 ile yerelde 0/0 doğrulandı. **Windows manuel UI smoke
+  operatör görevi bekliyor.** Oturum devri kaydı `docs/08` §8.5'te; geri dönünce
+  önce `docs/09` §2 ve `docs/08` §8.5 okunur. Idempotency sonrası v1.1 önceliği:
   parola sıfırlama + e-posta doğrulama.
 
 ## Çözüm yapısı (özet)

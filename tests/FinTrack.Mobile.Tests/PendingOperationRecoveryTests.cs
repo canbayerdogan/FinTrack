@@ -87,8 +87,8 @@ public sealed class PendingOperationRecoveryTests
     public async Task Over_twenty_four_hours_with_404_marks_uncertain_without_new_uuid()
     {
         using var database = new TempDatabase();
-        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
         var clock = new FakeTimeProvider(Start);
+        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore(), clock);
         var queue = new QueueHandler(QueueHandler.Empty(HttpStatusCode.NotFound));
         var recovery = new PendingOperationRecoveryService(CreateHttp(queue), store, clock);
         var record = await CreateSentUnconfirmedAsync(recovery, store);
@@ -112,8 +112,8 @@ public sealed class PendingOperationRecoveryTests
     public async Task Status_query_completed_is_definitive_success_and_deletes_record()
     {
         using var database = new TempDatabase();
-        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
         var clock = new FakeTimeProvider(Start);
+        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore(), clock);
         var queue = new QueueHandler(QueueHandler.Json(
             HttpStatusCode.OK,
             new { status = "Completed", completedAtUtc = Start, hasBody = false }));

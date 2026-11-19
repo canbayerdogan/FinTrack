@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.13
+**Sürüm:** 2.14
 **Tarih:** 2026-11-19
-**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · ADR-0001…0010
+**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.24](09-todo.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -771,21 +771,25 @@ devir notu ve sürüm başlığı düzeltmeleri ayrı bir commit'dir; dönünce
 `409 IdempotencyExpired`, mobil AES-256-GCM pending store/kurtarma, S1–S29;
 435/435 yerel test, host build 0/0. `docs/05`–`docs/11`, ADR-0010 ve README
 tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
-`docs/answer*.txt` commit edilmedi.
+`docs/answer*.txt` commit edilmedi. CI run `44413433056` (`5e614c7`)
+**success**; Android MAUI head build JDK 17 ile yerelde 0/0 doğrulandı.
 
 **Kalan (öncelik sırası):**
 
-1. Push sonrası GitHub Actions `build-test` sonucunu kontrol et (run
-   `44413433056`, kontrol anında `in_progress`):
+1. ✅ Push sonrası GitHub Actions `build-test` **yeşil** (run
+   `44413433056`, `5e614c7`, 2026-11-18 22:38:02Z, 435/435 beklenen akış):
    `https://github.com/canbayerdogan/FinTrack/actions/runs/44413433056`.
-   Kırmızıysa logları incele. Son bilinen yeşil run `44379256250` (335/335,
-   V11-T01 öncesi kod).
+   (Docs-only handoff commit `ce412cd` için ayrıca run tetiklendi mi kontrol
+   edilebilir; kod doğrulaması `5e614c7` run'ı ile sağlandı.)
 2. Windows manuel UI smoke: `giriş → harcama → kart → rapor` (karar 2.1-A);
    henüz çalıştırılmadı, operatör tarafından yapılacak.
-3. MAUI head build: yerel varsayılan `JAVA_HOME` JRE 1.8
-   (`C:\Program Files\Java\jre1.8.0_451`) nedeniyle `XA5300` veriyor; JDK 17
-   ile tekrar dene (`docs/08` §5'teki Android SDK/JDK notu).
-4. Yeni kod işi yok; v1.1 sonrası öncelik parola sıfırlama + e-posta doğrulama.
+3. ✅ Android MAUI head build JDK 17 ile 0 uyarı/0 hata:
+   `dotnet build src/Mobile/FinTrack.Mobile/FinTrack.Mobile.csproj -f net10.0-android -p:JavaSdkDirectory='C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot'`
+   (2026-11-19, yerel doğrulama). Windows hedefi build'i zaten yeşildi.
+4. Yerel mobil test determinism düzeltmesi: `PendingOperationRecoveryTests` iki
+   senaryosunda `PendingOperationStore`'a sabit `FakeTimeProvider` verildi;
+   `FinTrack.Mobile.Tests` 31/31 yerelde yeşil (CI run `44413433056` zaten yeşildi).
+5. Yeni kod işi yok; v1.1 sonrası öncelik parola sıfırlama + e-posta doğrulama.
 
 **Geri dönüşte okunacaklar:** `docs/09` §2 → bu bölüm → `docs/11` §9.5 →
 `docs/07` §5.1.
@@ -820,3 +824,4 @@ tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
 | 2.11 | 2026-11-18 | `docs/11-kararlar.txt` altı koşullu onayı işlendi: `docs/11` v1.1 + ADR-0010, RFC 8785 kütüphane kapısı, 24 s + 30 g tombstone, durum sorgusu/`409 IdempotencyExpired`, S1–S29, dört kritik konunun çözümü ve K1–K7 riskleri; LocalDB temizliği tamamlandı, Windows smoke bekliyor; yalnızca kodlama onayı bekliyor |
 | 2.12 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency (middleware/store/migration/DI, tek `DbTransaction`, ADR-0010 modül uyumları), durum sorgusu, mobil AES-256-GCM pending store ve kurtarma; 435/435 test. §4/§6/§8 durum notları güncellendi; Windows UI smoke ve MAUI head build operatörde |
 | 2.13 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; "henüz commit edilmedi" notları ve sürüm başlıkları güncellendi, oturum devri kaydı §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
+| 2.14 | 2026-11-19 | CI run `44413433056` (`5e614c7`) yeşil olarak doğrulandı; Android MAUI head build JDK 17 ile yerelde 0/0; mobil pending operation testlerinde deterministik saat enjeksiyonu düzeltildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |
