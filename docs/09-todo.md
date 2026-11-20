@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.24
-**Tarih:** 2026-11-19
-**Bağlı belgeler:** [Durum notu v2.14](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
+**Sürüm:** 1.25
+**Tarih:** 2026-11-20
+**Bağlı belgeler:** [Durum notu v2.15](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 görev kartı **V11-T01 — Idempotency-Key**: kararlar + altı koşullu tasarım onayı + açık kodlama onayı tamam; **uygulandı** (`docs/11` v1.3, ADR-0010; `docs/07` §5.1) |
-| Son doğrulama | **435/435** yerel: 222 modül + 77 API birim + 10 mimari + 31 mobil + 95 entegrasyon; host build 0/0 (`docs/11` §9.5) · 2026-11-19 · V11-T01 kodu `5e614c7` push sonrası CI **yeşil** (run `44413433056`); Android MAUI head build JDK 17 ile yerelde 0/0 (`docs/08` §8.5) |
-| Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak (`docs/08` §8.5, `docs/11` §9.3/§9.5). LocalDB temizliği (2.2-A) ✅ tamamlandı |
+| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.4, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) |
+| Son doğrulama | **45/45** mobil (31 mevcut + 14 yeni), **354/354** Docker hariç toplam (45 mobil + 77 API birim + 10 mimari + 222 modül), `FinTrack.slnx` Android + Windows build **0 uyarı/0 hata** · 2026-11-20. API entegrasyonları Docker daemon kapalı olduğu için çalıştırılamadı (86/95 `DockerUnavailableException`, 9 DB'siz smoke geçti); başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
+| Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak; Docker kullanılabilir olduğunda API entegrasyonları/CI yeniden doğrulanacak (`docs/08` §8.5/§8.7, `docs/11` §9.3/§9.6). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
 
@@ -290,6 +290,39 @@ dotnet test FinTrack.slnx --nologo -v q
       (`Kategori kırılımı: Market`) doğrulandı.
 - [x] **Dokümanlar:** `docs/07` v1.15, `docs/08` v2.9, `README.md`, bu dosya.
 
+### V11-T02 — Mobil harcama akışında PendingOperation entegrasyonu ✅ (2026-11-20)
+
+- [x] **Kapsam:** Bağlayıcı görev kartı `docs/12-PendingOperation Entegrasyonu.txt`;
+      yeni paket/tablo/migration, CQRS, state-machine veya modül/host
+      değişikliği yok. Yalnızca harcama oluşturma akışı entegre edildi.
+- [x] **Save akışı:** `AddExpenseViewModel.SaveAsync` doğrulama → tek
+      `CreateExpenseRequest` gövdesi (bir kez serileştirilir) →
+      `FindMatchingAsync`/`CreateAsync` → `SendAsync` veya `RecoverOneAsync`
+      zincirini kullanıyor. `Created` ağa çıkmadan kaydediliyor, gönderimden
+      önce `SentUnconfirmed` kalıcılaşıyor, aynı key/body ile POST yapılıyor;
+      kesin başarıda kayıt siliniyor, belirsizlikte korunuyor.
+- [x] **Tekrar Kaydet koruması:** `FindMatchingAsync` aynı kullanıcı, method,
+      route ve gövde baytlarını arıyor; çözülemeyen gövde yeni UUID üretme
+      tarafında eşleşmiş sayılıyor. `Uncertain` otomatik yeni harcamaya
+      dönüşmüyor; yeni form değerleri/başarı sonrası yeni anahtar oluşuyor.
+- [x] **Yaşam döngüsü ve izolasyon:** `PendingOperationStartup`, `App.OnStart`
+      içinde navigasyondan sonra fire-and-forget çağrılıyor;
+      `SemaphoreSlim(1,1)` ile single-flight, oturum hazır olmadan recovery
+      yok, hatalar yutuluyor. Yerel kullanıcı anahtarı JWT `sub`'dan türetiliyor
+      (`JwtUserKey`, `SessionService.GetUserIdKeyAsync`); oturum değişirse
+      pending kayıt korunup başka token ile gönderilmiyor.
+- [x] **Testler:** `ExpensePendingOperationIntegrationTests` içinde 14 yeni
+      test; görev §4 senaryoları 1–10 ViewModel → PendingOperation → HTTP
+      zincirinde doğrulandı. Ek olarak oturum değişimi, kullanıcı izolasyonu,
+      JWT `sub` yokluğu ve 31 günlük tombstone senaryoları eklendi.
+      `dotnet test tests/FinTrack.Mobile.Tests`: **45/45**; Docker hariç
+      çözüm testleri **354/354**; Android + Windows çözüm build **0/0**.
+- [x] **Belgeler:** `docs/08` v2.15 + §8.7, `docs/09` v1.25,
+      `docs/11` v1.4 + §9.6 ve denetim raporunun §8 kapanış durumu güncellendi.
+- [ ] **Operasyonel doğrulama:** Docker daemon erişilemediği için API
+      entegrasyonları/CI bu oturumda yeniden doğrulanmadı; Windows manuel UI
+      smoke operatör tarafından tamamlanacak.
+
 ### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
@@ -315,16 +348,16 @@ dotnet test FinTrack.slnx --nologo -v q
 
 - [x] `Idempotency-Key` (finansal/mutasyon `POST`, auth hariç) — **v1.1 V11-T01 tamamlandı**
       · kararlar: [docs/10 v1.2](10-karar-bekleyen-konular.md) · son tasarım:
-      [docs/11 v1.3](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
+      [docs/11 v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
       · görev kartı: [docs/07 §5.1](07-yol-haritasi-ve-ajan-gorev-standardi.md).
       **Durum: altı koşullu tasarım onayı + açık kodlama onayı alındı; uygulandı;
-      435/435 test yeşil (`docs/11` §9.5).**
+      V11-T01 435/435 test yeşil (`docs/11` §9.5); V11-T02 mobil 45/45 (`docs/11` §9.6).**
       Uygulanan kapsam: RFC 8785 kapısı (S26/S27) → host middleware + `shared`
       migration + host-owned transaction (ADR-0010, dört modül) +
       `409 IdempotencyExpired` + durum sorgusu + **S1–S29** testleri +
       mobil pending store (`Uncertain`). `5e614c7` push edildi; sıradaki operasyonel
-      maddeler: CI sonucu, Windows
-      smoke (2.1) ve MAUI head build.
+      maddeler: Windows smoke (2.1) ve Docker erişilebildiğinde API entegrasyonlarının yeniden doğrulanması.
+      MAUI head build JDK 17 ile yerelde 0/0 doğrulandı.
 - [ ] Windows manuel UI smoke — karar 2.1-A: `giriş → harcama → kart → rapor` akışı
       Windows hedefinde de yapılacak (henüz çalıştırılmadı; operatör tamamlayacak)
 - [x] LocalDB smoke verilerinin silinmesi — karar 2.2-A:
@@ -402,3 +435,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.22 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency + ADR-0010 modül uyumları + durum sorgusu + mobil pending operations; 435/435 test, son doğrulama ve teknik borç maddesi güncellendi. S19 gerçek SQL 1205 enjeksiyonu hook tabanlı arbit ile örtüldü (`docs/11` §4.7); Windows smoke/MAUI head build operatörde |
 | 1.23 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; sürüm başlıkları ve "henüz commit edilmedi" notları güncellendi, oturum devri kaydı `docs/08` §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
 | 1.24 | 2026-11-19 | CI run `44413433056` yeşil doğrulandı; Android MAUI head build JDK 17 ile 0/0; `PendingOperationRecoveryTests` zaman bağımlılığı giderildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |
+| 1.25 | 2026-11-20 | **V11-T02 tamamlandı:** `AddExpenseViewModel` gerçek harcama POST'unu PendingOperation/Idempotency zincirine bağladı; tekrar Kaydet, `Created`/`SentUnconfirmed`/`Uncertain`, kullanıcı izolasyonu ve açılışta single-flight recovery doğrulandı. 14 yeni mobil testiyle 45/45, Docker hariç 354/354, Android + Windows build 0/0. Docker daemon kapalı; API entegrasyonları ve Windows UI smoke operasyonel doğrulamaya bırakıldı. |

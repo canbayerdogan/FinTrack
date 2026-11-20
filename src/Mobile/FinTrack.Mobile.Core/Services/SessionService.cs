@@ -20,6 +20,17 @@ public sealed class SessionService
     public async Task<bool> IsAuthenticatedAsync(CancellationToken cancellationToken = default) =>
         !string.IsNullOrWhiteSpace(await _tokenStore.GetAccessTokenAsync(cancellationToken));
 
+    /// <summary>
+    /// Pending-operation izolasyonu için yerel kullanıcı anahtarı (JWT <c>sub</c>).
+    /// Token yoksa/okunamıyorsa null döner; bu durumda recovery ve finansal
+    /// pending kaydı oluşturulmaz (docs/11 §7.2, §7.5).
+    /// </summary>
+    public async Task<string?> GetUserIdKeyAsync(CancellationToken cancellationToken = default)
+    {
+        var accessToken = await _tokenStore.GetAccessTokenAsync(cancellationToken);
+        return JwtUserKey.TryGetSubject(accessToken);
+    }
+
     public async Task LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
         var auth = await _api.LoginAsync(email, password, cancellationToken);

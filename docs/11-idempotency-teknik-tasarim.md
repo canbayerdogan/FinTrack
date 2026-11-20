@@ -1,8 +1,8 @@
 # FinTrack — Idempotency Teknik Tasarımı
 
-**Sürüm:** 1.3
-**Tarih:** 2026-11-19
-**Durum:** ✅ V11-T01 uygulandı; çalıştırılabilir testler **435/435** yeşil — Windows manuel UI smoke ve MAUI head build operatör görevleri
+**Sürüm:** 1.4
+**Tarih:** 2026-11-20
+**Durum:** ✅ V11-T01 + V11-T02 uygulandı; mobil **45/45**, Docker hariç toplam **354/354**, çözüm build **0/0** — Windows manuel UI smoke ve Docker erişilebildiğinde API entegrasyon doğrulaması operatör görevleri
 **Bağlı belgeler:** [Kararlar v1.2](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5.1
 
 > Bu dosya, `docs/10` kararlarının teknik tasarımı ve kullanıcının
@@ -729,8 +729,10 @@ Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 
 > **Kodlama onayı ve uygulama:** Altı koşullu onayın tamamı ve dört kritik konu
 > kapatılmıştır; kullanıcı `5abb6af` sonrası açık kodlama onayını vermiştir.
-> V11-T01 uygulandı ve doğrulandı (§9.5). Kalan işler operasyoneldir: Windows
-> manuel UI smoke (§9.3) ve Android Java SDK gerektiren MAUI head build.
+> V11-T01 uygulandı ve doğrulandı (§9.5). V11-T02 ile gerçek mobil harcama
+> akışı da aynı altyapıya bağlandı (§9.6). Kalan işler operasyoneldir: Windows
+> manuel UI smoke (§9.3) ve Docker erişilebildiğinde API entegrasyonlarının
+> yeniden doğrulanması; Android/Windows MAUI build JDK 17 ile yerelde 0/0'dır.
 
 ### 9.5 V11-T01 uygulama ve doğrulama durumu (2026-11-19)
 
@@ -752,6 +754,36 @@ commit/rollback/lock-timeout senaryoları (S4/S21/S22–S24) ile örtüldü.
 smoke (§9.3); yerel Android Java SDK yapılandırması nedeniyle MAUI head projesinin
 tam build'i. `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip test edildi.
 
+### 9.6 V11-T02 — gerçek mobil harcama akışı (2026-11-20)
+
+V11-T01 altyapısı hazırdı; denetimde `AddExpenseViewModel.SaveAsync` hâlâ
+`FinTrackApiClient.CreateExpenseAsync`'i doğrudan çağırıyordu. V11-T02 bu boşluğu
+**yeni bir state machine kurmadan** kapattı.
+
+| Karar / davranış | Uygulama |
+|---|---|
+| Tek anahtar, tek gövde | `SaveAsync` formu doğrular, `CreateExpenseRequest`'i `ApiJson.Options` ile **bir kez** `byte[]`'e serileştirir. `CreateAsync` bu baytları pending kaydına yazar; tüm denemeler aynı baytları ve kaydın UUID `D` anahtarını kullanır. |
+| Typed client'ın baypas edilmesi | `CreateExpenseAsync` yerine finansal POST `PendingOperationRecoveryService.SendPostAsync` ile gönderilir. Genel POST yardımcısı, gönderimden önce `SentUnconfirmed` geçişini ve bayt-identik replay'i garanti edemediği için kullanılmaz; typed client yalnızca form GET'leri için kalır. |
+| Kalıcı durum sırası | `CreateAsync` → `Created` (ağa çıkmaz); `SendAsync` ağa çıkmadan önce `SentUnconfirmed` yazar; 2xx → kayıt silinir; 4xx/5xx/ağ hatası → kayıt korunur; `Uncertain` → otomatik yeni işlem yok. Mevcut `Created`/`SentUnconfirmed`/`Uncertain` anlamları değişmedi. |
+| Tekrar Kaydet | `FindMatchingAsync(userIdKey, POST, /api/v1/expenses, body)` aynı kullanıcı/method/route ve gövdeyi arar; `Created` aynı kayıtla gönderilir, `SentUnconfirmed` aynı kayıtla kurtarılır, `Uncertain` mesaj gösterir ve yeni POST açmaz. Gövde çözülemezse kayıt eşleşmiş sayılır; böylece yeni UUID üretilmez. Form değişirse/başarı sonrası yeni kullanıcı işlemi yeni anahtar alır. |
+| Kullanıcı izolasyonu | Yerel `UserIdKey = JWT sub` (`JwtUserKey.TryGetSubject` → `SessionService.GetUserIdKeyAsync`). Recovery servisindeki isteğe bağlı `currentUserKeyProvider` kayıt sahibi ile oturum kullanıcısını karşılaştırır; farklıysa kayıt korunur ve başka token ile gönderilmez. AES-256-GCM + AAD + SecureStorage anahtarı aynen korundu. |
+| Startup recovery | `App.OnStart` navigasyondan sonra `PendingOperationStartup.RecoverCurrentUserAsync`'u fire-and-forget çağırır. `SemaphoreSlim(1,1)` kuyruğa girmeden single-flight sağlar; oturum hazır değilse/hata varsa hiçbir şey yapılmaz, açılış ve navigasyon bloklanmaz. Yalnızca `SentUnconfirmed` kurtarılır; `Created` otomatik gönderilmez. |
+| 30 saat / 30 gün | Görev kartındaki "30 saat ifadesi", V11-T01 kaynak tasarımındaki **30 günlük** tombstone TTL'siyle çelişir. Sözleşme korundu: 24 saatten sonra durum sorgusu, 31. saatte hâlâ sorgu/bekleyen durum; 31. günde tombstone/`Uncertain`. Ayrı testlerle doğrulandı. |
+| Kapsam dışı | Kart/borç/ödeme/para girişi mutasyonları, profil `PUT`, login/register/logout; yeni paket, tablo, migration, CQRS veya modül/host değişikliği yok. |
+
+**Test karşılığı:** `tests/FinTrack.Mobile.Tests/ExpensePendingOperationIntegrationTests.cs`
+içindeki 14 test, görev kartı §4 senaryoları 1–10'u ViewModel →
+PendingOperation → HTTP zincirinde doğrular; ayrıca oturum değişimi,
+kullanıcı izolasyonu, JWT `sub` yokluğu ve 31 günlük tombstone ele alınır.
+
+| Kontrol | Sonuç |
+|---|---|
+| `dotnet test tests/FinTrack.Mobile.Tests --nologo` | **45/45** (31 mevcut + 14 yeni) |
+| Docker hariç çözüm testleri | **354/354** (45 mobil + 77 API birim + 10 mimari + 222 modül) |
+| `dotnet build FinTrack.slnx -p:JavaSdkDirectory=... --nologo -v q` | **0 uyarı, 0 hata** (Android + Windows) |
+| API entegrasyonları | ⚠️ Docker daemon kapalı: 86/95 `DockerUnavailableException`, 9 DB'siz smoke geçti; başarılı sayılmaz |
+| Windows manuel UI smoke | ⏳ Operatör tarafından tamamlanacak; bu oturumda çalıştırılmadı |
+
 ---
 
 ## 10. Değişiklik geçmişi
@@ -762,3 +794,4 @@ tam build'i. `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip test edi
 | 1.1 | 2026-11-18 | `docs/11-kararlar.txt` koşulları işlendi: §4.2 beş zorunlu koşul + §4.2.1 belirsiz commit; ADR-0010 + §4.5 dört modül/host scope kuralları; §3.2 özel canonicalizer reddedilip RFC 8785 kütüphanesi + decimal sınırı; §5.1 şema/metadata/kısıtlar/veri koruması; §7.2 AES-256-GCM güvenlik koşulları; §7.5 R13 düzeltildi (durum sorgusu + tombstone + `Uncertain`); §4.4.1 çoklu instance matrisi; S21–S29 eklendi; LocalDB temizliği tamamlandı, Windows smoke bekliyor |
 | 1.2 | 2026-11-19 | Açık kodlama onayı işlendi. §3.2 RFC 8785 kapısı koşuldu: `Jcs.Net` 0.1.1 resmî vektörler/S13/strict I-JSON testlerini geçti (26/26). §3.2.1 sayı sınırı, kapıda bulunan double çakışması nedeniyle `2^53/10^4`'ten `2^39`'a düzeltildi (kullanıcı onayıyla); S27 ve K2 güncellendi. |
 | 1.3 | 2026-11-19 | **V11-T01 uygulandı:** host middleware/store/`shared` migration/DI, tek `DbTransaction` + ADR-0010 modül uyumları, durum sorgusu ve `409 IdempotencyExpired`, mobil AES-256-GCM pending store + kurtarma; S1–S29 kapsamı (S19 gerçek deadlock enjeksiyonu yerine hook tabanlı arbit) ve 435/435 test. §4.7 uygulama notu, §9.5 doğrulama tablosu ve son onay notu güncellendi. |
+| 1.4 | 2026-11-20 | **V11-T02 uygulandı:** `AddExpenseViewModel.SaveAsync` gerçek harcama POST'unu PendingOperation/Idempotency zincirine bağladı; tek key/body, tekrar Kaydet koruması, JWT `sub` kullanıcı izolasyonu, oturum değişimi koruması ve açılışta single-flight recovery. 14 yeni entegrasyon testiyle 45/45 mobil, Docker hariç 354/354, build 0/0. §9.6 uygulama notu eklendi; Docker/Windows operasyonel doğrulama açık bırakıldı. |

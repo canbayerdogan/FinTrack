@@ -28,5 +28,10 @@ public partial class App : Application
         var navigator = _services.GetRequiredService<IAppNavigator>();
         var authenticated = await session.IsAuthenticatedAsync();
         await navigator.GoToAsync(authenticated ? "//main" : "login");
+
+        // Kurtarma navigasyondan sonra arka planda çalışır; açılışı ve UI'ı
+        // bloklamaz. Oturum yoksa/zaten sürüyorsa servis hiçbir şey yapmaz.
+        var startup = _services.GetRequiredService<PendingOperationStartup>();
+        _ = startup.RecoverCurrentUserAsync();
     }
 }

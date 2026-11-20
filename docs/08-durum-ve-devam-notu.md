@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.14
-**Tarih:** 2026-11-19
-**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.3](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.24](09-todo.md) · ADR-0001…0010
+**Sürüm:** 2.15
+**Tarih:** 2026-11-20
+**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.25](09-todo.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -61,11 +61,19 @@ gereği son docs run'ı eklenmez). **Kod commit'i `5e614c7` push edildi**
 **Operasyonel:** LocalDB smoke verileri temizlendi (0 satır doğrulandı); Windows
 manuel UI smoke operatör tarafından tamamlanacak (§8.4, §8.3 madde 2).
 
+**V11-T02 (2026-11-20):** Gerçek `AddExpenseViewModel.SaveAsync` akışı
+PendingOperation altyapısına bağlandı: doğrulama → tek anahtar → sabit gövde →
+`Created` kaydı → `SentUnconfirmed` → aynı key/body ile POST → başarıda silme /
+belirsizlikte `Uncertain` veya pending. Startup recovery oturum hazır olduktan
+sonra tek uçuş olarak tetikleniyor; kullanıcı anahtarı JWT `sub`'den türetiliyor.
+`FinTrack.Mobile.Tests` **45/45** (14 yeni entegrasyon testi); çözüm build'i
+JDK 17 ile 0 uyarı/0 hata. Ayrıntılar §8.7 ve `docs/11` §9.6.
+
 **Mobil:** `src/Mobile/FinTrack.Mobile.Core` (platform bağımsız net10.0: DTO,
 typed `HttpClient`, `AuthHandler`/`SessionRefresher`, `SessionService`, 10
 ViewModel), `src/Mobile/FinTrack.Mobile` (MAUI Shell + v1 XAML ekranları,
 `SecureStorageTokenStore`, `MauiNavigator`), `tests/FinTrack.Mobile.Tests`
-(15 xUnit testi). Hedefler: Android + Windows.
+(45 xUnit testi). Hedefler: Android + Windows.
 
 **Yazılmış modüller:** Identity (`FinTrack.Api/Identity`, `identity` şeması),
 Expenses (`expenses` şeması, migration, uç noktalar), CreditCards (`cards` şeması,
@@ -117,7 +125,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 | `FinTrack.Modules.CashInflows.Tests` | 48 | Domain + handler (SQLite in-memory) |
 | `FinTrack.Modules.Debts.Tests` | 31 | Domain + handler + ADR-0009 atomiklik (SQLite in-memory) |
 | `FinTrack.Modules.Reporting.Tests` | 10 | Handler, fake `ModuleContracts` |
-| `FinTrack.Mobile.Tests` | 15 | `AuthHandler`, token akışı, ViewModel doğrulama/hata eşlemesi |
+| `FinTrack.Mobile.Tests` | 45 | `AuthHandler`, token akışı, ViewModel doğrulama/hata eşlemesi, V11-T02 ViewModel → PendingOperation → HTTP entegrasyonu |
 | `FinTrack.Api.IntegrationTests` | 72 | 9 smoke + 17 kimlik + 10 harcama + 6 kart + 6 ekstre/ödeme + 5 para girişi + 4 nakit avans + 8 kredi/borç + 7 raporlama (Testcontainers MSSQL) |
 
 **Uygulanan migration'lar:**
@@ -391,7 +399,7 @@ kredi/taksit/kişisel borç uç noktaları), Reporting (salt okunur aylık özet
 
 | Konu | Durum |
 |---|---|
-| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **v1.1 görevi V11-T01 tamamlandı**: kararlar + sözleşme + koşullu onaylar + son tasarım uygulandı (435/435 test); istemci aynı key/gövde ile güvenle retry edebilir (`docs/11` §9.5) |
+| `Idempotency-Key` (finansal/mutasyon POST, auth hariç) | **V11-T01 + V11-T02 tamamlandı**: host altyapısı ve gerçek mobil harcama akışı aynı key/gövde ile güvenle retry eder (V11-T01: 435/435; V11-T02: 45/45 mobil + çözüm build 0/0; `docs/11` §9.5–9.6) |
 | Kart harcamaları için taksitli ödeme planı | v1 kapsam dışı |
 | Çoklu para birimi / kur dönüşümü | v1 kapsam dışı |
 | Kategori `restore`, arşivli kartı geri açma | v1'de yok |
@@ -825,3 +833,64 @@ tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
 | 2.12 | 2026-11-19 | **V11-T01 uygulandı:** host idempotency (middleware/store/migration/DI, tek `DbTransaction`, ADR-0010 modül uyumları), durum sorgusu, mobil AES-256-GCM pending store ve kurtarma; 435/435 test. §4/§6/§8 durum notları güncellendi; Windows UI smoke ve MAUI head build operatörde |
 | 2.13 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; "henüz commit edilmedi" notları ve sürüm başlıkları güncellendi, oturum devri kaydı §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
 | 2.14 | 2026-11-19 | CI run `44413433056` (`5e614c7`) yeşil olarak doğrulandı; Android MAUI head build JDK 17 ile yerelde 0/0; mobil pending operation testlerinde deterministik saat enjeksiyonu düzeltildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |
+| 2.15 | 2026-11-20 | **V11-T02 uygulandı:** gerçek `AddExpenseViewModel.SaveAsync` akışı PendingOperation/Idempotency zincirine bağlandı; 14 uçtan uca mobil test eklendi (45/45), çözüm build'i 0/0, Docker hariç testler 354/354. §6, §8.7 ve `docs/09` v1.25 güncellendi; `docs/11` v1.4 uygulama notu eklendi. Docker daemon kapalı olduğu için API entegrasyon sonucu ve Windows UI smoke doğrulanmadı. |
+
+### 8.6 Sonraki oturum devri notu (2026-11-20)
+
+**Bu oturumda yapılan (inceleme/raporlama):** docs/architecture-audit-mobile-idempotency.md oluşturuldu (Y-1/P-1 derin doğrulama). Kaynak kod bulgusu: V11-T01 altyapısı (PendingOperationStore, PendingOperationRecoveryService, AuthHandler koşullu retry) mevcut/DI kayıtlı/testli olsa da gerçek ViewModel/typed-client finansal mutasyon akışlarına entegre değil; AddExpenseViewModel.SaveAsync → CreateExpenseAsync doğrudan gönderim yapıyor, Idempotency-Key/pending kayıt/recovery tetiklemesi yok, App.OnStart recovery çalıştırmıyor.
+
+**Sonraki oturum başlangıcı:**
+1. Önce docs/architecture-audit.md ve docs/architecture-audit-mobile-idempotency.md dosyalarını oku.
+2. Başlangıç promptu docs/12-PendingOperation Entegrasyonu.txt dosyasının içindedir; bu dosyayı okuyarak devam et.
+
+**O anki durum (2026-11-20, §8.6 yazıldığı sırada):** Yerel HEAD `88441ac`,
+`origin/main` `ce412cd` önündeydi ve V11-T02 henüz commit edilmemişti. Bu
+not geçmiş durum kaydıdır; V11-T02 uygulama sonucu ve doğrulama için §8.7,
+dosya sürümleri ve değişiklik geçmişi için §9 bakınız. Windows manuel UI smoke
+(karar 2.1-A) hâlâ operatör bekliyor.
+
+### 8.7 V11-T02 devir notu (2026-11-20) — gerçek mobil harcama akışı
+
+**Kapsam:** `docs/12-PendingOperation Entegrasyonu.txt` görevi tamamlandı.
+`AddExpenseViewModel.SaveAsync` artık `FinTrackApiClient.CreateExpenseAsync`'i
+doğrudan çağırmıyor; `PendingOperationRecoveryService.CreateAsync` →
+`SendAsync` / `RecoverOneAsync` zincirini kullanıyor. Tek gövde
+`CreateExpenseRequest`'ten bir kez serileştirilip pending kaydına ve tüm
+denemelere aynı baytlarla veriliyor; `AuthHandler` 401 sonrası aynı
+`Idempotency-Key` + gövde ile retry ediyor.
+
+**Mimari kararlar:**
+
+- `FinTrackApiClient`'ın genel POST yardımcısı, pending durumu geçişini ve
+  bayt-identik replay'i garanti edemediği için finansal POST
+  `PendingOperationRecoveryService.SendPostAsync` üzerinden gönderiliyor.
+  Typed client yalnızca form GET'leri için kullanılıyor; yeni paket, tablo,
+  migration veya state machine eklenmedi.
+- Kullanıcı izolasyonu yerel `UserIdKey = JWT sub` ile sağlanıyor
+  (`JwtUserKey.TryGetSubject`, `SessionService.GetUserIdKeyAsync`). Recovery
+  servisine isteğe bağlı `currentUserKeyProvider` verildi; oturum değişirse
+  pending kayıt korunuyor ve başka token ile gönderilmiyor.
+- `FindMatchingAsync` aynı kullanıcı/method/route ve gövde baytlarını arıyor;
+  çözülemeyen gövde "yeni anahtar üretme" tarafında eşleşmiş sayılıyor.
+  `Uncertain` kayıt otomatik yeni harcamaya dönüşmüyor.
+- `PendingOperationStartup`, `App.OnStart` içinde navigasyondan sonra
+  fire-and-forget çağrılıyor; `SemaphoreSlim(1,1)` kuyruğa girmeden tek uçuş
+  garantisi veriyor, hatalar yutuluyor ve açılış/navigasyon bloklanmıyor.
+- Görev kartındaki "30 saat" ifadesi V11-T01 kaynak tasarımındaki **30 günlük**
+  tombstone TTL'siyle çelişiyor. Mevcut sözleşme korundu; 31. saatte durum
+  sorgusu, 31. günde tombstone/`Uncertain` ayrı ayrı test edildi (`docs/11` §9.6).
+
+**Doğrulama:**
+
+| Kontrol | Sonuç |
+|---|---|
+| `dotnet test tests/FinTrack.Mobile.Tests --nologo` | ✅ **45/45** (31 mevcut + 14 yeni) |
+| Birim/mimari/mobil toplam (Docker hariç) | ✅ **354/354** (45 mobil + 77 API birim + 10 mimari + 222 modül) |
+| `dotnet build FinTrack.slnx -p:JavaSdkDirectory=... --nologo -v q` | ✅ 0 uyarı, 0 hata (Android + Windows hedefleri dahil) |
+| `dotnet test FinTrack.slnx ... --nologo -v q` | ⚠️ Entegrasyon 86/95 `DockerUnavailableException` ile başarısız; 9 DB'siz smoke geçti. Docker endpoint `npipe://./pipe/docker_engine` kapalı. |
+| Docker `docker info` | ⚠️ Zaman aşımı; daemon erişilemedi. |
+
+**Açık kalan:** Windows manuel UI smoke; canlı API/uçtan uca Docker doğrulaması;
+kart/borç/para girişi mutasyonlarının pending entegrasyonu (V11-T02 kapsam dışı);
+profil `PUT`, login/register/logout (kapsam dışı). Yeni testlerin kapsamı ve Y-1
+kapanış durumu `docs/architecture-audit-mobile-idempotency.md` §8'de listelendi.

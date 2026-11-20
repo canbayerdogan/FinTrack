@@ -62,9 +62,11 @@ public static class MauiProgram
                     BaseAddress = apiAddress,
                 },
                 services.GetRequiredService<IPendingOperationStore>(),
-                services.GetRequiredService<TimeProvider>()));
+                services.GetRequiredService<TimeProvider>(),
+                currentUserKeyProvider: services.GetRequiredService<SessionService>().GetUserIdKeyAsync));
 
         builder.Services.AddSingleton<SessionService>();
+        builder.Services.AddSingleton<PendingOperationStartup>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<RegisterViewModel>();

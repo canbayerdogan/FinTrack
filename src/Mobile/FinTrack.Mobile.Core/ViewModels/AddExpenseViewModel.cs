@@ -1,21 +1,34 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FinTrack.Mobile.Core.Abstractions;
 using FinTrack.Mobile.Core.Api;
+using FinTrack.Mobile.Core.PendingOperations;
+using FinTrack.Mobile.Core.Services;
 using FinTrack.Mobile.Core.Validation;
 
 namespace FinTrack.Mobile.Core.ViewModels;
 
 public partial class AddExpenseViewModel : ViewModelBase
 {
+    private const string ExpenseRoute = "/api/v1/expenses";
+
     private readonly FinTrackApiClient _api;
     private readonly IAppNavigator _navigator;
+    private readonly PendingOperationRecoveryService _recovery;
+    private readonly SessionService _session;
 
-    public AddExpenseViewModel(FinTrackApiClient api, IAppNavigator navigator)
+    public AddExpenseViewModel(
+        FinTrackApiClient api,
+        IAppNavigator navigator,
+        PendingOperationRecoveryService recovery,
+        SessionService session)
     {
         _api = api;
         _navigator = navigator;
+        _recovery = recovery;
+        _session = session;
         Title = "Harcama ekle";
         OccurredOn = DateTime.Today;
     }
@@ -80,16 +93,68 @@ public partial class AddExpenseViewModel : ViewModelBase
     [RelayCommand]
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
-        if (!Validate(out var request))
+        // IsBusy yalnızca UI kilidi değil; kalıcı pending durumu da aşağıda kontrol edilir.
+        if (IsBusy || !Validate(out var request))
         {
             return;
         }
 
+        var userIdKey = await _session.GetUserIdKeyAsync(cancellationToken);
+        if (userIdKey is null)
+        {
+            ErrorMessage = "Oturum bilgisi alınamadı. Lütfen tekrar giriş yapınız.";
+            return;
+        }
+
+        // Gövde bir kez serileştirilir; pending kaydı ve tüm denemeler aynı baytları kullanır.
+        var body = JsonSerializer.SerializeToUtf8Bytes(request!, ApiJson.Options);
+
         SetBusy(true);
         try
         {
-            await _api.CreateExpenseAsync(request!, cancellationToken);
-            await _navigator.GoToAsync("//expenses", cancellationToken);
+            var existing = await _recovery.FindMatchingAsync(
+                userIdKey,
+                HttpMethod.Post.Method,
+                ExpenseRoute,
+                body,
+                cancellationToken);
+
+            RecoveryResult result;
+            if (existing?.State == PendingOperationState.Uncertain)
+            {
+                // Belirsiz işlem otomatik olarak yeni harcamaya dönüşmez (docs/11 §7.5).
+                ErrorMessage = PendingOperationRecoveryService.UnknownResultMessage;
+                return;
+            }
+
+            if (existing is null)
+            {
+                var operation = await _recovery.CreateAsync(
+                    userIdKey,
+                    HttpMethod.Post.Method,
+                    ExpenseRoute,
+                    body,
+                    cancellationToken);
+                result = await _recovery.SendAsync(operation.Key, cancellationToken);
+            }
+            else if (existing.State == PendingOperationState.Created)
+            {
+                result = await _recovery.SendAsync(existing.Key, cancellationToken);
+            }
+            else
+            {
+                result = await _recovery.RecoverOneAsync(existing.Key, cancellationToken);
+            }
+
+            if (result.Status == RecoveryStatus.Completed)
+            {
+                await _navigator.GoToAsync("//expenses", cancellationToken);
+                return;
+            }
+
+            ErrorMessage = result.Status == RecoveryStatus.Skipped
+                ? "İşlem tamamlandı; kayıtlarını kontrol edebilirsin."
+                : result.Message;
         }
         catch (ApiException exception)
         {

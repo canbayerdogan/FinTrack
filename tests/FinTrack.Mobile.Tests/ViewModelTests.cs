@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FinTrack.Mobile.Core.Api;
+using FinTrack.Mobile.Core.PendingOperations;
 using FinTrack.Mobile.Core.ViewModels;
 using FinTrack.Mobile.Tests.Fakes;
 using Xunit;
@@ -94,7 +95,12 @@ public sealed class ViewModelTests
         var queue = new QueueHandler();
         var api = new FinTrackApiClient(new HttpClient(queue) { BaseAddress = BaseAddress });
         var navigator = new FakeNavigator();
-        var viewModel = new AddExpenseViewModel(api, navigator) { AmountText = "abc" };
+        using var database = new TempDatabase();
+        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
+        var recovery = new PendingOperationRecoveryService(
+            new HttpClient(new QueueHandler()) { BaseAddress = BaseAddress }, store);
+        var session = new Core.Services.SessionService(api, new FakeTokenStore());
+        var viewModel = new AddExpenseViewModel(api, navigator, recovery, session) { AmountText = "abc" };
 
         await viewModel.SaveCommand.ExecuteAsync(null);
 
@@ -107,7 +113,12 @@ public sealed class ViewModelTests
     {
         var queue = new QueueHandler();
         var api = new FinTrackApiClient(new HttpClient(queue) { BaseAddress = BaseAddress });
-        var viewModel = new AddExpenseViewModel(api, new FakeNavigator())
+        using var database = new TempDatabase();
+        using var store = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
+        var recovery = new PendingOperationRecoveryService(
+            new HttpClient(new QueueHandler()) { BaseAddress = BaseAddress }, store);
+        var session = new Core.Services.SessionService(api, new FakeTokenStore());
+        var viewModel = new AddExpenseViewModel(api, new FakeNavigator(), recovery, session)
         {
             AmountText = "12,50",
             SelectedCategory = new CategoryDto(Guid.NewGuid(), "Market", null, false, "AAAAAAAAAAA="),

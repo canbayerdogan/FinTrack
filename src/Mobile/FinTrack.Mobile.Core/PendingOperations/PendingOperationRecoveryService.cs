@@ -28,17 +28,20 @@ public sealed class PendingOperationRecoveryService
     private readonly IPendingOperationStore _store;
     private readonly TimeProvider _clock;
     private readonly Func<TimeSpan, CancellationToken, Task> _delay;
+    private readonly Func<CancellationToken, Task<string?>>? _currentUserKey;
 
     public PendingOperationRecoveryService(
         HttpClient http,
         IPendingOperationStore store,
         TimeProvider? clock = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        Func<CancellationToken, Task<string?>>? currentUserKeyProvider = null)
     {
         _http = http ?? throw new ArgumentNullException(nameof(http));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _clock = clock ?? TimeProvider.System;
         _delay = delay ?? ((duration, token) => Task.Delay(duration, token));
+        _currentUserKey = currentUserKeyProvider;
     }
 
     /// <summary> Son kullanıcıya gösterilmesi beklenen mesaj. </summary>
@@ -107,10 +110,60 @@ public sealed class PendingOperationRecoveryService
         return await ExecuteAsync(operation, cancellationToken);
     }
 
+    /// <summary>
+    /// Aynı kullanıcı/method/route ve aynı gövde baytlarıyla temsil edilen mevcut
+    /// işlemi bulur. Şifre çözülemeyen kayıt, gövde karşılaştırması yapılamadığı
+    /// için "yeni anahtar üretme" tarafında döndürülür; kurtarma onu Uncertain
+    /// işaretler (docs/11 §7.2/§7.5). Böylece aynı kullanıcı hareketi için ikinci
+    /// UUID ve ikinci finansal POST oluşmaz.
+    /// </summary>
+    public async Task<PendingOperation?> FindMatchingAsync(
+        string userIdKey,
+        string method,
+        string route,
+        byte[] body,
+        CancellationToken cancellationToken = default)
+    {
+        var operations = await _store.ListForUserAsync(userIdKey, cancellationToken: cancellationToken);
+        foreach (var operation in operations)
+        {
+            if (!string.Equals(operation.Method, method, StringComparison.OrdinalIgnoreCase) ||
+                !SameRoute(operation.Route, route))
+            {
+                continue;
+            }
+
+            var storedBody = await _store.TryReadBodyAsync(operation, cancellationToken);
+            if (storedBody is null || storedBody.AsSpan().SequenceEqual(body))
+            {
+                return operation;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool SameRoute(string left, string right) =>
+        string.Equals(left.TrimStart('/'), right.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+
     private async Task<RecoveryResult> ExecuteAsync(
         PendingOperation operation,
         CancellationToken cancellationToken)
     {
+        // Oturum kullanıcı anahtarı, kaydın sahibiyle aynı olmalıdır. Oturum
+        // değişirse kayıt korunur; başka kullanıcının token'ıyla gönderilmez.
+        if (_currentUserKey is not null)
+        {
+            var currentUserKey = await _currentUserKey(cancellationToken);
+            if (!string.Equals(currentUserKey, operation.UserIdKey, StringComparison.Ordinal))
+            {
+                return Result(
+                    RecoveryStatus.Pending,
+                    operation.Key,
+                    "Oturum değişti; bekleyen işlem korundu.");
+            }
+        }
+
         var body = await _store.TryReadBodyAsync(operation, cancellationToken);
         if (body is null)
         {

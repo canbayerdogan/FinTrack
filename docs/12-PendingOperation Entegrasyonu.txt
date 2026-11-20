@@ -1,0 +1,221 @@
+# V11-T02 — Mobil Harcama Oluşturma Akışında PendingOperation Entegrasyonu
+
+## 1. Görevin amacı
+
+FinTrack mobil uygulamasındaki gerçek harcama oluşturma akışını, mevcut V11-T01 Idempotency ve PendingOperation altyapısına entegre et.
+
+Mevcut durumda:
+
+- Sunucu tarafında `IdempotencyMiddleware` çalışıyor ve `/api/v1/expenses` POST isteğinde `Idempotency-Key` bekliyor.
+- `PendingOperationStore`, `PendingOperationRecoveryService` ve `AuthHandler` mevcut.
+- Bu bileşenler DI'a kayıtlı ve kendi testleri bulunuyor.
+- Ancak `AddExpenseViewModel.SaveAsync`, doğrudan `FinTrackApiClient.CreateExpenseAsync` çağırıyor.
+- Gerçek harcama oluşturma akışında pending kayıt, idempotency anahtarı ve recovery entegrasyonu bulunmuyor.
+- Uygulama başlangıcında `PendingOperationRecoveryService.RecoverAsync` çağrılmıyor.
+
+Bu görevde yalnızca harcama oluşturma akışını tamamla. Amaç, mevcut mimariyi yeniden tasarlamak değil, mevcut altyapıyı gerçek kullanıcı akışında doğru şekilde kullanmaktır.
+
+## 2. Önce doğrulanacak kaynaklar
+
+Uygulamaya başlamadan önce aşağıdaki kaynakları ve güncel Git durumunu incele:
+
+- `docs/architecture-audit.md`
+- `docs/architecture-audit-mobile-idempotency.md`
+- `docs/08-durum-ve-devam-notu.md`
+- `docs/09-todo.md`
+- `docs/11-idempotency-teknik-tasarim.md`
+- `src/Mobile/FinTrack.Mobile.Core/ViewModels/AddExpenseViewModel.cs`
+- `src/Mobile/FinTrack.Mobile.Core/Api/FinTrackApiClient.cs`
+- `src/Mobile/FinTrack.Mobile.Core/Api/AuthHandler.cs`
+- `src/Mobile/FinTrack.Mobile.Core/PendingOperations/`
+- `src/Mobile/FinTrack.Mobile.Core/Services/SessionService.cs`
+- `src/Mobile/FinTrack.Mobile/App.xaml.cs`
+- `src/Mobile/FinTrack.Mobile/MauiProgram.cs`
+- `tests/FinTrack.Mobile.Tests/`
+
+Önce şu bilgileri raporla:
+
+1. Güncel branch, HEAD commit, `origin/main` ile fark ve çalışma ağacı durumu.
+2. PendingOperation modellerinin ve servislerinin güncel API'si.
+3. `CreateAsync`, `SendAsync` ve `RecoverAsync` metotlarının gerçek davranışı.
+4. Başarılı, başarısız ve belirsiz sonuçların nasıl temsil edildiği.
+5. Kullanıcı oturumu ve kullanıcı kimliğinin uygulama başlangıcında hangi sırayla hazırlandığı.
+6. Mevcut testlerin bu görev için sağlayabildiği altyapı.
+
+Önceki denetim raporlarını referans al ancak güncel kaynak kodu esas kabul et. Raporlarda yazanları doğrulamadan doğru kabul etme.
+
+## 3. Kapsam
+
+### Yapılacaklar
+
+**A. Harcama oluşturma akışının entegrasyonu**
+
+`AddExpenseViewModel.SaveAsync` doğrudan API çağrısı yapmak yerine mevcut PendingOperation altyapısını kullanmalı.
+
+Beklenen işlem sırası:
+
+1. Form doğrulaması yapılır.
+2. Kullanıcı işlemi için tek bir idempotency anahtarı oluşturulur.
+3. İstek gövdesi sabit bir içerik olarak hazırlanır.
+4. İşlem, gönderimden önce PendingOperationStore'a kalıcı olarak kaydedilir.
+5. Gönderim başladığında durum `SentUnconfirmed` olarak kalıcılaştırılır.
+6. HTTP POST isteği aynı anahtar ve aynı body ile gönderilir.
+7. Sonuç kesin olarak başarılıysa pending kayıt tamamlanır ve temizlenir.
+8. Sonuç belirsizse kayıt korunur ve `Uncertain` veya uygun mevcut durum üzerinden takip edilir.
+9. Kesin istemci hatalarında mevcut recovery servisinin belirlediği davranış uygulanır.
+
+Mevcut `PendingOperationRecoveryService` davranışlarını ve sözleşmesini incele. Yukarıdaki sıra ile mevcut implementasyon arasında fark varsa önce farkı açıkla ve mimari kararını belgele.
+
+**B. Tekrar Kaydetme koruması**
+
+Aynı kullanıcı işlemi için ikinci bir idempotency anahtarı üretilmemeli.
+
+- İşlem devam ederken tekrar Kaydet engellenmeli.
+- İstek gönderildiği halde sonuç belirsizse yeni bir harcama POST'u başlatılmamalı.
+- Aynı mantıksal işlem yeniden gönderilecekse aynı anahtar ve aynı body kullanılmalı.
+- Kullanıcı formu değiştirerek yeni bir harcama oluşturuyorsa bu yeni bir kullanıcı işlemi kabul edilmeli ve yeni anahtar kullanılmalı.
+- Başarılı işlem tamamlandıktan sonra yeni bir harcama oluşturulabilmeli.
+
+Sadece `IsBusy` kontrolüne güvenme. Kalıcı pending-operation durumunu da dikkate al.
+
+**C. Recovery yaşam döngüsü**
+
+`PendingOperationRecoveryService.RecoverAsync` uygulamanın doğru yaşam döngüsü noktasında çağrılmalı.
+
+Şartlar:
+
+- Kullanıcı oturumu ve kimliği hazır olmadan recovery çalışmamalı.
+- Kullanıcı izolasyonu korunmalı.
+- Oturum değiştiğinde başka kullanıcıya ait pending kayıtlar gönderilmemeli.
+- Aynı anda birden fazla recovery çalışması engellenmeli veya mevcut altyapının bu garantiyi nasıl verdiği kanıtlanmalı.
+- Recovery sırasında uygulamanın normal navigasyon ve kullanıcı deneyimi bozulmamalı.
+- `Uncertain` kayıtlar otomatik olarak yeni bir işlem şeklinde oluşturulmamalı.
+
+Önemli tasarım noktası:
+
+Mevcut altyapıda `Created` kayıtları otomatik gönderilmiyor; `RecoverAsync` esas olarak `SentUnconfirmed` kayıtları ele alıyor.
+
+Uygulama kapanırsa `Created` durumunda kalmış bir kullanıcı işleminin nasıl ele alınacağını açıkça değerlendir.
+
+Bu davranışı sırf recovery çalışsın diye değiştirme. Mevcut V11-T01 tasarımının gerekçesini incele. Güvenli bir çözüm mevcut sözleşmeyle mümkün değilse durumu, alternatifleri ve önerini raporla; izinsiz yeni bir state-machine tasarımı oluşturma.
+
+**D. API Client entegrasyonu**
+
+`FinTrackApiClient.CreateExpenseAsync` ve HTTP gönderim mekanizmasını incele.
+
+- `Idempotency-Key` başlığı doğru istek üzerinde taşınmalı.
+- Anahtarın kaynağı tek ve açık olmalı.
+- Retry sırasında aynı anahtar korunmalı.
+- Retry sırasında aynı body baytları kullanılmalı.
+- Mevcut `AuthHandler` koşullu retry mekanizması bozulmamalı.
+- Aynı işlem için farklı katmanlarda bağımsız UUID üretilmemeli.
+
+Gerekirse küçük ve sorumluluğu açık bir metot/abstraction ekle. Ancak genel amaçlı yeni bir HTTP framework veya yeni bir queue mimarisi oluşturma.
+
+## 4. Test gereksinimleri
+
+Mevcut testleri değiştirmeden önce incele. Gereksiz tekrar testleri yazma; ancak gerçek entegrasyon davranışını kanıtlayan testleri ekle.
+
+En az aşağıdaki senaryoları test et:
+
+1. Save çağrısında POST öncesinde pending kayıt oluşması.
+2. Aynı kullanıcı işleminin tekrar Kaydet çağrısında ikinci POST oluşturmaması.
+3. POST gönderilirken uygulama süreci sonlandığında `SentUnconfirmed` kaydının korunması.
+4. Sunucu işlemi tamamladığı halde istemci yanıtı alamadığında aynı key/body ile recovery yapılması.
+5. 401 ve başarılı token refresh sonrasında aynı key/body ile güvenli POST retry yapılması.
+6. `Created` durumundaki işlemin mevcut tasarıma uygun şekilde ele alınması.
+7. 24 saat sonrası status kontrolünün gerçek recovery çağrısı üzerinden çalışması.
+8. 30 saat sonrası `Uncertain` davranışının korunması.
+9. Decrypt veya SecureStorage anahtar kaybında işlemin yanlışlıkla silinmemesi.
+10. Başarılı işlemden sonra yeni bir harcama oluşturulabilmesi.
+
+Testler mümkün olduğunca ViewModel → PendingOperation → HTTP Client zincirini birlikte doğrulamalı.
+
+Sadece servisleri doğrudan çağıran birim testleriyle entegrasyon tamamlandı deme.
+
+## 5. Mimari ve kod kalitesi sınırları
+
+- Modular Monolith mimarisini değiştirme.
+- Modüllerin sınırlarını değiştirme.
+- Host idempotency middleware'ini yeniden tasarlama.
+- Yeni veritabanı tablosu veya migration ekleme.
+- Finansal domain modelini değiştirme.
+- Harcama oluşturma API sözleşmesini gerekmedikçe değiştirme.
+- Mevcut AES-GCM şifreleme, AAD ve kullanıcı izolasyonunu koru.
+- Mevcut `Created`, `SentUnconfirmed`, `Uncertain` durumlarının anlamlarını koru.
+- MediatR veya yeni bir CQRS altyapısı ekleme.
+- Yeni paket bağımlılığı ekleme.
+- Profil güncelleme, login, register ve logout akışlarını bu göreve dahil etme.
+- Diğer ViewModel'leri değiştirme.
+- Var olan testleri sırf kolaylık için kaldırma veya gevşetme.
+
+Bir değişiklik mevcut tasarımla çelişiyorsa, değişikliği sessizce yapma. Gerekçeyi raporla.
+
+## 6. Kapsam dışı
+
+Bu görevde aşağıdakiler yapılmayacak:
+
+- Kart, borç, ödeme veya para girişi mutasyonlarının entegrasyonu.
+- Profil güncelleme idempotency/retry tasarımı.
+- Yeni bildirim veya arka plan servisleri.
+- Genel amaçlı offline-first mimari.
+- Yeni kullanıcı arayüzü tasarımı.
+- Reporting performans iyileştirmeleri.
+- Transaction participant standardizasyonu.
+- Mimari refactoring.
+- Şifre sıfırlama veya e-posta doğrulama.
+
+## 7. Doğrulama
+
+Uygulama sonrasında:
+
+- İlgili mobil testlerini çalıştır.
+- Gerekli tüm mobil test paketini çalıştır.
+- Android MAUI build al.
+- Docker kullanılabiliyorsa ilgili entegrasyon testlerini çalıştır.
+- Docker kullanılamıyorsa bunu açıkça belirt; çalıştırılmamış testleri başarılı gösterme.
+- Yeni testlerin hangi davranışı kanıtladığını listele.
+- Değiştirilen dosyaları ve her değişikliğin gerekçesini açıkla.
+
+Windows UI smoke testini gerçekten çalıştırmadıysan tamamlandı olarak işaretleme.
+
+## 8. Dokümantasyon
+
+Aşağıdaki belgeleri güncelle:
+
+- `docs/08-durum-ve-devam-notu.md`
+- `docs/09-todo.md`
+
+Gerekiyorsa `docs/11-idempotency-teknik-tasarim.md` içine uygulama davranışını açıklayan kısa bir ek yap.
+
+Ayrıca `docs/architecture-audit-mobile-idempotency.md` içindeki Y-1 bulgusunun hangi kısmının kapandığını ve hangi kısmının açık kaldığını belirt.
+
+Dokümantasyon ile gerçek kod ve test sonuçları tutarlı olmalı.
+
+## 9. Tamamlanma kriterleri
+
+Görev ancak aşağıdaki koşullar sağlandığında tamamlanmış sayılır:
+
+- Gerçek `AddExpenseViewModel.SaveAsync` akışı PendingOperation altyapısını kullanıyor.
+- Finansal POST doğru `Idempotency-Key` ile gönderiliyor.
+- Aynı kullanıcı işlemi aynı key ve aynı body ile takip ediliyor.
+- Tekrar Kaydet çift işlem oluşturmuyor.
+- Recovery doğru oturum/kullanıcı bağlamında çalışıyor.
+- Belirsiz işlemler yanlışlıkla yeni harcamaya dönüşmüyor.
+- Entegrasyon davranışı testlerle kanıtlanıyor.
+- Mobil build ve çalıştırılabilen testler başarılı.
+- Dokümantasyon güncel ve kanıtlarla tutarlı.
+
+Bir kriter sağlanmıyorsa görevi tamamen tamamlandı olarak işaretleme; açık kalan noktayı ve nedenini belirt.
+
+## 10. Git ve teslim kuralları
+
+- Başlangıç Git durumunu raporla.
+- Mevcut yerel commitleri değiştirme veya yeniden yazma.
+- Force push yapma.
+- Commit oluşturma.
+- Push yapma.
+- Kullanıcının mevcut değişikliklerini silme veya üzerine yazma.
+- Çalışma sonunda değiştirilen dosyaları, testleri, build sonuçlarını ve açık kalan riskleri raporla.
+
+**Önemli:** Bu görevde amaç yalnızca kodun derlenmesi değil, V11-T01'in gerçek mobil finansal işlem akışında çalıştığının kanıtlanmasıdır.
