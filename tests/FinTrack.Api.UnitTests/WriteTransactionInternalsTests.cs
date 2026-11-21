@@ -103,6 +103,21 @@ public sealed class WriteTransactionInternalsTests
             scope.GetType().FullName); // no-op sarmalayıcı değil, gerçek scope
     }
 
+    [Fact]
+    public async Task WriteTransactionScope_DbTransaction_CommitAsync_istisnasini_yayar()
+    {
+        var expected = new InvalidOperationException("DbTransaction.CommitAsync başarısız.");
+        var transaction = new ThrowingDbTransaction(expected);
+        var scope = (IWriteTransactionScope)CreateInternal(
+            "FinTrack.Api.WriteTransactions.WriteTransactionScope", transaction);
+
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => scope.CommitAsync(CancellationToken.None));
+
+        Assert.Same(expected, actual);
+        Assert.Equal(1, transaction.CommitAttempts);
+    }
+
     [Theory]
     [InlineData("UNIQUE constraint failed: shared.IdempotencyKeys")]
     [InlineData("duplicate key value violates unique constraint")]
@@ -250,6 +265,28 @@ public sealed class WriteTransactionInternalsTests
         public override void Commit()
         {
         }
+
+        public override void Rollback()
+        {
+        }
+    }
+
+    /// <summary>F-07: gerçek <c>DbTransaction.CommitAsync</c> çağrısında hata simülasyonu.</summary>
+    private sealed class ThrowingDbTransaction(Exception exception) : DbTransaction
+    {
+        public int CommitAttempts { get; private set; }
+
+        protected override DbConnection? DbConnection => null;
+
+        public override IsolationLevel IsolationLevel => IsolationLevel.Serializable;
+
+        public override Task CommitAsync(CancellationToken cancellationToken = default)
+        {
+            CommitAttempts++;
+            return Task.FromException(exception);
+        }
+
+        public override void Commit() => throw exception;
 
         public override void Rollback()
         {

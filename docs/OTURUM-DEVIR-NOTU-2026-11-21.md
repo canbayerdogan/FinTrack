@@ -149,11 +149,12 @@ Expenses yalnızca kendi projesinde test edilebilir.
    `docs/08`, `docs/09` ve teslim raporundaki işaretçiler güncellendi.
 2. **Docker doğrulaması (kullanıcı isterse):** `tests/FinTrack.Api.IntegrationTests`
    çalıştırın; daemon yoksa "çalıştırılmadı" notunu koruyun.
-3. **Açık audit bulguları ayrı bir görevde:** önce yüksek seviyeli F-06 (Enlist
-   istisnası politikası), F-07 (gerçek commit istisnası), F-08 (gerçek ikinci
-   participant hatası); ardından F-03/F-04 (`committed` ölü flag + iki commit
-   noktası), F-05 (S25 adı), F-13 (güncel olmayan yorum), F-11 (PUT/auth yolları),
-   F-14 (rollback mekanizması). **F-12 kapalı**, F-01/F-09/F-10 kısmen kapalı.
+3. **Açık audit bulguları:** F-06/F-07/F-08 için hata sınırı testleri eklendi
+   (audit §9.6; Docker hariç 383/383); F-06 politika kararı ve gerçek MSSQL
+   doğrulaması açık. Sırada F-03/F-04 (`committed` ölü flag + iki commit noktası),
+   F-05 (S25 adı), F-13 (güncel olmayan yorum), F-11 (PUT/auth yolları),
+   F-14 (rollback mekanizması). **F-12 kapalı**, F-01/F-06/F-07/F-08/F-09/F-10
+   kısmen kapalı.
 4. **Windows manuel UI smoke** hâlâ operatörde bekliyor (V11-T02'den devir).
 5. Commit/push yalnızca kullanıcı açıkça isterse.
 

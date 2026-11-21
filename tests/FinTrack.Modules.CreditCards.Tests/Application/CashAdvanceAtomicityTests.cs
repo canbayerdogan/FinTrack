@@ -1,3 +1,4 @@
+using FinTrack.ModuleContracts;
 using FinTrack.Modules.CashInflows.Application.CashInflows;
 using FinTrack.Modules.CashInflows.Domain;
 using FinTrack.Modules.CashInflows.Infrastructure;
@@ -7,6 +8,7 @@ using FinTrack.Modules.CreditCards.Application.Abstractions;
 using FinTrack.Modules.CreditCards.Application.Cards;
 using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Tests.Support;
+using FinTrack.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
@@ -123,6 +125,31 @@ public sealed class CashAdvanceAtomicityTests
     }
 
     [Fact]
+    public async Task Ikinci_yazici_gercekten_yazip_sonra_hata_verdiginde_kart_satiri_yok()
+    {
+        await using var database = await CardTestDatabase.CreateWithCashInflowsAsync();
+        await using var cardsDb = database.CreateContext(UserId);
+        await using var inflowsDb = database.CreateInflowContext(UserId);
+        var failingWriter = new FailingAfterRealWriteWriter(CreateWriter(inflowsDb));
+        var factory = new CardHandlerFactory(cardsDb, UserId, Now, inflowWriter: failingWriter);
+        var card = await CreateCardAsync(factory);
+
+        var result = await factory.CreateCashAdvance().HandleAsync(
+            new CreateCashAdvanceCommand(card.Id, 4_000m, null, Today.AddDays(-1), null),
+            CancellationToken.None);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("WriterFailedAfterWrite", result.Error.Code);
+        Assert.True(failingWriter.RealWriteSucceeded, "Gerçek ikinci yazıcı yazmadan hata simüle edilmemeli.");
+        Assert.Equal(0, factory.WriteTransactions.LastScope!.CommitCount);
+
+        await using var verifyCards = database.CreateContext(UserId);
+        await using var verifyInflows = database.CreateInflowContext(UserId);
+        Assert.Empty(await verifyCards.CashAdvances.ToListAsync());
+        Assert.Empty(await verifyInflows.CashInflows.ToListAsync());
+    }
+
+    [Fact]
     public async Task Enlist_sirada_owner_ve_writer_ayni_fiziksel_transaction_a_bagli()
     {
         await using var database = await CardTestDatabase.CreateWithCashInflowsAsync();
@@ -153,6 +180,34 @@ public sealed class CashAdvanceAtomicityTests
 
     private static DebtCashInflowWriter CreateWriter(CashInflowsDbContext db) =>
         new(new CashInflowRepository(db), new UnitOfWork(db));
+
+    /// <summary>
+    /// F-08: fake writer yerine gerçek writer'a yazdırır, sonra hata döndürür.
+    /// Böylece "ikinci participant yazdıktan sonra hata verirse ilk yazı geri alınır"
+    /// iddiası gerçek DB yazısı üzerinden doğrulanır.
+    /// </summary>
+    private sealed class FailingAfterRealWriteWriter(IDebtCashInflowWriter inner) : IDebtCashInflowWriter
+    {
+        public bool RealWriteSucceeded { get; private set; }
+
+        public async Task<Result<Guid>> CreateAsync(
+            DebtInflowCreate request,
+            IWriteTransactionScope scope,
+            CancellationToken cancellationToken)
+        {
+            var written = await inner.CreateAsync(request, scope, cancellationToken);
+            RealWriteSucceeded = written.IsSuccess;
+            return Result.Failure<Guid>(new Error(
+                "WriterFailedAfterWrite",
+                "Gerçek yazı sonrası zorlanan ikinci participant hatası."));
+        }
+
+        public Task<Result> CancelAsync(
+            DebtInflowCancel request,
+            IWriteTransactionScope scope,
+            CancellationToken cancellationToken) =>
+            inner.CancelAsync(request, scope, cancellationToken);
+    }
 
     private static async Task<CardDto> CreateCardAsync(CardHandlerFactory factory) =>
         (await factory.CreateCard().HandleAsync(

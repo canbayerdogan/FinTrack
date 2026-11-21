@@ -345,16 +345,36 @@ test projesinde doğrulanabilir.
 - Kaynak-metin tabanlı mimari testleri kırılgandır; yeni dosya/desene göre
   güncellenmeleri gerekir. Çalışma zamanındaki tüm olası host atlama yollarını
   kapsamaz.
-- F-02…F-08, F-11, F-13, F-14 (ör. gerçek ikinci participant hatası, gerçek
-  `DbTransaction.CommitAsync` istisnası, `Enlist` istisnası, S25'in yanıltıcı
-  kapsamı, Put/auth kapsam dışı yollar) bu görevde kapsanmadı; açık kalmaya devam eder.
+- F-02…F-08, F-11, F-13, F-14 bu görevde kapsanmadı. F-06/F-07/F-08 için §9.6'da
+  ek testler eklendi; buna karşın 3+ modülün tek transaction'ı, gerçek MSSQL
+  commit davranışı ve F-06 hata politikası kararı açık kalmaya devam eder.
 
 ### 9.5 Audit bulgularının durumu
 
 | Bulgu | V12-T01 sonrası durum |
 |---|---|
 | **F-01** (Orta) | Kısmen kapatıldı: sapma tespiti zorlayıcı hale getirildi; yapısal fark korunuyor (kasıtlı). |
+| **F-06** (Yüksek) | Kısmen kapatıldı (§9.6): mevcut davranış testle belgelendi — `Enlist` istisnası yayılır (500), idempotency kaydı yazılmaz, scope kapanır. Politika kararı açık. |
+| **F-07** (Yüksek) | Kısmen kapatıldı (§9.6): gerçek `DbTransaction.CommitAsync` istisnasının production scope'tan yayıldığı ve middleware'da 409'a çevrildiği test edildi; gerçek MSSQL commit belirsizliği açık. |
+| **F-08** (Orta) | Kısmen kapatıldı (§9.6): gerçek ikinci yazıcı SQLite'a yazıp sonra hata verdiğinde commit olmadığı ve iki modülün satırının bulunmadığı doğrulandı; 3+ modül açık. |
 | **F-09** (Orta) | Kısmen kapatıldı: connection/transaction kimliği ve host `Serializable` isteği test edildi; 3+ modül tek transaction'ı hâlâ kanıtlanmadı. |
 | **F-10** (Orta) | Kısmen kapatıldı: dört modül için mimari koruma eklendi; PUT/auth kapsam dışı yollar açık. |
 | **F-12** (Düşük) | Kapatıldı: guard davranışı dört modül için test edildi. |
-| F-02…F-08, F-11, F-13, F-14 | Açık (bu görev kapsam dışı). |
+| F-02, F-03, F-04, F-05, F-11, F-13, F-14 | Açık (bu görev kapsam dışı). |
+
+### 9.6 F-06/F-07/F-08 hata sınırı testleri (2026-11-21, ikinci ek)
+
+Production kodu değişmedi. Yalnızca test eklendi; `FinTrack.Api.UnitTests`
+projesine test amaçlı `Microsoft.EntityFrameworkCore.Sqlite` paket referansı
+eklendi (host/migration değişmedi).
+
+| Test | Bulgu | Doğrulanan davranış |
+|---|---|---|
+| `Enlist_istisnasi_mevcut_politikada_yayilir_ve_hicbir_kayit_yazilmaz` | F-06 | Middleware kayıt döngüsü try/catch'siz: istisna yayılır (HTTP 500), store insert/complete yapılmaz, scope kapanır, tüm participant'lar detach edilir. **Politika değişikliği istenirse bu test güncellenir.** |
+| `Gercek_commit_istisnasi_409_InProgress_doner_ve_scope_kapanir` | F-07 | Commit istisnası yakalanır, 409 `IdempotencyInProgress` döner; `CompleteAsync` çağrılır ama transaction commit edilmez, scope kapanır. |
+| `WriteTransactionScope_DbTransaction_CommitAsync_istisnasini_yayar` | F-07 | Production `WriteTransactionScope`, gerçek `DbTransaction.CommitAsync` istisnasını sarmaz; aynı istisna dışa yayılır. |
+| `Ikinci_yazici_gercekten_yazip_sonra_hata_verdiginde_kart_satiri_yok` | F-08 | Fake writer yerine gerçek `DebtCashInflowWriter` SQLite'a yazar, ardından hata döndürülür; commit 0, kart ve para girişi satırı yok. |
+
+Doğrulama: çözüm build 0 uyarı/0 hata; Api.Unit **81/81**, CreditCards **86/86**;
+Docker hariç toplam **383/383** (önceki 379/379 + 4 yeni test). Docker/Testcontainers (gerçek MSSQL) senaryoları
+çalıştırılmadı; F-06 politika kararı ve 3+ modül tek-transaction kanıtı açık kaldı.

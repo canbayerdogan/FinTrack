@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.27
+**Sürüm:** 1.28
 **Tarih:** 2026-11-21
-**Bağlı belgeler:** [Durum notu v2.17](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Transaction Audit + V12-T01 eki](FinTrack-Transaction-Participant-Audit-2026-11-21.md)
+**Bağlı belgeler:** [Durum notu v2.18](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Transaction Audit + V12-T01 eki](FinTrack-Transaction-Participant-Audit-2026-11-21.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -35,7 +35,7 @@ dotnet test FinTrack.slnx --nologo -v q
 | Alan | Değer |
 |---|---|
 | Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.4, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) · **V12-T01 — host transaction sahipliği testleri tamamlandı** (yalnızca test; audit raporu §9) |
-| Son doğrulama | **379/379** Docker hariç toplam (45 mobil + 78 API birim + 17 mimari + 239 modül: 85 kart + 38 borç + 58 harcama + 48 para girişi + 10 raporlama), `FinTrack.slnx` build **0 uyarı/0 hata** · 2026-11-21. Önceki doğrulama: 354/354, 2026-11-20. API entegrasyonları Docker/Testcontainers gerektirdiği için çalıştırılmadı; başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
+| Son doğrulama | **383/383** Docker hariç toplam (45 mobil + 81 API birim + 17 mimari + 240 modül: 86 kart + 38 borç + 58 harcama + 48 para girişi + 10 raporlama), `FinTrack.slnx` build **0 uyarı/0 hata** · 2026-11-21. Önceki doğrulama: 354/354, 2026-11-20. API entegrasyonları Docker/Testcontainers gerektirdiği için çalıştırılmadı; başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
 | Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak; Docker kullanılabilir olduğunda API entegrasyonları/CI yeniden doğrulanacak (`docs/08` §8.5/§8.7, `docs/11` §9.3/§9.6). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
@@ -347,8 +347,24 @@ dotnet test FinTrack.slnx --nologo -v q
       **379/379** test geçti (17 mimari + 85 kart + 38 borç + 78 API birim +
       58 harcama + 48 para girişi + 10 raporlama + 45 mobil).
 - [ ] **Kapsam dışı / açık:** `FinTrack.Api.IntegrationTests` (Docker/Testcontainers)
-      çalıştırılmadı; F-02…F-08, F-11, F-13, F-14 açık kalmaya devam ediyor.
-      Ayrıntı: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9.
+      çalıştırılmadı; F-02…F-05, F-11, F-13, F-14 açık; F-06/F-07/F-08 için
+      aşağıdaki ek testler eklendi. Ayrıntı: audit raporu §9 ve §9.6.
+
+### F-06/F-07/F-08 — hata sınırı testleri ✅ (2026-11-21, yalnızca test)
+
+- [x] **F-06:** `Enlist` istisnasının mevcut politikası belgelendi — istisna
+      yayılır (500), idempotency kaydı yazılmaz, scope kapanır, participant'lar
+      detach edilir. Politika kararı açık; değişirse test güncellenir.
+- [x] **F-07:** Gerçek `DbTransaction.CommitAsync` istisnasının production
+      `WriteTransactionScope`'tan yayıldığı ve middleware'da 409
+      `IdempotencyInProgress`'e çevrildiği doğrulandı.
+- [x] **F-08:** Gerçek `DebtCashInflowWriter` SQLite'a yazıp sonra hata
+      döndürdüğünde commit olmadığı ve iki modülün satırının bulunmadığı test edildi.
+- [x] **Doğrulama:** build 0/0; Docker hariç **383/383** (Api.Unit 81/81,
+      CreditCards 86/86). Yalnızca test + `FinTrack.Api.UnitTests` için
+      `Microsoft.EntityFrameworkCore.Sqlite` referansı; production kodu değişmedi.
+- [ ] **Açık:** Docker/Testcontainers (gerçek MSSQL) senaryoları, F-06 politika
+      kararı ve 3+ modülün tek transaction kanıtı.
 
 ### Yüksek seviye
 
@@ -465,3 +481,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.25 | 2026-11-20 | **V11-T02 tamamlandı:** `AddExpenseViewModel` gerçek harcama POST'unu PendingOperation/Idempotency zincirine bağladı; tekrar Kaydet, `Created`/`SentUnconfirmed`/`Uncertain`, kullanıcı izolasyonu ve açılışta single-flight recovery doğrulandı. 14 yeni mobil testiyle 45/45, Docker hariç 354/354, Android + Windows build 0/0. Docker daemon kapalı; API entegrasyonları ve Windows UI smoke operasyonel doğrulamaya bırakıldı. |
 | 1.26 | 2026-11-21 | **V12-T01 tamamlandı (yalnızca test):** F-01/F-09/F-10/F-12 için mimari koruma, gerçek SQLite connection/transaction kimliği, dört modülde `Enlist` guard'ı ve host `Serializable` doğrulaması eklendi. Production kodu değişmedi; Docker hariç 379/379, çözüm build 0/0, commit/push yok. Ayrıntı: audit raporu §9. |
 | 1.27 | 2026-11-21 | **Teslim:** V12-T01 testleri + devir notu commit/push edildi; audit dosyaları tek dosyada birleştirildi, §9 işaretçileri düzeltildi. Docker hariç test sayısı 379/379, production kodu değişmedi. Sıradaki görev: F-06/F-07/F-08 hata senaryoları (ayrı oturum/görev). |
+| 1.28 | 2026-11-21 | **F-06/F-07/F-08 hata sınırı testleri eklendi:** `Enlist` istisnası politikası, gerçek `DbTransaction.CommitAsync` istisnası + middleware 409 yanıtı ve gerçek ikinci yazıcının yazıp hata verdiği rollback senaryosu. Yalnızca test + test paketi; production kodu değişmedi, Docker hariç 383/383, build 0/0. |

@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.17
+**Sürüm:** 2.18
 **Tarih:** 2026-11-21
-**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.27](09-todo.md) · ADR-0001…0010
+**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.28](09-todo.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -836,6 +836,7 @@ tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
 | 2.15 | 2026-11-20 | **V11-T02 uygulandı:** gerçek `AddExpenseViewModel.SaveAsync` akışı PendingOperation/Idempotency zincirine bağlandı; 14 uçtan uca mobil test eklendi (45/45), çözüm build'i 0/0, Docker hariç testler 354/354. §6, §8.7 ve `docs/09` v1.25 güncellendi; `docs/11` v1.4 uygulama notu eklendi. Docker daemon kapalı olduğu için API entegrasyon sonucu ve Windows UI smoke doğrulanmadı. |
 | 2.16 | 2026-11-21 | **V12-T01 tamamlandı (yalnızca test):** Transaction Participant Architecture Audit F-01/F-09/F-10/F-12 için mimari koruma, gerçek SQLite connection/transaction kimliği, dört modülde `Enlist` guard'ı ve host `Serializable` doğrulaması eklendi. Docker hariç 379/379 test, çözüm build 0 uyarı/0 hata. Production kodu değişmedi; commit/push yok. Ayrıntı: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9. |
 | 2.17 | 2026-11-21 | **Docs/test teslimi tamamlandı:** V12-T01 testleri ve devir notu commit edilip `origin/main`'e push edildi. §9 işaretçi uyuşmazlığı giderildi; audit tek dosyada birleştirildi (`...-2026-11-20.md` kopyası silindi), `docs/08`/`docs/09`/teslim raporu güncellendi. Test sayıları değişmedi (Docker hariç 379/379); production kodu değişmedi. |
+| 2.18 | 2026-11-21 | **F-06/F-07/F-08 hata sınırı testleri eklendi:** `Enlist` istisnasının mevcut politikası, gerçek `DbTransaction.CommitAsync` istisnası ve gerçek ikinci yazıcının yazıp hata vermesi senaryoları test edildi. Yalnızca test + test paketi referansı; production kodu değişmedi. Docker hariç 383/383, build 0/0. Ayrıntı: audit raporu §9.6. |
 
 ### 8.6 Sonraki oturum devri notu (2026-11-20)
 
@@ -920,3 +921,16 @@ tarihli kopya silindi; `docs/08`, `docs/09` ve teslim raporundaki bütün işare
 bu tek dosyaya yönlendirildi. Audit gövdesi ve §9 bulguları değişmedi. V12-T01
 testleri, bu düzeltmeler ve devir notu birlikte commit edilip `origin/main`'e
 push edildi; Docker/Testcontainers doğrulaması hâlâ bekliyor.
+
+### 8.10 F-06/F-07/F-08 hata sınırı testleri (2026-11-21)
+
+Audit'in yüksek/orta seviyeli üç açık bulgusu için yalnızca test kapsamı eklendi:
+`Enlist` istisnasında mevcut davranış (istisna yayılır, 500, idempotency kaydı
+yazılmaz), production `WriteTransactionScope` üzerinde gerçek
+`DbTransaction.CommitAsync` istisnasının yayılması ve middleware'ın bunu 409
+`IdempotencyInProgress`'e çevirmesi, ayrıca gerçek ikinci yazıcının SQLite'a
+yazıp sonra hata verdiğinde commit olmaması. F-08 testi fake writer yerine gerçek
+`DebtCashInflowWriter` kullanır. Doğrulama: build 0/0, Docker hariç **383/383**
+(Api.Unit 81/81, CreditCards 86/86). Docker/Testcontainers çalıştırılmadı;
+F-06 için hata politikası kararı ve 3+ modül tek-transaction kanıtı hâlâ açık.
+Ayrıntı: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9.6.
