@@ -62,6 +62,10 @@ public partial class CardsViewModel : ViewModelBase
         await _navigator.GoToAsync($"carddetail?id={item.Id}", cancellationToken);
 
     [RelayCommand]
+    private async Task AddCardAsync(CancellationToken cancellationToken) =>
+        await _navigator.GoToAsync("addcard", cancellationToken);
+
+    [RelayCommand]
     private async Task GoBackAsync(CancellationToken cancellationToken) =>
         await _navigator.GoToAsync("//main", cancellationToken);
 }

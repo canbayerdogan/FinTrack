@@ -580,8 +580,9 @@ slice 1–8 tamam.
       single-flight. Token'lar loglanmaz/hata mesajlarına eklenmez.
 - [x] `Idempotency-Key` uygulanmadığı için otomatik retry yalnızca
       GET/HEAD/OPTIONS; POST/PUT tekrar edilmez.
-- [x] Ekranlar: giriş/kayıt, ana özet, harcama listesi/ekleme, kartlar, kart
-      detayı (harcamalar, borç, ekstre), borçlar, raporlar, ayarlar.
+- [x] Ekranlar: giriş/kayıt, ana özet, harcama listesi/ekleme, kartlar,
+      kart ekleme (banka/kart adı; kart numarası/CVV yok), kart detayı
+      (harcamalar, borç, ekstre), borçlar, raporlar, ayarlar.
 - [x] Ayarlar: saat dilimi (`GET/PUT /auth/me`), çıkış.
 - [x] v1: çevrimdışı yazma yok; okuma önbelleği eklenmedi (opsiyonel).
 - [x] `IQueryProperty` yerine .NET 10 `IQueryAttributable` /

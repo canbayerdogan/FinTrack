@@ -174,6 +174,63 @@ public sealed class ViewModelTests
         Assert.Empty(queue.Requests);
     }
 
+    [Fact]
+    public async Task Kartlar_ekle_komutu_kart_ekleme_sayfasina_gider()
+    {
+        var queue = new QueueHandler();
+        var api = new FinTrackApiClient(new HttpClient(queue) { BaseAddress = BaseAddress });
+        var navigator = new FakeNavigator();
+        var viewModel = new CardsViewModel(api, navigator);
+
+        await viewModel.AddCardCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { "addcard" }, navigator.Routes);
+        Assert.Empty(queue.Requests);
+    }
+
+    [Fact]
+    public async Task Kart_ekleme_banka_adi_olmadan_istek_gondermez()
+    {
+        var queue = new QueueHandler();
+        var api = new FinTrackApiClient(new HttpClient(queue) { BaseAddress = BaseAddress });
+        var navigator = new FakeNavigator();
+        using var database = new TempDatabase();
+        using var pendingStore = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
+        var recovery = new PendingOperationRecoveryService(
+            new HttpClient(new QueueHandler()) { BaseAddress = BaseAddress }, pendingStore);
+        var session = new Core.Services.SessionService(api, new FakeTokenStore());
+        var viewModel = new AddCardViewModel(navigator, recovery, session) { DisplayName = "Axess kredi kartı" };
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Banka adı zorunludur.", viewModel.ErrorMessage);
+        Assert.Empty(queue.Requests);
+        Assert.Empty(navigator.Routes);
+    }
+
+    [Fact]
+    public async Task Kart_ekleme_gecersiz_ekstre_gunu_ile_istek_gondermez()
+    {
+        var queue = new QueueHandler();
+        var api = new FinTrackApiClient(new HttpClient(queue) { BaseAddress = BaseAddress });
+        using var database = new TempDatabase();
+        using var pendingStore = new PendingOperationStore(database.DatabasePath, new FakeSecureKeyValueStore());
+        var recovery = new PendingOperationRecoveryService(
+            new HttpClient(new QueueHandler()) { BaseAddress = BaseAddress }, pendingStore);
+        var session = new Core.Services.SessionService(api, new FakeTokenStore());
+        var viewModel = new AddCardViewModel(new FakeNavigator(), recovery, session)
+        {
+            BankName = "Akbank",
+            DisplayName = "Axess kredi kartı",
+            StatementDayText = "32",
+        };
+
+        await viewModel.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Ekstre günü 1 ile 31 arasında olmalıdır.", viewModel.ErrorMessage);
+        Assert.Empty(queue.Requests);
+    }
+
     private static (Core.Services.SessionService Session, FakeNavigator Navigator, FakeTokenStore Store) CreateServices(
         HttpMessageHandler handler)
     {

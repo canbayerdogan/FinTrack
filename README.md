@@ -114,8 +114,8 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
   `FinTrack.Mobile.Core` (net10.0), `FinTrack.Mobile` ve
   `FinTrack.Mobile.Tests`. Shell + MVVM, typed `HttpClient`, `SecureStorage`
   token akışı, 401 refresh + güvenli tekrar (POST/PUT otomatik retry yok),
-  giriş/kayıt, özet, harcama + ekleme, kartlar + detay, borçlar, raporlar ve
-  ayarlar. Token'lar loglanmaz. Hedefler: Android + Windows; çevrimdışı yazma
+  giriş/kayıt, özet, harcama + ekleme, kartlar + ekleme + detay, borçlar,
+  raporlar ve ayarlar. Token'lar loglanmaz. Hedefler: Android + Windows; çevrimdışı yazma
   ve bildirim kapsam dışı. Android emülatör smoke'u giriş → harcama → kart →
   rapor akışını doğruladı; eksik `MainApplication`, global `login` rotası,
   `Keyboard="Numeric"` ve root geri dönüş düzeltmeleri kalıcı hale getirildi.

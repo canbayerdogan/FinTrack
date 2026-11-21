@@ -208,3 +208,14 @@ public sealed record CreateExpenseRequest(
     Guid? CardId,
     string? Description,
     string Currency = "TRY");
+
+/// <summary>
+/// POST /cards gövdesi. Yalnızca banka/kart adı ve isteğe bağlı bilgiler
+/// gönderilir; kart numarası, CVV veya son kullanma tarihi yoktur.
+/// </summary>
+public sealed record CreateCardRequest(
+    string BankName,
+    string DisplayName,
+    decimal? CreditLimit,
+    int? StatementDay,
+    int? PaymentDueDay);
