@@ -140,7 +140,6 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
 
         var enlistedParticipants = participants.ToArray();
         IWriteTransactionScope? scope = null;
-        var committed = false;
         var originalBody = context.Response.Body;
         MemoryStream? buffer = null;
 
@@ -157,7 +156,7 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
             var existing = await store.FindAsync(scopeHash, key, context.RequestAborted);
             if (existing is not null)
             {
-                committed = await HandleExistingAsync(
+                await HandleExistingAsync(
                     context, store, scope, existing, scopeHash, key, requestHash, context.RequestAborted);
                 return;
             }
@@ -195,7 +194,7 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
                     return;
                 }
 
-                committed = await HandleExistingAsync(
+                await HandleExistingAsync(
                     context, store, scope, existing, scopeHash, key, requestHash, context.RequestAborted);
                 return;
             }
@@ -234,30 +233,33 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
 
                 try
                 {
-                    await store.CompleteAsync(
-                        scopeHash,
-                        key,
-                        new IdempotencyResponseMetadata(
-                            statusCode,
-                            responseContentType,
-                            location,
-                            Encoding.UTF8.GetString(responseBytes)),
-                        DateTime.UtcNow,
+                    await CommitStatusChangeAsync(
+                        async () =>
+                        {
+                            await store.CompleteAsync(
+                                scopeHash,
+                                key,
+                                new IdempotencyResponseMetadata(
+                                    statusCode,
+                                    responseContentType,
+                                    location,
+                                    Encoding.UTF8.GetString(responseBytes)),
+                                DateTime.UtcNow,
+                                context.RequestAborted);
+                            if (hook?.BeforeCommitAsync is not null)
+                            {
+                                await hook.BeforeCommitAsync();
+                            }
+
+                            if (hook?.CommitMode is IdempotencyTestCommitMode.BeforeCommit or
+                                IdempotencyTestCommitMode.DuringCommit)
+                            {
+                                throw new IdempotencyTestException(
+                                    "Test hook: bağlantı commit sırasında koptu.");
+                            }
+                        },
+                        scope,
                         context.RequestAborted);
-                    if (hook?.BeforeCommitAsync is not null)
-                    {
-                        await hook.BeforeCommitAsync();
-                    }
-
-                    if (hook?.CommitMode is IdempotencyTestCommitMode.BeforeCommit or
-                        IdempotencyTestCommitMode.DuringCommit)
-                    {
-                        throw new IdempotencyTestException(
-                            "Test hook: bağlantı commit sırasında koptu.");
-                    }
-
-                    await scope.CommitAsync(context.RequestAborted);
-                    committed = true;
 
                     if (hook?.CommitMode == IdempotencyTestCommitMode.AfterCommit)
                     {
@@ -315,8 +317,8 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
         }
     }
 
-    /// <summary> Var kayıt için replay / key reuse / expired / in-progress kararı. Commit yapıldıysa true. </summary>
-    private static async Task<bool> HandleExistingAsync(
+    /// <summary> Var kayıt için replay / key reuse / expired / in-progress kararı. </summary>
+    private static async Task HandleExistingAsync(
         HttpContext context,
         IIdempotencyStore store,
         IWriteTransactionScope scope,
@@ -329,29 +331,31 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
         if (existing.Status == IdempotencyStatus.InProgress)
         {
             await IdempotencyProblems.InProgress(context).ExecuteAsync(context);
-            return false;
+            return;
         }
 
         if (existing.Status == IdempotencyStatus.Tombstone)
         {
             await IdempotencyProblems.Expired(context).ExecuteAsync(context);
-            return false;
+            return;
         }
 
         if (existing.ExpiresAtUtc <= DateTime.UtcNow)
         {
             //Tam gövde TTL'si doldu: gövdesiz tombstone + tek commit.
-            await store.TombstoneAsync(scopeHash, key, cancellationToken);
-            await scope.CommitAsync(cancellationToken);
+            await CommitStatusChangeAsync(
+                () => store.TombstoneAsync(scopeHash, key, cancellationToken),
+                scope,
+                cancellationToken);
             await IdempotencyProblems.Expired(context).ExecuteAsync(context);
-            return true;
+            return;
         }
 
         if (!string.Equals(existing.RequestHash, requestHash, StringComparison.Ordinal) ||
             existing.ResponseBody is null || existing.ResponseStatusCode is null)
         {
             await IdempotencyProblems.KeyReused(context).ExecuteAsync(context);
-            return false;
+            return;
         }
 
         context.Response.StatusCode = existing.ResponseStatusCode.Value;
@@ -364,7 +368,20 @@ internal sealed class IdempotencyMiddleware(RequestDelegate next, ILogger<Idempo
         var bytes = Encoding.UTF8.GetBytes(existing.ResponseBody);
         context.Response.ContentLength = bytes.Length;
         await context.Response.Body.WriteAsync(bytes, cancellationToken);
-        return false;
+    }
+
+    /// <summary>
+    /// ADR-0010: durum yazımını izleyen tek commit. 2xx → <c>Completed</c> ve
+    /// expired → <c>Tombstone</c> dalları aynı sırayı kullanır; hata/rollback
+    /// davranışı çağrana aittir (2xx dalı 409'a çevirir, expired dalı yayar).
+    /// </summary>
+    private static async Task CommitStatusChangeAsync(
+        Func<Task> writeStatus,
+        IWriteTransactionScope scope,
+        CancellationToken cancellationToken)
+    {
+        await writeStatus();
+        await scope.CommitAsync(cancellationToken);
     }
 
     private static IEnumerable<KeyValuePair<string, string>> ParseStoredHeaders(string? stored) =>

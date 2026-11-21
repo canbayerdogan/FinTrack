@@ -1,8 +1,8 @@
 # FinTrack — Idempotency Teknik Tasarımı
 
-**Sürüm:** 1.4
-**Tarih:** 2026-11-20
-**Durum:** ✅ V11-T01 + V11-T02 uygulandı; mobil **45/45**, Docker hariç toplam **354/354**, çözüm build **0/0** — Windows manuel UI smoke ve Docker erişilebildiğinde API entegrasyon doğrulaması operatör görevleri
+**Sürüm:** 1.5
+**Tarih:** 2026-11-21
+**Durum:** ✅ V11-T01 + V11-T02 uygulandı; V12-T02 commit yolu temizliği ve kapsam sınırı testleri doğrulandı — Docker hariç **390/390**, gerçek Docker/Testcontainers + MSSQL entegrasyon **95/95**, çözüm build **0/0** — Windows manuel UI smoke operatör görevidir; V12-T02 kod/test değişiklikleri commit/push bekliyor, son yeşil CI `44931169879` (`1826dc7`)
 **Bağlı belgeler:** [Kararlar v1.2](10-karar-bekleyen-konular.md) · [İş Kuralları §2.7](05-is-kurallari.md) · [API Sözleşmeleri §1.4](06-api-sozlesmeleri.md) · [ADR-0009](adr/0009-moduller-arasi-atomik-yazma.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Görev kartı](07-yol-haritasi-ve-ajan-gorev-standardi.md) §5.1
 
 > Bu dosya, `docs/10` kararlarının teknik tasarımı ve kullanıcının
@@ -424,7 +424,7 @@ CreditCards, Debts).
 | **S22** | **İlk transaction deadlock (1205) / rollback ayrımı** | Her durumda 1 kayıt; ikinci istek replay veya normal execution |
 | **S23** | **Lock timeout (1222 / command timeout)** | `409 IdempotencyInProgress`; 2. finansal kayıt yok |
 | **S24** | **İki instance × {commit, rollback, deadlock, lock timeout} matrisi** | §4.4.1 tablosunun tamamı doğrulanır |
-| **S25** | **Expenses / CashInflows / CreditCards / Debts entegrasyonu** | Dördü de host scope'unda `Enlist`; host yokken eski davranış |
+| **S25** | **Expenses / CashInflows / CreditCards / Debts entegrasyonu** | Dört modülün mutasyon POST'u middleware altında çalışır; **dört ayrı `Idempotency-Key` ve dört ayrı transaction** — çok modüllü tek transaction kanıtı değildir (V12-T02, audit F-05) |
 | **S26** | **RFC 8785 resmî test vektörleri** | Kütüphane kapı koşulu geçer (§3.2) |
 | **S27** | **decimal sınırı (§3.2.1 — `2^39`)** | Sınır altındaki ardışık tutarlar farklı hash; `2^39` ve üzeri `400 ValidationFailed` |
 | **S28** | **Durum sorgusu + tombstone** | `GET /idempotency/{key}` → 200 (Completed/tombstone) / 404; gövde sızdırılmaz |
@@ -726,6 +726,10 @@ Windows UI smoke kullanıcı/operatör tarafından tamamlanacak.
 | K5 | Windows manuel smoke yapılmadı | DoD eksik | §9.3; operatör tamamlar |
 | K6 | Dağıtık kilit yok | Yüksek eşzamanlılıkta gecikme | §4.4.1 lock timeout → `409 InProgress`; gerekirse yeni ADR |
 | K7 | `Microsoft.Data.Sqlite` yeni bağımlılığı | Paket yönetimi | §7.1 gerekçe; mevcut structured store olmadığı için tek altyapı |
+| K8 | `OperationCanceledException` mevcut `catch (Exception)` içinde 409'a çevrilebilir | İstemci iptali ile sunucu tarafı belirsiz commit ayrımı bulanıklaşabilir | **V12-T02 regresyonu değil, önceden var olan risk** (`IdempotencyMiddleware.cs:270-276`); bu turda değiştirilmedi |
+| K9 | `RequestAborted` ile cleanup gate beklemesinde iptal oluşabilir | İstek transaction açılmadan düşebilir | **Önceden var olan risk** (`IdempotencyCleanupService.cs:34`, try bloğu dışı); V12-T02 bu dosyaya dokunmadı |
+| K10 | Handler'da `Enlist(null)` hata verirse izleyen `DisposeAsync()` atlanabilir | Host dışı yolda transaction/bağlantı temizliği gecikebilir | **Önceden var olan risk** (`CashAdvanceHandlers.cs:106-107`, `:196-197`); host kapsamında no-op zinciri nedeniyle pratik etki sınırlı, hostsuz çalışma zamanı davranışı kaynak koddan kesin doğrulanamaz |
+| K11 | Rollback açık `RollbackAsync` yerine uncommitted transaction dispose'a dayanıyor | Framework davranışına bağımlılık; F-14 açık | **Önceden var olan risk** (`SqlWriteTransactions.cs:71-72`); gerçek MSSQL doğrulaması bu turda yapılmadı |
 
 > **Kodlama onayı ve uygulama:** Altı koşullu onayın tamamı ve dört kritik konu
 > kapatılmıştır; kullanıcı `5abb6af` sonrası açık kodlama onayını vermiştir.
@@ -754,7 +758,7 @@ commit/rollback/lock-timeout senaryoları (S4/S21/S22–S24) ile örtüldü.
 smoke (§9.3); yerel Android Java SDK yapılandırması nedeniyle MAUI head projesinin
 tam build'i. `FinTrack.Mobile.Core` ve `FinTrack.Mobile.Tests` derlenip test edildi.
 
-### 9.6 V11-T02 — gerçek mobil harcama akışı (2026-11-20)
+### 9.6 V11-T02 — gerçek mobil harcama akışı (2026-11-20, V11-T02 anlık görüntüsü)
 
 V11-T01 altyapısı hazırdı; denetimde `AddExpenseViewModel.SaveAsync` hâlâ
 `FinTrackApiClient.CreateExpenseAsync`'i doğrudan çağırıyordu. V11-T02 bu boşluğu
@@ -784,6 +788,31 @@ kullanıcı izolasyonu, JWT `sub` yokluğu ve 31 günlük tombstone ele alınır
 | API entegrasyonları | ⚠️ Docker daemon kapalı: 86/95 `DockerUnavailableException`, 9 DB'siz smoke geçti; başarılı sayılmaz |
 | Windows manuel UI smoke | ⏳ Operatör tarafından tamamlanacak; bu oturumda çalıştırılmadı |
 
+### 9.7 V12-T02 — commit yolu temizliği ve kapsam sınırı doğrulaması (2026-11-21)
+
+Audit raporu §10, gerçek `git diff HEAD` üzerinden aşağıdaki kapanışları kaydeder:
+
+| Konu / bulgu | Sonuç |
+|---|---|
+| F-03 — ölü `committed` state | Kapatıldı. Flag ve `HandleExistingAsync` ölü `bool` dönüşü kaldırıldı; commit/hata davranışı değişmedi. |
+| F-04 — iki commit noktası | Kapatıldı. 2xx ve expired→Tombstone, `CommitStatusChangeAsync` altında merkezileştirildi. Hook sırası yalnızca 2xx yolunda geçerlidir: `CompleteAsync → BeforeCommitAsync → CommitMode kontrolü → CommitAsync → AfterCommit`. Expired→Tombstone yolu `TombstoneAsync → CommitAsync` çağırır; `BeforeCommitAsync`, `CommitMode` hook kontrolü veya `AfterCommit` bulunmaz. |
+| F-05 — yanıltıcı S25 adı | Kapatıldı. **Dört ayrı POST, dört ayrı `Idempotency-Key` ve dört ayrı transaction**; test çok modüllü tek transaction kanıtı değildir. |
+| F-11 — kapsam dışı yollar | Sınırlı kapsamda kapatıldı. Gerçek middleware invocation testleri PUT/auth POST ve kimlik hatasında `next`'e geçişi, scope/store/commit/cleanup çağrısı olmadığını gösteriyor. **Endpoint içi domain write olmadığını kanıtlamaz.** |
+| Audit F-13 — güncel olmayan handler yorumu | Kapatıldı. Yorum ADR-0010 host sahipliğini doğru yansıtıyor; çalışma zamanı kodu değişmedi. Görev metnindeki "F-13 — expired→Tombstone" ifadesi bu raporda F-04 kanıtı olarak işlendi; iki id aynı değildir. |
+| F-09 / F-10 / F-12 / F-14 | Bu turda kapatılmadı. F-12, V12-T01'de kapalı kayıtlıdır; V12-T02'de yeniden test edilmedi. Diğerleri açık/kısmen kapalı durumlarını korudu. |
+
+Yeni/doğrulanmış testler:
+`Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner`,
+`S25_Dort_modulun_POST_u_idempotency_middleware_altinda_calisir`,
+`IdempotencyScopeBoundaryTests` (4 kapsam-dışı vaka + kimlik hatası + kapsam-içi pozitif kontrol).
+
+**Doğrulama:** `FinTrack.slnx` build 0 uyarı/0 hata; Docker hariç testler **390/390**;
+gerçek Docker/Testcontainers + MSSQL API entegrasyonları **95/95** (aynı testler
+iki kez sayılmadı); F-06 özel testi **1/1**; `git diff --check` temiz. Son yeşil CI
+`44931169879` (`1826dc7`) V12-T02 öncesinedir; yeni CI yok. Windows manuel UI
+smoke yapılmadı. Beş kod/test dosyası commit/push bekliyor. Önceden var olan
+riskler §9.4 K8–K11'de korundu; V12-T02 regresyonu olarak nitelendirilmedi.
+
 ---
 
 ## 10. Değişiklik geçmişi
@@ -795,3 +824,4 @@ kullanıcı izolasyonu, JWT `sub` yokluğu ve 31 günlük tombstone ele alınır
 | 1.2 | 2026-11-19 | Açık kodlama onayı işlendi. §3.2 RFC 8785 kapısı koşuldu: `Jcs.Net` 0.1.1 resmî vektörler/S13/strict I-JSON testlerini geçti (26/26). §3.2.1 sayı sınırı, kapıda bulunan double çakışması nedeniyle `2^53/10^4`'ten `2^39`'a düzeltildi (kullanıcı onayıyla); S27 ve K2 güncellendi. |
 | 1.3 | 2026-11-19 | **V11-T01 uygulandı:** host middleware/store/`shared` migration/DI, tek `DbTransaction` + ADR-0010 modül uyumları, durum sorgusu ve `409 IdempotencyExpired`, mobil AES-256-GCM pending store + kurtarma; S1–S29 kapsamı (S19 gerçek deadlock enjeksiyonu yerine hook tabanlı arbit) ve 435/435 test. §4.7 uygulama notu, §9.5 doğrulama tablosu ve son onay notu güncellendi. |
 | 1.4 | 2026-11-20 | **V11-T02 uygulandı:** `AddExpenseViewModel.SaveAsync` gerçek harcama POST'unu PendingOperation/Idempotency zincirine bağladı; tek key/body, tekrar Kaydet koruması, JWT `sub` kullanıcı izolasyonu, oturum değişimi koruması ve açılışta single-flight recovery. 14 yeni entegrasyon testiyle 45/45 mobil, Docker hariç 354/354, build 0/0. §9.6 uygulama notu eklendi; Docker/Windows operasyonel doğrulama açık bırakıldı. |
+| 1.5 | 2026-11-21 | **V12-T02 doğrulandı:** `committed` ölü state'i kaldırıldı, 2xx/expired commit'leri `CommitStatusChangeAsync` altında toplandı, S25 adı dört ayrı transaction gerçeğiyle düzeltildi, expired→Tombstone ve middleware kapsam sınırı testleri eklendi. Audit F-03/F-04/F-05/F-11 ve F-13 (yorum) kapatıldı; F-09/F-10/F-12/F-14 bu turda kapatılmadı. Docker hariç 390/390 + gerçek MSSQL 95/95, build 0/0; §4.7 S25, §9.4 K8–K11, §9.7 güncellendi. Beş kod/test dosyası commit/push bekliyor, yeni CI yok. |

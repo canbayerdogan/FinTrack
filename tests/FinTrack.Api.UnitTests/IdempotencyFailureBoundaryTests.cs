@@ -75,6 +75,43 @@ public sealed class IdempotencyFailureBoundaryTests
         Assert.Equal(0, store.TombstoneCount);
     }
 
+    [Fact]
+    public async Task Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await using var idempotencyDb = CreateIdempotencyDb(connection);
+        var context = CreateContext();
+        var scope = new RecordingScope(transaction);
+        var store = new FakeStore(new IdempotencyKeyRecord
+        {
+            Status = IdempotencyStatus.Completed,
+            ExpiresAtUtc = DateTime.UtcNow.AddMinutes(-1),
+        });
+        var setter = new FakeScopeSetter();
+        var nextCalls = 0;
+        var middleware = new IdempotencyMiddleware(
+            _ =>
+            {
+                nextCalls++;
+                return Task.CompletedTask;
+            },
+            NullLogger<IdempotencyMiddleware>.Instance);
+
+        await InvokeAsync(middleware, context, store, scope, setter, idempotencyDb, [new RecordingParticipant()]);
+
+        // F-04: expired → Tombstone yazımını izleyen tek commit; 2xx dalı ile aynı yardımcı metot.
+        Assert.Equal(StatusCodes.Status409Conflict, context.Response.StatusCode);
+        Assert.Equal(0, nextCalls);
+        Assert.Equal(1, store.TombstoneCount);
+        Assert.Equal(1, scope.CommitCount);
+        Assert.Equal(1, scope.DisposeCount);
+        Assert.Equal(0, store.InsertCount);
+        Assert.Equal(0, store.CompleteCount);
+        Assert.Null(setter.Current);
+    }
+
     private static IdempotencyDbContext CreateIdempotencyDb(SqliteConnection connection) =>
         new(new DbContextOptionsBuilder<IdempotencyDbContext>().UseSqlite(connection).Options);
 
@@ -190,7 +227,7 @@ public sealed class IdempotencyFailureBoundaryTests
         }
     }
 
-    private sealed class FakeStore : IIdempotencyStore
+    private sealed class FakeStore(IdempotencyKeyRecord? existing = null) : IIdempotencyStore
     {
         public int InsertCount { get; private set; }
 
@@ -200,7 +237,7 @@ public sealed class IdempotencyFailureBoundaryTests
 
         public Task<IdempotencyKeyRecord?> FindAsync(
             string scopeHash, string key, CancellationToken cancellationToken) =>
-            Task.FromResult<IdempotencyKeyRecord?>(null);
+            Task.FromResult(existing);
 
         public Task<IdempotencyInsertOutcome> InsertAsync(
             IdempotencyKeyRecord record, CancellationToken cancellationToken)

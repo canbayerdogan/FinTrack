@@ -1,6 +1,11 @@
 # FinTrack — Transaction Participant Architecture Audit
 
 > **Kapsam notu:** Bu rapor yalnızca kaynak kodu ve mevcut test dosyalarının incelenmesine dayanır. **Hiçbir test çalıştırılmadı**, hiçbir dosya değiştirilmedi/oluşturulmadı/silinmedi, refactoring yapılmadı, commit/push yapılmadı. Çalışma ağacı denetim boyunca temiz kaldı (`main...origin/main`). API integration testleri `Testcontainers.MsSql` + Docker gerektirir (`tests/FinTrack.Api.IntegrationTests/ApiFixture.cs:4,16-28`); bu denetimde çalıştırılmadı. "Test kanıtı" ifadeleri, test kaynak kodundaki assert'leri anlatır; çalıştırılmış sonuç anlamına gelmez. Çalışma zamanına dair framework davranışları (ADO.NET rollback semantics, EF `UseTransaction` uyumluluğu) kodda kanıtlanamadığı için açıkça "doğrulanmamış" olarak işaretlenmiştir.
+>
+> **Ekler hakkında:** Bu not yalnızca ilk denetim anına aittir. Sonradan yapılan
+> test/production değişiklikleri ve çalıştırılmış test sonuçları §9 (V12-T01),
+> §9.6 (F-06/F-07/F-08) ve **§10 (V12-T02)** bölümlerinde kaydedilmiştir.
+> Bulguların güncel durumu için §10.3 esas alınmalıdır.
 
 ---
 
@@ -349,7 +354,10 @@ test projesinde doğrulanabilir.
   ek testler eklendi; buna karşın 3+ modülün tek transaction'ı, gerçek MSSQL
   commit davranışı ve F-06 hata politikası kararı açık kalmaya devam eder.
 
-### 9.5 Audit bulgularının durumu
+### 9.5 Audit bulgularının durumu (V12-T01 anlık görüntüsü)
+
+> Bu tablo V12-T01 sonrasını kaydeder. V12-T02 ile kapatılan bulgular ve
+> korunan açık/kısmen kapalı durumlar için **§10.3** esas alınmalıdır.
 
 | Bulgu | V12-T01 sonrası durum |
 |---|---|
@@ -378,3 +386,97 @@ eklendi (host/migration değişmedi).
 Doğrulama: çözüm build 0 uyarı/0 hata; Api.Unit **81/81**, CreditCards **86/86**;
 Docker hariç toplam **383/383** (önceki 379/379 + 4 yeni test). Docker/Testcontainers (gerçek MSSQL) senaryoları
 çalıştırılmadı; F-06 politika kararı ve 3+ modül tek-transaction kanıtı açık kaldı.
+
+---
+
+## 10. V12-T02 — Commit yolu temizliği ve kapsam sınırı testleri (2026-11-21 eki)
+
+Bu bölüm V12-T02'nin **gerçek Git diff'i** (`HEAD` `1826dc7` ↔ çalışma kopyası)
+ve çalıştırılmış test sonuçlarıyla doğrulanan kapanışları kaydeder. Beş kod/test
+dosyası değiştirilmiştir; bunlar **henüz commit/push edilmemiştir**. Son yeşil CI
+hâlâ `44931169879` (`build-test`, commit `1826dc7`) olup V12-T02 değişikliklerini
+içermez. Windows manuel UI smoke bu turda da yapılmadı.
+
+### 10.1 Değiştirilen kod/test dosyaları
+
+| Dosya | Değişiklik |
+|---|---|
+| `src/Host/FinTrack.Api/Idempotency/IdempotencyMiddleware.cs` | Okunmayan `committed` state'i kaldırıldı; 2xx ve expired→Tombstone commit çağrıları `CommitStatusChangeAsync` altında toplandı. `HandleExistingAsync` `Task<bool>` yerine `Task` döndürüyor. |
+| `src/Modules/CreditCards/FinTrack.Modules.CreditCards.Application/CashAdvances/CashAdvanceHandlers.cs` | Sınıf yorumu düzeltildi: ADR-0010 host kapsamında gerçek commit middleware'da; host yoksa ADR-0009 akışı korunur. Çalışma zamanı kodu değişmedi. |
+| `tests/FinTrack.Api.IntegrationTests/IdempotencyCoreScenariosTests.cs` | S25'in adı ve XML yorumu dört bağımsız POST/anahtar/transaction gerçeğini yansıtacak şekilde düzeltildi. |
+| `tests/FinTrack.Api.UnitTests/IdempotencyFailureBoundaryTests.cs` | Expired→Tombstone için `Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner` eklendi; `FakeStore` mevcut kayıtla oluşturulabilir hale getirildi. |
+| `tests/FinTrack.Api.UnitTests/IdempotencyScopeBoundaryTests.cs` | **Yeni.** PUT, auth POST ve kimlik hatası için gerçek `IdempotencyMiddleware.InvokeAsync` çağrıları; kapsam içi POST için pozitif kontrol. |
+
+### 10.2 Kapatılan bulgular ve kanıtları
+
+| Bulgu | Önceki durum | Yapılan değişiklik | Doğrulama / kapsam |
+|---|---|---|---|
+| **F-03** | `committed` atanır, hiç okunmaz (`IdempotencyMiddleware.cs:143,160,198,260`). | Flag ve `HandleExistingAsync` dönüş değerindeki ölü `bool` kaldırıldı. | `git diff HEAD`: state tanımı ve tüm atamalar gitti; çağrı noktaları `await HandleExistingAsync(...)` oldu. Commit/hata davranışı değişmedi. |
+| **F-04** | İki doğrudan commit: 2xx (`:259`) ve expired→Tombstone (`:345`). | Her iki dal `CommitStatusChangeAsync(writeStatus, scope, cancellationToken)` çağırıyor. Hook sırası yalnızca 2xx yolunda geçerlidir: `CompleteAsync → BeforeCommitAsync → CommitMode kontrolü → CommitAsync → AfterCommit`; expired→Tombstone dalı `TombstoneAsync → CommitAsync` çağırır ve `BeforeCommitAsync`, `CommitMode` hook kontrolü veya `AfterCommit` içermez. | `Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner`: `TombstoneCount=1`, `CommitCount=1`, `CompleteCount=0`, `InsertCount=0`, `nextCalls=0`, 409. 2xx yolu için mevcut middleware testleri korundu. Hata/rollback sahipliği çağrana ait: 2xx 409'a çevirir, expired dalı yayar. |
+| **F-05** | S25 adı "dört modül aynı scope" diyordu; gövde dört ayrı `Guid.NewGuid()` kullanıyordu. | Test adı `S25_Dort_modulun_POST_u_idempotency_middleware_altinda_calisir` oldu; yorum dört ayrı host transaction'ını açıkça yazıyor; test gövdesi korundu. | **Dört ayrı POST, dört ayrı `Idempotency-Key` ve dört ayrı transaction söz konusudur. Bu test dört modülün tek bir ortak transaction içinde atomik çalıştığını KANITLAMAZ.** Gerçek Docker/MSSQL entegrasyon koşusunda 95/95 içinde yer aldı. |
+| **F-11** | PUT/auth POST ve kimlik hatasında host scope açılmadığı yalnızca kaynak koddan çıkarılıyordu; davranış testi yoktu. | `IdempotencyScopeBoundaryTests.cs` eklendi. Geçersiz anahtar bilerek gönderilerek middleware kapsam içinde olsaydı 400 üreteceği durum kuruldu. | Theory 4 vaka: `PUT /api/v1/expenses/abc`, `PUT /api/v1/categories/abc/archive`, `POST /api/v1/auth/login`, `POST /api/v1/auth/register` → `next=1`, 200, `BeginCount=0`, `SetCount=0`, participant enlist/detach=0, store erişimi=0, commit=0, cleanup=0. Kimlik hatası ayrı testte aynı sonucu doğruluyor. Pozitif kontrol kapsam içi POST'ta 1 scope/1 commit görüyor. **Bu testler middleware'in scope açmadığını ve isteği doğrudan devam ettirdiğini kanıtlar; PUT/auth POST endpoint'lerinde domain write bulunmadığını kanıtlamaz.** |
+| **F-13 (audit kimliği)** | `CashAdvanceHandlers.cs:12` yorumu "commit yalnızca handler'dadır" diyordu. | Yorum ADR-0010 host sahipliğini ve hostsuz ADR-0009 akışını doğru tarif edecek şekilde düzeltildi. | `git diff HEAD` yalnızca yorum satırlarını gösteriyor; `SqlWriteTransactions.cs:43-49,84-86` no-op zinciri ve `Program.cs:61-66` DI kaydıyla uyumlu. Çalışma zamanı davranışı değişmedi. |
+
+> **Kimlik uyarısı:** Görev metninde "F-13 — expired→Tombstone tek commit regression testi"
+> ifadesi kullanılmıştır. Audit raporundaki **F-13** ise güncel olmayan
+> `CashAdvanceHandlers` yorumudur (yukarıdaki satır). Expired→Tombstone tek commit
+> davranışının regression kanıtı bu raporda **F-04** altında kaydedilmiştir. İki
+> id aynı çalışmayı temsil etmez; ikisi de yukarıda kapatılmıştır.
+
+### 10.3 Audit bulgularının güncel durumu (V12-T02 sonrası)
+
+| Bulgu | Durum | Not |
+|---|---|---|
+| F-01 | Kısmen kapalı (korundu) | Y-3 yapısal farkı bilinçli olarak korundu; atomicity hatası kanıtlanmadı. |
+| F-02 | Doğrulanmış (korundu) | Tek gerçek commit artık `CommitStatusChangeAsync` içinde. |
+| **F-03** | **Kapatıldı** | Ölü `committed` state'i kaldırıldı. |
+| **F-04** | **Kapatıldı** | İki commit yolu tek yardımcı metotta birleşti; davranış korundu. |
+| **F-05** | **Kapatıldı** | S25 adı/gerekçesi dört ayrı transaction gerçeğiyle uyumlu. |
+| F-06 | Kısmen kapalı (korundu) | Mevcut politika testle belgelendi; 500/idempotency kaydı yok/scope kapalı. Politika kararı açık. |
+| F-07 | Kısmen kapalı (korundu) | Gerçek commit istisnası 409'a çevriliyor; gerçek MSSQL commit belirsizliği açık. |
+| F-08 | Kısmen kapalı (korundu) | İki modüllü gerçek yazıcı senaryosu var; 3+ modül açık. |
+| **F-09** | **Açık / bu turda kapatılmadı** | Gerçek connection/transaction identity invariant'larının kapsamı korundu; yeni doğrulama yapılmadı. |
+| **F-10** | **Açık / bu turda kapatılmadı** | Host-owned commit'in mimari/test güvencesi bu turda genişletilmedi. |
+| **F-11** | **Kapatıldı (sınırlı kapsamda)** | Middleware bypassı ve scope açılmadığı kanıtlandı; endpoint içi domain write iddiası yok. |
+| **F-12** | **Bu turda kapatılmadı** | V12-T01 kaydında "Kapatıldı" durumundadır; V12-T02'de yeniden test edilmedi veya durumu değiştirilmedi. |
+| **F-13** | **Kapatıldı** | Audit kimliğindeki güncel olmayan yorum düzeltildi; görev metnindeki expired→Tombstone kanıtı F-04'e bağlandı. |
+| **F-14** | **Açık / bu turda kapatılmadı** | Commit öncesi/commit sırasında gerçek MSSQL rollback davranışı doğrulanmadı. |
+
+### 10.4 Doğrulama sonuçları
+
+| Kontrol | Sonuç | Kapsam |
+|---|---|---|
+| `dotnet build FinTrack.slnx --no-restore` | ✅ 0 uyarı, 0 hata | V12-T02 çalışma ağacı. |
+| Docker gerektirmeyen testler | ✅ **390/390** | API birim + modül + mimari + mobil; ayrı bir gruptur. |
+| `tests/FinTrack.Api.IntegrationTests` | ✅ **95/95** | Gerçek Docker/Testcontainers + MSSQL; 390/390 ile aynı testler **iki kez sayılmadı**. |
+| F-06 özel testi | ✅ **1/1** | `Enlist_istisnasi_mevcut_politikada_yayilir_ve_hicbir_kayit_yazilmaz`. |
+| `git diff --check` | ✅ Temiz | — |
+| Windows manuel UI smoke | ⏳ Yapılmadı | Operatör görevi. |
+| Yeni CI | ⏳ Yok | Son yeşil: `44931169879`, commit `1826dc7`, V12-T02 öncesi. |
+| Commit / push | ⏳ Yapılmadı | Beş kod/test dosyası çalışma ağacında. |
+
+Docker daemon bu turda erişilebilir olduğu için API entegrasyonları gerçek
+Testcontainers/MSSQL ortamında çalıştırıldı; önceki "Docker kapalı" notu bu tur
+için geçerli değildir.
+
+### 10.5 Korunan önceden var olan riskler (V12-T02 regresyonu değil)
+
+Son diff doğrulamasında aşağıdakilerin V12-T02 tarafından oluşturulmadığı tespit
+edildi; mevcut davranış/risk olarak korunur:
+
+1. `OperationCanceledException`, middleware'ın mevcut `catch (Exception)`
+   davranışı nedeniyle 409 `IdempotencyInProgress`'e dönüşebilir
+   (`IdempotencyMiddleware.cs:270-276`).
+2. `RequestAborted` ile cleanup gate beklemesinde iptal oluşabilir
+   (`IdempotencyCleanupService.cs:34`); V12-T02 bu dosyaya dokunmadı.
+3. Handler içinde `Enlist(null)` hata verirse takip eden `DisposeAsync()`
+   çağrısı atlanabilir (`CashAdvanceHandlers.cs:106-107` ve `:196-197`);
+   host kapsamında no-op zinciri nedeniyle pratik etki sınırlıdır, hostsuz
+   yolda çalışma zamanı davranışı kaynak koddan kesin doğrulanamaz.
+4. Rollback, açık `RollbackAsync` yerine uncommitted transaction dispose
+   davranışına dayanır (`SqlWriteTransactions.cs:71-72`; F-14 açık).
+
+Ayrıca `Enlist(scope)` istisnasının yayılması (F-06 politikası), 3+ modülün tek
+transaction kanıtının bulunmaması ve Windows manuel smoke'un yapılmamış olması
+bu turda kapatılmadı. Y-3 yapısal farkı için refactor önerilmedi; atomicity
+hatası kanıtlanmadı.

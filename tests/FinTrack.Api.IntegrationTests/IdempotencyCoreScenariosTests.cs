@@ -298,12 +298,18 @@ public sealed class IdempotencyCoreScenariosTests(ApiFixture fixture) : Idempote
         Assert.Equal(1, await CountInflowsAsync("advance-atomic"));
     }
 
+    /// <summary>
+    /// S25 — Dört modülün mutasyon POST'u, middleware kapsamında bağımsız anahtarlarla
+    /// çalışır. Her istek kendi <c>Guid</c> anahtarını kullandığı için dört ayrı host
+    /// transaction'ı vardır; bu test çok modüllü tek transaction'ı KANITLAMAZ.
+    /// </summary>
     [Fact]
-    public async Task S25_Dort_modul_de_host_scope_una_katilir()
+    public async Task S25_Dort_modulun_POST_u_idempotency_middleware_altinda_calisir()
     {
         var client = await CreateAuthenticatedClientAsync();
         var category = await CreateCategoryAsync(client, "DortModul");
 
+        // Ayrı anahtarlar → ayrı scope hash'leri → ayrı transaction'lar.
         using var expense = await PostWithKeyAsync(
             client, ExpensesBase, ExpenseBody(category.Id, 10m, "module-expense"), Guid.NewGuid());
         using var inflow = await PostWithKeyAsync(

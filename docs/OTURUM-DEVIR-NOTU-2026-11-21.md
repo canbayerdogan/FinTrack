@@ -4,6 +4,10 @@
 > edebilmesi** için hazırlandı. İçerik `git status -sb` ve docs dosyalarının doğrudan
 > okunmasıyla doğrulandı. Bu oturumda **commit/push yapılmadı**, production kodu
 > değiştirilmedi.
+>
+> **Güncelleme (V12-T02):** §1–§8, V12-T01 anlık görüntüsüdür. V12-T02'de production
+> kodu ve testler değişmiştir; güncel git durumu, kapatılan bulgular, doğrulama
+> sonuçları ve açık riskler **§9'da** kaydedilmiştir. Çelişki halinde §9 esas alınır.
 
 ---
 
@@ -11,10 +15,11 @@
 
 - Depo: `C:\Users\Erdogan\source\FinTrack`, dal: `## main...origin/main`.
 - Çalışma ağacı **temiz değil**: aşağıdaki docs/test dosyaları modified/untracked.
-- Tamamlanan son iş: **V12-T01** (yalnızca test + dokümantasyon).
+- **(V12-T01 anlık görüntüsü)** Tamamlanan son iş: **V12-T01** (yalnızca test + dokümantasyon).
 - Öncesinde: **Transaction Participant Architecture Audit** ve **Y-3'ün bağımsız
   doğrulanması** tamamlandı; Türkçe rapor masaüstüne ve `docs/` altına kaydedildi.
-- Docker/Testcontainers gerektiren `FinTrack.Api.IntegrationTests` **çalıştırılmadı**.
+- **(V12-T01 anlık görüntüsü)** Docker/Testcontainers gerektiren
+  `FinTrack.Api.IntegrationTests` **çalıştırılmadı**.
 
 ---
 
@@ -61,7 +66,7 @@ işaretçiler bu tek dosyaya yönlendirildi. Audit bulgularının içeriği değ
 
 ---
 
-## 4. V12-T01'de gerçekten yapılanlar
+## 4. V12-T01'de gerçekten yapılanlar (V12-T01 anlık görüntüsü)
 
 ### Test dosyaları (7)
 
@@ -120,7 +125,7 @@ Expenses yalnızca kendi projesinde test edilebilir.
 
 ---
 
-## 6. Git durumu (oturum kapanış anlık görüntüsü)
+## 6. Git durumu (V12-T01 oturum kapanışı anlık görüntüsü)
 
 ```
 ## main...origin/main
@@ -173,9 +178,75 @@ dotnet test tests/FinTrack.Modules.Expenses.Tests --nologo
 dotnet test tests/FinTrack.Modules.CashInflows.Tests --nologo
 dotnet test tests/FinTrack.Modules.Reporting.Tests --nologo
 dotnet test tests/FinTrack.Mobile.Tests --nologo
-# Docker gerektirir, bu oturumda çalıştırılmadı:
+# Docker gerektirir; V12-T02'de gerçek Testcontainers/MSSQL ile çalıştırıldı (95/95):
 dotnet test tests/FinTrack.Api.IntegrationTests --nologo
 ```
 
 PowerShell konsolunda Türkçe karakterler bozuk görünebilir; dosya içerikleri UTF-8
 ve sağlamdır (doğrulamak için `read` aracını kullanın).
+
+---
+
+## 9. V12-T02 sonrası güncel devir durumu (2026-11-21)
+
+§7'deki "sıradaki adımlar" listesi V12-T01 anlık görüntüsüdür. F-03/F-04/F-05/
+F-11 ve audit F-13 (yorum) V12-T02'de kapatıldı; aşağıdaki durum günceldir.
+
+### 9.1 Git ve CI
+
+- Dal `main`, `main` ve `origin/main` senkron, HEAD `1826dc7`.
+- V12-T02 **commit/push edilmedi**. Çalışma ağacı:
+  - `M src/Host/FinTrack.Api/Idempotency/IdempotencyMiddleware.cs`
+  - `M src/Modules/CreditCards/FinTrack.Modules.CreditCards.Application/CashAdvances/CashAdvanceHandlers.cs`
+  - `M tests/FinTrack.Api.IntegrationTests/IdempotencyCoreScenariosTests.cs`
+  - `M tests/FinTrack.Api.UnitTests/IdempotencyFailureBoundaryTests.cs`
+  - `?? tests/FinTrack.Api.UnitTests/IdempotencyScopeBoundaryTests.cs`
+- Yeni CI yok. Son yeşil `build-test`: `44931169879`, commit `1826dc7`
+  (`https://github.com/canbayerdogan/FinTrack/actions/runs/44931169879`);
+  V12-T02 değişikliklerini içermez.
+- Bu dokümantasyon güncellemesi yalnızca mevcut `docs/**` dosyalarını değiştirdi;
+  yukarıdaki beş kod/test dosyasına dokunulmadı.
+
+### 9.2 V12-T02'de yapılanlar
+
+- `IdempotencyMiddleware.cs`: okunmayan `committed` state'i ve ölü `bool` dönüş
+  kaldırıldı; 2xx ve expired→Tombstone commit'leri `CommitStatusChangeAsync`
+  altında toplandı. Hook sırası, exception handling ve cleanup sırası korundu.
+- `CashAdvanceHandlers.cs`: yorum ADR-0010 host sahipliğini doğru anlatıyor;
+  çalışma zamanı kodu değişmedi.
+- S25 testinin adı/gerekçesi dört ayrı POST, dört ayrı `Idempotency-Key` ve dört
+  ayrı transaction gerçeğiyle düzeltildi. **Çok modüllü tek transaction kanıtı
+  değildir.**
+- Yeni regression: `Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner`
+  (expired → Tombstone → tek commit → 409).
+- Yeni `IdempotencyScopeBoundaryTests.cs`: gerçek middleware invocation ile
+  PUT/auth POST/kimlik hatasında `next`'e geçiş ve scope açılmadığı; ayrıca
+  kapsam-içi POST için 1 scope/1 commit pozitif kontrolü. **Endpoint içi domain
+  write olmadığını kanıtlamaz.**
+
+### 9.3 Doğrulama ve açıklar
+
+- Build: `dotnet build FinTrack.slnx --no-restore` → **0 uyarı / 0 hata**.
+- Docker hariç testler: **390/390**.
+- Gerçek Docker/Testcontainers + MSSQL API entegrasyonları: **95/95** (aynı
+  testler 390/390 içinde iki kez sayılmadı). Docker daemon bu turda erişilebilirdi.
+- F-06 özel testi: **1/1**; `git diff --check`: temiz.
+- Windows manuel UI smoke: yapılmadı (operatör).
+- Açık/kapatılmayan: F-09, F-10, F-14 açık; F-12 V12-T01'de kapalı kayıtlıdır,
+  bu turda yeniden test edilmedi. F-06 politika kararı ve 3+ modül tek
+  transaction kanıtı bekliyor. Y-3 yapısal farkı korundu; atomicity hatası
+  kanıtlanmadığı için refactor önerilmedi.
+- Önceden var olan riskler (V12-T02 regresyonu değil): `OperationCanceledException`
+  → 409; `RequestAborted` + cleanup gate; handler `Enlist(null)` sonrası
+  `DisposeAsync()` atlanması; rollback'in uncommitted transaction dispose'a
+  dayanması. Ayrıntı: `docs/11` §9.4 K8–K11 ve audit raporu §10.5.
+
+### 9.4 Sonraki oturumda sırasıyla
+
+1. İstenirse V12-T02 beş dosyalık kod/test diff'ini commit/push et.
+2. Yeni CI sonucunu doğrula; son yeşil run `44931169879` güncel kapsamı temsil
+   etmiyor.
+3. Windows manuel UI smoke'u operatör tamamlasın.
+4. F-09/F-10/F-14 ve 3+ modül tek-transaction kanıtını ayrı görev olarak ele al;
+   F-12 mevcut kapalı durumunu korur, kanıtlanmış hata olmadan Y-3 refactor'ı
+   başlatma.

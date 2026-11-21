@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.28
+**Sürüm:** 1.29
 **Tarih:** 2026-11-21
-**Bağlı belgeler:** [Durum notu v2.18](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Transaction Audit + V12-T01 eki](FinTrack-Transaction-Participant-Audit-2026-11-21.md)
+**Bağlı belgeler:** [Durum notu v2.19](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.5](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Transaction Audit + V12-T01/V12-T02 ekleri](FinTrack-Transaction-Participant-Audit-2026-11-21.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,9 +34,9 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.4, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) · **V12-T01 — host transaction sahipliği testleri tamamlandı** (yalnızca test; audit raporu §9) |
-| Son doğrulama | **383/383** Docker hariç toplam (45 mobil + 81 API birim + 17 mimari + 240 modül: 86 kart + 38 borç + 58 harcama + 48 para girişi + 10 raporlama), `FinTrack.slnx` build **0 uyarı/0 hata** · 2026-11-21. Önceki doğrulama: 354/354, 2026-11-20. API entegrasyonları Docker/Testcontainers gerektirdiği için çalıştırılmadı; başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
-| Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak; Docker kullanılabilir olduğunda API entegrasyonları/CI yeniden doğrulanacak (`docs/08` §8.5/§8.7, `docs/11` §9.3/§9.6). LocalDB temizliği (2.2-A) ✅ tamamlandı |
+| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.5, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) · **V12-T01 — host transaction sahipliği testleri tamamlandı** (audit raporu §9) · **V12-T02 — commit yolu temizliği + kapsam sınırı testleri tamamlandı, commit/push bekliyor** (audit raporu §10) |
+| Son doğrulama | **390/390** Docker hariç toplam + **95/95** gerçek Docker/Testcontainers + MSSQL API entegrasyonu (aynı testler iki kez sayılmadı); `FinTrack.slnx` build **0 uyarı/0 hata**, F-06 özel testi **1/1**, `git diff --check` temiz · 2026-11-21. Önceki Docker hariç doğrulama: 383/383. Son yeşil CI `44931169879` (commit `1826dc7`) V12-T02 öncesinedir; yeni CI yok. Android head build JDK 17 ile 0/0 (`docs/08` §8.11, `docs/11` §9.7) |
+| Sıradaki adım | **V12-T02 beş dosyalık kod/test diff'i commit/push edilecek** (yalnızca açıkça istenirse); ardından yeni CI doğrulanacak. **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak. F-09/F-10/F-12/F-14 bu turda kapatılmadı; Y-3 yapısal farkı için refactor önerilmedi (`docs/08` §8.11, audit §10.3). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
 
@@ -346,9 +346,12 @@ dotnet test FinTrack.slnx --nologo -v q
 - [x] **Doğrulama:** `FinTrack.slnx` build **0 uyarı / 0 hata**; Docker hariç
       **379/379** test geçti (17 mimari + 85 kart + 38 borç + 78 API birim +
       58 harcama + 48 para girişi + 10 raporlama + 45 mobil).
-- [ ] **Kapsam dışı / açık:** `FinTrack.Api.IntegrationTests` (Docker/Testcontainers)
-      çalıştırılmadı; F-02…F-05, F-11, F-13, F-14 açık; F-06/F-07/F-08 için
-      aşağıdaki ek testler eklendi. Ayrıntı: audit raporu §9 ve §9.6.
+- [ ] **Kapsam dışı / açık (V12-T01 anlık görüntüsü):**
+      `FinTrack.Api.IntegrationTests` (Docker/Testcontainers) o oturumda
+      çalıştırılmadı; F-02…F-05, F-11, F-13, F-14 açıktı; F-06/F-07/F-08 için
+      aşağıdaki ek testler eklendi. **V12-T02 sonrası güncel durum bir sonraki
+      bölümdedir** (F-03/F-04/F-05/F-11/F-13 kapatıldı; Docker/MSSQL 95/95).
+      Ayrıntı: audit raporu §9, §9.6 ve §10.
 
 ### F-06/F-07/F-08 — hata sınırı testleri ✅ (2026-11-21, yalnızca test)
 
@@ -365,6 +368,51 @@ dotnet test FinTrack.slnx --nologo -v q
       `Microsoft.EntityFrameworkCore.Sqlite` referansı; production kodu değişmedi.
 - [ ] **Açık:** Docker/Testcontainers (gerçek MSSQL) senaryoları, F-06 politika
       kararı ve 3+ modülün tek transaction kanıtı.
+
+### V12-T02 — Commit yolu temizliği ve kapsam sınırı testleri ✅ (2026-11-21, commit/push bekliyor)
+
+- [x] **Kapsam:** Gerçek `git diff HEAD` (`1826dc7` ↔ çalışma kopyası) üzerinden
+      production middleware + bir handler yorumu ve üç test dosyası (biri yeni).
+      Ayrıntı: audit raporu §10.
+- [x] **F-03:** Kullanılmayan `committed` state'i ve `HandleExistingAsync`
+      ölü `bool` dönüşü kaldırıldı; commit davranışı değişmedi.
+- [x] **F-04:** 2xx ve expired→Tombstone commit'leri `CommitStatusChangeAsync`
+      altında toplandı. Hook sırası yalnızca 2xx yolunda geçerlidir:
+      `CompleteAsync → BeforeCommitAsync → CommitMode kontrolü → CommitAsync →
+      AfterCommit`. Expired→Tombstone yolu `TombstoneAsync → CommitAsync`
+      çağırır; `BeforeCommitAsync`, `CommitMode` hook kontrolü veya `AfterCommit`
+      bulunmaz. Regression:
+      `Sureti_dolan_kayit_tombstone_yazip_tek_commit_ve_409_doner`
+      (`TombstoneCount=1`, `CommitCount=1`, 409, `next=0`).
+- [x] **F-05:** S25 adı
+      `S25_Dort_modulun_POST_u_idempotency_middleware_altinda_calisir` oldu.
+      **Dört ayrı POST, dört ayrı `Idempotency-Key` ve dört ayrı transaction;
+      bu test dört modülün tek ortak transaction içinde atomik çalıştığını
+      kanıtlamaz.**
+- [x] **F-11:** `IdempotencyScopeBoundaryTests.cs` gerçek middleware
+      invocation'ı ile PUT (2), auth POST (2) ve kimlik hatasında `next`'e
+      geçişi, scope/store/commit/cleanup çağrısı olmadığını doğruluyor; kapsam
+      içi POST pozitif kontrolü 1 scope/1 commit görüyor. **Endpoint'lerde
+      domain write bulunmadığını kanıtlamaz.**
+- [x] **F-13 (audit kimliği):** `CashAdvanceHandlers` sınıf yorumu ADR-0010 host
+      sahipliğini doğru anlatacak şekilde düzeltildi. Görev metnindeki
+      "expired→Tombstone regression" id'si audit'de F-04'tür; iki bulgu ayrı
+      kayıtlar olarak kapatıldı.
+- [x] **Doğrulama:** build **0/0**; Docker hariç **390/390**; gerçek
+      Docker/Testcontainers + MSSQL **95/95**; F-06 özel testi **1/1**;
+      `git diff --check` temiz.
+- [ ] **Açık / kapatılmadı:** F-09, F-10, F-14 açık; F-12 V12-T01'de kapalı
+      kayıtlıdır ve bu turda yeniden test edilmedi/kapatılmadı. F-06 politika
+      kararı, 3+ modül tek-transaction kanıtı, Windows manuel UI smoke ve yeni
+      CI sonucu bekliyor. Son yeşil CI `44931169879` (`1826dc7`) V12-T02
+      öncesinedir; beş kod/test dosyası commit/push bekliyor.
+- [ ] **Teknik borç (V12-T02 regresyonu değil):** `OperationCanceledException`
+      → 409 (`IdempotencyMiddleware.cs:270-276`); `RequestAborted` + cleanup
+      gate (`IdempotencyCleanupService.cs:34`); handler `Enlist(null)` sonrası
+      `DisposeAsync()` atlanması (`CashAdvanceHandlers.cs:106-107`, `:196-197`);
+      rollback'in uncommitted transaction dispose'a dayanması
+      (`SqlWriteTransactions.cs:71-72`). Ayrıntı: `docs/11` §9.4 K8–K11 ve
+      audit §10.5.
 
 ### Yüksek seviye
 
@@ -482,3 +530,4 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.26 | 2026-11-21 | **V12-T01 tamamlandı (yalnızca test):** F-01/F-09/F-10/F-12 için mimari koruma, gerçek SQLite connection/transaction kimliği, dört modülde `Enlist` guard'ı ve host `Serializable` doğrulaması eklendi. Production kodu değişmedi; Docker hariç 379/379, çözüm build 0/0, commit/push yok. Ayrıntı: audit raporu §9. |
 | 1.27 | 2026-11-21 | **Teslim:** V12-T01 testleri + devir notu commit/push edildi; audit dosyaları tek dosyada birleştirildi, §9 işaretçileri düzeltildi. Docker hariç test sayısı 379/379, production kodu değişmedi. Sıradaki görev: F-06/F-07/F-08 hata senaryoları (ayrı oturum/görev). |
 | 1.28 | 2026-11-21 | **F-06/F-07/F-08 hata sınırı testleri eklendi:** `Enlist` istisnası politikası, gerçek `DbTransaction.CommitAsync` istisnası + middleware 409 yanıtı ve gerçek ikinci yazıcının yazıp hata verdiği rollback senaryosu. Yalnızca test + test paketi; production kodu değişmedi, Docker hariç 383/383, build 0/0. |
+| 1.29 | 2026-11-21 | **V12-T02 doğrulandı:** `committed` ölü state kaldırıldı, iki commit yolu `CommitStatusChangeAsync` altında toplandı, S25 adı dört ayrı transaction gerçeğiyle düzeltildi, expired→Tombstone ve middleware kapsam sınırı testleri eklendi. Audit F-03/F-04/F-05/F-11 + F-13 (yorum) kapatıldı; F-09/F-10/F-12/F-14 bu turda kapatılmadı. Docker hariç 390/390 + gerçek MSSQL 95/95, build 0/0, F-06 1/1. Beş kod/test dosyası commit/push bekliyor, yeni CI yok. |

@@ -9,7 +9,8 @@ namespace FinTrack.Modules.CreditCards.Application.CashAdvances;
 /// <summary>
 /// Nakit avansı kart borcuna ekler ve aynı kullanıcı işleminde bağlı para
 /// girişini oluşturur (docs/05 §5.5, docs/06 §6.5). İki modülün yazması
-/// ADR-0009 ile paylaşılan transaction'da yapılır; commit yalnızca handler'dadır.
+/// ADR-0009 ile paylaşılan transaction'da yapılır. Host kapsamında gerçek commit
+/// IdempotencyMiddleware'a aittir (ADR-0010); host yoksa ADR-0009 akışı korunur.
 /// </summary>
 public sealed class CreateCashAdvanceHandler(
     ICurrentUser currentUser,
