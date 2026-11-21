@@ -1,5 +1,6 @@
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using FinTrack.Api.Idempotency;
 using FinTrack.ModuleContracts;
@@ -82,6 +83,26 @@ public sealed class WriteTransactionInternalsTests
         Assert.Equal(0, host.DisposeCount);
     }
 
+    [Fact]
+    public async Task Gercek_host_fabric_bagantiyi_Serializable_transaction_ile_acar()
+    {
+        var accessor = (IWriteTransactionScopeAccessor)CreateInternal(
+            "FinTrack.Api.WriteTransactions.WriteTransactionScopeAccessor");
+        var connection = new RecordingDbConnection();
+        var provider = new SingleConnectionProvider(connection);
+        var factory = (IWriteTransactionScopeFactory)CreateInternal(
+            "FinTrack.Api.WriteTransactions.SqlWriteTransactionScopeFactory", provider, accessor);
+
+        var scope = await factory.BeginAsync(CancellationToken.None);
+
+        Assert.True(connection.OpenCalled, "Kapalı bağlantı açılmalı.");
+        Assert.Equal(IsolationLevel.Serializable, connection.RequestedIsolationLevel);
+        Assert.Same(connection.Transaction, scope.Transaction);
+        Assert.Equal(
+            "FinTrack.Api.WriteTransactions.WriteTransactionScope",
+            scope.GetType().FullName); // no-op sarmalayıcı değil, gerçek scope
+    }
+
     [Theory]
     [InlineData("UNIQUE constraint failed: shared.IdempotencyKeys")]
     [InlineData("duplicate key value violates unique constraint")]
@@ -139,6 +160,63 @@ public sealed class WriteTransactionInternalsTests
             throw new InvalidOperationException("Host scope varken bağlantı açılmamalı.");
     }
 
+    private sealed class SingleConnectionProvider(DbConnection connection) : IWriteConnectionProvider
+    {
+        public DbConnection Connection => connection;
+    }
+
+    /// <summary>
+    /// Gerçek host fabrikasının hangi izolasyon seviyesini istediğini kaydeder;
+    /// SQL Server/Testcontainers gerektirmeden production kodunu gözlemler.
+    /// </summary>
+    private sealed class RecordingDbConnection : DbConnection
+    {
+        public bool OpenCalled { get; private set; }
+
+        public IsolationLevel? RequestedIsolationLevel { get; private set; }
+
+        public DbTransaction? Transaction { get; private set; }
+
+        private ConnectionState _state = ConnectionState.Closed;
+
+        [AllowNull]
+        public override string ConnectionString
+        {
+            get => "fake";
+            set { }
+        }
+
+        public override string Database => "fake";
+
+        public override string DataSource => "fake";
+
+        public override string ServerVersion => "fake";
+
+        public override ConnectionState State => _state;
+
+        public override void ChangeDatabase(string databaseName)
+        {
+        }
+
+        public override void Close() => _state = ConnectionState.Closed;
+
+        public override void Open()
+        {
+            OpenCalled = true;
+            _state = ConnectionState.Open;
+        }
+
+        protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel)
+        {
+            RequestedIsolationLevel = isolationLevel;
+            Transaction = new FakeDbTransaction(this);
+            return Transaction;
+        }
+
+        protected override DbCommand CreateDbCommand() =>
+            throw new NotSupportedException("Bu test çifti yalnızca transaction başlatmayı kaydeder.");
+    }
+
     private sealed class FakeWriteTransactionScope : IWriteTransactionScope
     {
         public FakeWriteTransactionScope(DbTransaction? transaction = null) =>
@@ -163,9 +241,9 @@ public sealed class WriteTransactionInternalsTests
         }
     }
 
-    private sealed class FakeDbTransaction : DbTransaction
+    private sealed class FakeDbTransaction(DbConnection? connection = null) : DbTransaction
     {
-        protected override DbConnection? DbConnection => null;
+        protected override DbConnection? DbConnection => connection;
 
         public override IsolationLevel IsolationLevel => IsolationLevel.Serializable;
 

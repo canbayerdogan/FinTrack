@@ -1,8 +1,8 @@
 # FinTrack — Görev Listesi (TODO)
 
-**Sürüm:** 1.25
-**Tarih:** 2026-11-20
-**Bağlı belgeler:** [Durum notu v2.15](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md)
+**Sürüm:** 1.27
+**Tarih:** 2026-11-21
+**Bağlı belgeler:** [Durum notu v2.17](08-durum-ve-devam-notu.md) · [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [ADR-0010](adr/0010-host-owned-idempotent-writes.md) · [Transaction Audit + V12-T01 eki](FinTrack-Transaction-Participant-Audit-2026-11-21.md)
 
 > Bu dosya **nerede kaldığımızı** tutar. Bağlayıcı kapsam `docs/07` §4'tedir;
 > burada yalnızca ilerleme ve sıradaki somut adımlar listelenir.
@@ -34,8 +34,8 @@ dotnet test FinTrack.slnx --nologo -v q
 
 | Alan | Değer |
 |---|---|
-| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.4, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) |
-| Son doğrulama | **45/45** mobil (31 mevcut + 14 yeni), **354/354** Docker hariç toplam (45 mobil + 77 API birim + 10 mimari + 222 modül), `FinTrack.slnx` Android + Windows build **0 uyarı/0 hata** · 2026-11-20. API entegrasyonları Docker daemon kapalı olduğu için çalıştırılamadı (86/95 `DockerUnavailableException`, 9 DB'siz smoke geçti); başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
+| Aktif dilim | v1 dilimleri **0–9 tamamlandı** ✅ · v1.1 **V11-T01 — Idempotency-Key** uygulandı (`docs/11` v1.4, ADR-0010; `docs/07` §5.1) · **V11-T02 — gerçek mobil harcama akışında PendingOperation entegrasyonu uygulandı** (`docs/12`; `docs/08` §8.7; `docs/11` §9.6) · **V12-T01 — host transaction sahipliği testleri tamamlandı** (yalnızca test; audit raporu §9) |
+| Son doğrulama | **379/379** Docker hariç toplam (45 mobil + 78 API birim + 17 mimari + 239 modül: 85 kart + 38 borç + 58 harcama + 48 para girişi + 10 raporlama), `FinTrack.slnx` build **0 uyarı/0 hata** · 2026-11-21. Önceki doğrulama: 354/354, 2026-11-20. API entegrasyonları Docker/Testcontainers gerektirdiği için çalıştırılmadı; başarılı olarak raporlanmadı. V11-T01 sonrası CI run `44413433056` yeşil, Android head build JDK 17 ile 0/0 (`docs/08` §8.5/§8.7, `docs/11` §9.5–9.6) |
 | Sıradaki adım | Kod tarafında bekleyen iş yok: **Windows manuel UI smoke (2.1-A)** operatör tarafından tamamlanacak; Docker kullanılabilir olduğunda API entegrasyonları/CI yeniden doğrulanacak (`docs/08` §8.5/§8.7, `docs/11` §9.3/§9.6). LocalDB temizliği (2.2-A) ✅ tamamlandı |
 
 ---
@@ -323,6 +323,33 @@ dotnet test FinTrack.slnx --nologo -v q
       entegrasyonları/CI bu oturumda yeniden doğrulanmadı; Windows manuel UI
       smoke operatör tarafından tamamlanacak.
 
+### V12-T01 — Host transaction sahipliği enforcement testleri ✅ (2026-11-21)
+
+- [x] **Kapsam:** Transaction Participant Architecture Audit F-01/F-09/F-10/F-12
+      için **yalnızca test** kapsamı. Production kodu, yeni abstraction,
+      transaction factory refactoring, NuGet/migration, commit/push yok.
+- [x] **Mimari koruma:** `AtomicWriteBoundaryTests` içinde dört modulunda
+      BuildingBlocks sözleşme bağlantısı, `Enlist(IWriteTransactionScope)` imzası,
+      ham `SqlClient` bağlantısı/transaction'ı yasağı ve `BeginTransaction`'ın
+      yalnızca mevcut yerel fabrikada (Expenses/CreditCards) olduğu kontrolü.
+      Mevcut yerel fabrikalar ihlal sayılmadı.
+- [x] **Kimlik doğrulaması:** `CashAdvanceAtomicityTests` ve `AtomicWriteTests`
+      içinde gerçek SQLite owner/writer DbContext'lerinin `GetDbConnection()`
+      referans eşitliği ve her iki `CurrentTransaction.GetDbTransaction()`'ın
+      `scope.Transaction` ile aynı referansı.
+- [x] **Host fabrikası:** `WriteTransactionInternalsTests` içinde fake
+      `DbConnection` ile production `SqlWriteTransactionScopeFactory`'nin
+      `IsolationLevel.Serializable` istediği doğrulandı (Docker gerekmiyor).
+- [x] **Enlist guard:** Expenses, CreditCards, Debts ve CashInflows için
+      tekrarlanan `Enlist`, `Enlist(null)` detach ve host accessor temizlenince
+      ayrılma davranışları (3 yeni test dosyası, her modül kendi projesinde).
+- [x] **Doğrulama:** `FinTrack.slnx` build **0 uyarı / 0 hata**; Docker hariç
+      **379/379** test geçti (17 mimari + 85 kart + 38 borç + 78 API birim +
+      58 harcama + 48 para girişi + 10 raporlama + 45 mobil).
+- [ ] **Kapsam dışı / açık:** `FinTrack.Api.IntegrationTests` (Docker/Testcontainers)
+      çalıştırılmadı; F-02…F-08, F-11, F-13, F-14 açık kalmaya devam ediyor.
+      Ayrıntı: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9.
+
 ### Yüksek seviye
 
 - [x] **Slice 4 — Ekstre + kart ödemesi:** ✅ 2026-11-16. `CardPayment`,
@@ -436,3 +463,5 @@ dotnet test FinTrack.slnx --nologo -v q
 | 1.23 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; sürüm başlıkları ve "henüz commit edilmedi" notları güncellendi, oturum devri kaydı `docs/08` §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
 | 1.24 | 2026-11-19 | CI run `44413433056` yeşil doğrulandı; Android MAUI head build JDK 17 ile 0/0; `PendingOperationRecoveryTests` zaman bağımlılığı giderildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |
 | 1.25 | 2026-11-20 | **V11-T02 tamamlandı:** `AddExpenseViewModel` gerçek harcama POST'unu PendingOperation/Idempotency zincirine bağladı; tekrar Kaydet, `Created`/`SentUnconfirmed`/`Uncertain`, kullanıcı izolasyonu ve açılışta single-flight recovery doğrulandı. 14 yeni mobil testiyle 45/45, Docker hariç 354/354, Android + Windows build 0/0. Docker daemon kapalı; API entegrasyonları ve Windows UI smoke operasyonel doğrulamaya bırakıldı. |
+| 1.26 | 2026-11-21 | **V12-T01 tamamlandı (yalnızca test):** F-01/F-09/F-10/F-12 için mimari koruma, gerçek SQLite connection/transaction kimliği, dört modülde `Enlist` guard'ı ve host `Serializable` doğrulaması eklendi. Production kodu değişmedi; Docker hariç 379/379, çözüm build 0/0, commit/push yok. Ayrıntı: audit raporu §9. |
+| 1.27 | 2026-11-21 | **Teslim:** V12-T01 testleri + devir notu commit/push edildi; audit dosyaları tek dosyada birleştirildi, §9 işaretçileri düzeltildi. Docker hariç test sayısı 379/379, production kodu değişmedi. Sıradaki görev: F-06/F-07/F-08 hata senaryoları (ayrı oturum/görev). |

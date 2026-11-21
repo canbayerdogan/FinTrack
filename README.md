@@ -60,10 +60,10 @@ Kullanıcının **kendi girdiği** harcama, para girişi ve borç bilgilerinden 
 | 05 | [İş kuralları (business rules) v1.6](docs/05-is-kurallari.md) | ✅ |
 | 06 | [API sözleşmeleri v1.7](docs/06-api-sozlesmeleri.md) | ✅ |
 | 07 | [Yol haritası ve ajan görev standardı v1.18](docs/07-yol-haritasi-ve-ajan-gorev-standardi.md) | ✅ |
-| 08 | [Durum ve devam notu v2.12](docs/08-durum-ve-devam-notu.md) | ✅ |
-| 09 | [Görev listesi (TODO) v1.22](docs/09-todo.md) | ✅ |
+| 08 | [Durum ve devam notu v2.17](docs/08-durum-ve-devam-notu.md) | ✅ |
+| 09 | [Görev listesi (TODO) v1.27](docs/09-todo.md) | ✅ |
 | 10 | [Kararlar v1.2](docs/10-karar-bekleyen-konular.md) | ✅ yanıtlandı |
-| 11 | [Idempotency teknik tasarımı v1.3](docs/11-idempotency-teknik-tasarim.md) | ✅ koşullu onay + açık kodlama onayı — V11-T01 uygulandı (435/435 test) |
+| 11 | [Idempotency teknik tasarımı v1.4](docs/11-idempotency-teknik-tasarim.md) | ✅ koşullu onay + açık kodlama onayı — V11-T01 uygulandı (435/435 test) |
 | 12 | [ADR-0010 — host sahipliğinde idempotent yazma](docs/adr/0010-host-owned-idempotent-writes.md) | ✅ koşullu onay |
 
 ## Mevcut durum

@@ -7,7 +7,10 @@ using FinTrack.Modules.Debts.Domain;
 using FinTrack.Modules.Debts.Tests.Support;
 using FinTrack.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
+using CashInflowsUnitOfWork = FinTrack.Modules.CashInflows.Infrastructure.Persistence.UnitOfWork;
+using DebtsUnitOfWork = FinTrack.Modules.Debts.Infrastructure.Persistence.UnitOfWork;
 
 namespace FinTrack.Modules.Debts.Tests.Application;
 
@@ -143,6 +146,34 @@ public sealed class AtomicWriteTests : IAsyncLifetime
         Assert.Equal(DebtLinkType.PersonalDebt, inflow.DebtType);
         Assert.Equal(Today.AddDays(-10), inflow.OccurredOn);
         Assert.False(inflow.IsEarnedIncome);
+    }
+
+    [Fact]
+    public async Task Enlist_sirada_owner_ve_writer_ayni_fiziksel_transaction_a_bagli()
+    {
+        await using var debtsDb = _database.CreateContext(_userId);
+        await using var inflowsDb = _database.CreateInflowContext(_userId);
+
+        var connection = debtsDb.Database.GetDbConnection();
+
+        // Fixture kurulumu değil, iki gerçek DbContext'in çalışma anındaki bağlantısı.
+        Assert.Same(connection, inflowsDb.Database.GetDbConnection());
+
+        await using var transaction = await connection.BeginTransactionAsync();
+        var scope = new SqliteWriteTransactionScope(transaction);
+        var ownerUow = new DebtsUnitOfWork(debtsDb);
+        var writerUow = new CashInflowsUnitOfWork(inflowsDb);
+
+        ownerUow.Enlist(scope);
+        writerUow.Enlist(scope);
+
+        Assert.Same(transaction, scope.Transaction);
+        Assert.Same(transaction, debtsDb.Database.CurrentTransaction?.GetDbTransaction());
+        Assert.Same(transaction, inflowsDb.Database.CurrentTransaction?.GetDbTransaction());
+
+        // Enlist sonrası bağlantı/transaction kullanılabilir durumda kalmalı.
+        await debtsDb.Database.ExecuteSqlRawAsync("SELECT 1");
+        await inflowsDb.Database.ExecuteSqlRawAsync("SELECT 1");
     }
 
     private DebtHandlerFactory CreateFactory() =>

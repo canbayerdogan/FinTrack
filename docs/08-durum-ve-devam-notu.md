@@ -1,8 +1,8 @@
 # FinTrack — Durum ve Devam Notu
 
-**Sürüm:** 2.15
-**Tarih:** 2026-11-20
-**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.25](09-todo.md) · ADR-0001…0010
+**Sürüm:** 2.17
+**Tarih:** 2026-11-21
+**Bağlı belgeler:** [Yol haritası v1.18](07-yol-haritasi-ve-ajan-gorev-standardi.md) · [API Sözleşmeleri v1.7](06-api-sozlesmeleri.md) · [Teknik Mimari v1.3](03-mimari.md) · [İş Kuralları v1.6](05-is-kurallari.md) · [Kararlar v1.2](10-karar-bekleyen-konular.md) · [Idempotency teknik tasarımı v1.4](11-idempotency-teknik-tasarim.md) · [Görev listesi v1.27](09-todo.md) · ADR-0001…0010
 **Hedef okuyucu:** geliştirici ve geliştirme ajanları
 
 > Bu dosya **tek doğruluk kaynağı değildir**; hızlı devam notudur. Bağlayıcı olan
@@ -834,6 +834,8 @@ tutarlı; ignore edilen yerel `docs/*cevap*.txt`, `docs/*kararlar*.txt` ve
 | 2.13 | 2026-11-19 | V11-T01 kodu `5e614c7` ile commit edilip `origin/main`'e push edildi; "henüz commit edilmedi" notları ve sürüm başlıkları güncellendi, oturum devri kaydı §8.5'e eklendi. Push sonrası CI sonucu kontrol edilecek |
 | 2.14 | 2026-11-19 | CI run `44413433056` (`5e614c7`) yeşil olarak doğrulandı; Android MAUI head build JDK 17 ile yerelde 0/0; mobil pending operation testlerinde deterministik saat enjeksiyonu düzeltildi (31/31). Kalan tek adım Windows manuel UI smoke (operatör) |
 | 2.15 | 2026-11-20 | **V11-T02 uygulandı:** gerçek `AddExpenseViewModel.SaveAsync` akışı PendingOperation/Idempotency zincirine bağlandı; 14 uçtan uca mobil test eklendi (45/45), çözüm build'i 0/0, Docker hariç testler 354/354. §6, §8.7 ve `docs/09` v1.25 güncellendi; `docs/11` v1.4 uygulama notu eklendi. Docker daemon kapalı olduğu için API entegrasyon sonucu ve Windows UI smoke doğrulanmadı. |
+| 2.16 | 2026-11-21 | **V12-T01 tamamlandı (yalnızca test):** Transaction Participant Architecture Audit F-01/F-09/F-10/F-12 için mimari koruma, gerçek SQLite connection/transaction kimliği, dört modülde `Enlist` guard'ı ve host `Serializable` doğrulaması eklendi. Docker hariç 379/379 test, çözüm build 0 uyarı/0 hata. Production kodu değişmedi; commit/push yok. Ayrıntı: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9. |
+| 2.17 | 2026-11-21 | **Docs/test teslimi tamamlandı:** V12-T01 testleri ve devir notu commit edilip `origin/main`'e push edildi. §9 işaretçi uyuşmazlığı giderildi; audit tek dosyada birleştirildi (`...-2026-11-20.md` kopyası silindi), `docs/08`/`docs/09`/teslim raporu güncellendi. Test sayıları değişmedi (Docker hariç 379/379); production kodu değişmedi. |
 
 ### 8.6 Sonraki oturum devri notu (2026-11-20)
 
@@ -894,3 +896,27 @@ denemelere aynı baytlarla veriliyor; `AuthHandler` 401 sonrası aynı
 kart/borç/para girişi mutasyonlarının pending entegrasyonu (V11-T02 kapsam dışı);
 profil `PUT`, login/register/logout (kapsam dışı). Yeni testlerin kapsamı ve Y-1
 kapanış durumu `docs/architecture-audit-mobile-idempotency.md` §8'de listelendi.
+
+### 8.8 V12-T01 notu (2026-11-21) — host transaction sahipliği testleri
+
+Transaction Participant Architecture Audit sonucunda F-01/F-09/F-10/F-12 için
+**yalnızca test** kapsamı güçlendirildi: dört yazma modulunda contract/host-atlama
+mimari kontrolleri, gerçek SQLite'ta owner/writer connection + transaction kimliği,
+dört UnitOfWork için tekrarlanan `Enlist`/`Enlist(null)` davranışı ve production
+host fabrikasının `Serializable` isteği (fake `DbConnection` ile) doğrulandı.
+Expenses/CreditCards yerel fabrikaları **korundu**; ihlal olarak işaretlenmedi.
+Production kodu, NuGet paketi, migration ve transaction soyutlaması değişmedi.
+Doğrulama: `FinTrack.slnx` build 0/0; Docker hariç 379/379 test geçti.
+Docker gerektiren `FinTrack.Api.IntegrationTests` çalıştırılmadı. Ayrıntılar ve
+açık kalan audit bulguları: `docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` §9.
+
+### 8.9 Oturum devri notu (2026-11-21)
+
+Bu oturumun kapanışında kapsam, doğrulama sonuçları, kısıtlar ve sıradaki adımlar
+`docs/OTURUM-DEVIR-NOTU-2026-11-21.md` dosyasına kaydedildi. Sonraki oturumda §9
+işaretçi uyuşmazlığı giderildi: V12-T01 eki
+`docs/FinTrack-Transaction-Participant-Audit-2026-11-21.md` içine eklendi, öteki
+tarihli kopya silindi; `docs/08`, `docs/09` ve teslim raporundaki bütün işaretçiler
+bu tek dosyaya yönlendirildi. Audit gövdesi ve §9 bulguları değişmedi. V12-T01
+testleri, bu düzeltmeler ve devir notu birlikte commit edilip `origin/main`'e
+push edildi; Docker/Testcontainers doğrulaması hâlâ bekliyor.

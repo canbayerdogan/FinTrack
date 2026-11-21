@@ -8,6 +8,7 @@ using FinTrack.Modules.CreditCards.Application.Cards;
 using FinTrack.Modules.CreditCards.Application.CashAdvances;
 using FinTrack.Modules.CreditCards.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Xunit;
 
 namespace FinTrack.Modules.CreditCards.Tests.Application;
@@ -119,6 +120,35 @@ public sealed class CashAdvanceAtomicityTests
 
         Assert.Null(advance.CancelledAtUtc);
         Assert.Null(inflow.CancelledAtUtc);
+    }
+
+    [Fact]
+    public async Task Enlist_sirada_owner_ve_writer_ayni_fiziksel_transaction_a_bagli()
+    {
+        await using var database = await CardTestDatabase.CreateWithCashInflowsAsync();
+        await using var cardsDb = database.CreateContext(UserId);
+        await using var inflowsDb = database.CreateInflowContext(UserId);
+
+        var connection = cardsDb.Database.GetDbConnection();
+
+        // Fixture kurulumu değil, iki gerçek DbContext'in çalışma anındaki bağlantısı.
+        Assert.Same(connection, inflowsDb.Database.GetDbConnection());
+
+        await using var transaction = await connection.BeginTransactionAsync();
+        var scope = new SqliteWriteTransactionScope(transaction);
+        var ownerUow = new FinTrack.Modules.CreditCards.Infrastructure.Persistence.UnitOfWork(cardsDb);
+        var writerUow = new UnitOfWork(inflowsDb);
+
+        ownerUow.Enlist(scope);
+        writerUow.Enlist(scope);
+
+        Assert.Same(transaction, scope.Transaction);
+        Assert.Same(transaction, cardsDb.Database.CurrentTransaction?.GetDbTransaction());
+        Assert.Same(transaction, inflowsDb.Database.CurrentTransaction?.GetDbTransaction());
+
+        // Enlist sonrası bağlantı/transaction kullanılabilir durumda kalmalı.
+        await cardsDb.Database.ExecuteSqlRawAsync("SELECT 1");
+        await inflowsDb.Database.ExecuteSqlRawAsync("SELECT 1");
     }
 
     private static DebtCashInflowWriter CreateWriter(CashInflowsDbContext db) =>
